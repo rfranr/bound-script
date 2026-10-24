@@ -8,7 +8,7 @@ BoundScript aims to keep machine-produced software governable and locally repair
 
 ### `@boundscript/language`
 
-Owns source-level concerns: documents, parsing, AST/model construction, name resolution, type checking, and language diagnostics. No grammar or parser is selected yet.
+Owns source-level concerns: documents, the typed AST, parsing, validation, and language diagnostics. The current hand-written parser intentionally supports only one system, one director, one `on start` handler, and string-literal `print()` statements. A full grammar and parser technology remain undecided.
 
 ### `@boundscript/artifact`
 
@@ -19,23 +19,27 @@ Owns the stable hand-off between compiler and runtime. `ExecutableArtifact` is a
 - named runtime entrypoints;
 - byte assets addressed by unique relative paths.
 
-The contract deliberately excludes compiler AST nodes, arbitrary metadata, build logs, prompts, model identities, and build-agent state. Entry-point targets and asset media types remain runtime-defined until execution semantics are designed.
+The contract deliberately excludes compiler AST nodes, arbitrary metadata, build logs, prompts, model identities, and build-agent state. The first runtime profile adds a versioned JSON director program containing only `print` instructions; the artifact envelope itself remains independent of the source language.
 
 ### `@boundscript/compiler`
 
-Consumes a fully resolved compilation input and deterministically emits one `ExecutableArtifact`. A resolved input includes every implementation asset or reference required for packaging; obtaining those implementations is not the compiler's responsibility.
+Consumes a fully resolved compilation input and deterministically emits one `ExecutableArtifact`. For the first slice, the typed language AST is already the complete compilation input. Future box implementations must be resolved before compilation; obtaining them will not be the compiler's responsibility.
 
-Compilation returns a discriminated success or failure result, preventing a failed compilation from accidentally exposing a partial artifact.
+Compilation returns a discriminated success or failure result, preventing a failed compilation from accidentally exposing a partial artifact. The current compiler lowers `print()` statements to the versioned director instruction asset.
 
 ### `@boundscript/runtime`
 
-Executes `ExecutableArtifact` values using a named entrypoint and optional input. It is independent of parser, AST, compiler, and build-agent implementation details. It must support explicit control flow rather than reducing every program to a DAG.
+Executes `ExecutableArtifact` values using a named entrypoint and optional input. It is independent of parser, AST, compiler, and build-agent implementation details. The current runtime validates and executes the first director instruction format through an injected output sink.
 
-The runtime result currently contains only output. Events, tracing, correlation identifiers, and lifecycle hooks are deferred until concrete observability requirements exist.
+`print` is a temporary built-in operation, not a sandboxed capability. General control flow, events, tracing, correlation identifiers, and lifecycle hooks are deferred until concrete requirements exist.
 
 ### `@boundscript/sandbox`
 
 Defines declarative capability and resource-limit policies. Concrete process, container, or WebAssembly execution interfaces are deferred until the executable workload contract is known. A policy type documents restrictions but does not enforce them.
+
+### `@boundscript/cli`
+
+Connects file loading, parsing, deterministic compilation, and artifact execution. It reports source diagnostics and returns a non-zero status on failure. It does not interpret source directly or bypass the compiler/runtime artifact boundary.
 
 ## Compiler/runtime artifact boundary
 
@@ -112,14 +116,14 @@ The runtime must not depend on `language` or `compiler`. The artifact package co
 
 ## Future, not scaffolded
 
-- textual grammar and typed AST;
+- a complete grammar and semantic model beyond the minimal typed AST;
 - contract semantics and verification;
-- a resolved compilation-input model;
-- director control-flow compilation;
+- a resolved compilation-input model for boxes;
+- director control flow beyond sequential `print` instructions;
 - box implementation packaging;
 - build-agent orchestration;
 - optional runtime-agent language semantics;
-- CLI and editor tooling;
+- expanded CLI and editor tooling;
 - artifact serialization and integrity verification;
 - concrete sandbox adapters.
 

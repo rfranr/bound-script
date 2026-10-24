@@ -6,6 +6,7 @@
     { "path": "./packages/compiler" },
     { "path": "./packages/runtime" },
     { "path": "./packages/sandbox" },
+    { "path": "./packages/cli" },
     { "path": "./tsconfig.tests.json" }
   ]
 }

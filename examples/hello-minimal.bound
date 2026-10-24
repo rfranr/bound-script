@@ -1,0 +1,7 @@
+system HelloMinimal {
+    director Main {
+        on start {
+            print("Hello, World!")
+        }
+    }
+}

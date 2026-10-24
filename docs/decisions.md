@@ -13,6 +13,10 @@
 9. **Distinguish build-time and runtime agents.** Build-time agents generate implementations before compilation. Runtime agents, if later supported, are explicit application components governed by runtime contracts and capabilities.
 10. **Start as a TypeScript monorepo.** npm workspaces and TypeScript project references provide enough isolation without extra build tooling.
 11. **Review dependency install scripts explicitly.** npm's install-script protection remains enabled. Any future approval must be package- and version-specific rather than globally disabling the policy.
+12. **Start with a hand-written parser.** The first grammar is small enough that adding parser infrastructure would cost more than it provides. Parser tooling can be reconsidered when the language expands.
+13. **Compile to a versioned instruction asset.** The first runtime profile uses deterministic JSON with sequential `print` instructions, keeping the runtime independent from the source AST.
+14. **Treat `print` as a temporary built-in.** It writes through an injected runtime sink and makes no sandbox or capability-security claim.
+15. **Keep the CLI as composition only.** It loads source and connects language, compiler, artifact, and runtime packages without interpreting the program itself.
 
 ## Simplifications made
 

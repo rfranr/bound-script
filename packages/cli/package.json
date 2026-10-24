@@ -1,0 +1,26 @@
+{
+  "name": "@boundscript/cli",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "bin": {
+    "bound": "./dist/bin.js"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": ["dist"],
+  "dependencies": {
+    "@boundscript/compiler": "0.0.0",
+    "@boundscript/language": "0.0.0",
+    "@boundscript/runtime": "0.0.0"
+  },
+  "scripts": {
+    "build": "tsc -b"
+  }
+}

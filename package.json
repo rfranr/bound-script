@@ -13,6 +13,7 @@
   ],
   "scripts": {
     "build": "tsc -b",
+    "bound": "npm run build --silent && node packages/cli/dist/bin.js",
     "clean": "tsc -b --clean",
     "test": "vitest run",
     "test:watch": "vitest",

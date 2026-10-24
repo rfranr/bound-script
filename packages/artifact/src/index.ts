@@ -7,6 +7,22 @@ export const EXECUTABLE_ARTIFACT_FORMAT = 'boundscript/executable' as const;
 /** Version of the artifact envelope. Runtime implementations must reject unsupported versions. */
 export const EXECUTABLE_ARTIFACT_VERSION = 1 as const;
 
+/** Media type for the first executable director instruction format. */
+export const DIRECTOR_PROGRAM_MEDIA_TYPE =
+  'application/vnd.boundscript.director-program+json' as const;
+
+export const DIRECTOR_PROGRAM_VERSION = 1 as const;
+
+export interface PrintInstruction {
+  readonly operation: 'print';
+  readonly value: string;
+}
+
+export interface DirectorProgram {
+  readonly version: typeof DIRECTOR_PROGRAM_VERSION;
+  readonly instructions: readonly PrintInstruction[];
+}
+
 export interface ArtifactEntrypoint {
   /** Public name used by an execution request. */
   readonly name: string;

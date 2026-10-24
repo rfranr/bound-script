@@ -11,7 +11,7 @@ These decisions materially affect what BoundScript is and should be resolved thr
 7. **Implementation portability:** Must boxes support multiple implementation languages initially, or is a TypeScript-only first prototype acceptable?
 8. **Build lifecycle:** Who reviews, approves, packages, deploys, rolls back, and audits build-agent-generated implementations?
 9. **Runtime agents:** Does the language need first-class model-invoking agents, or should initial programs only call externally supplied capabilities?
-10. **Artifact runtime profile:** What target identifiers, media types, and asset layout will the first runtime support?
+10. **Artifact runtime profile evolution:** How should the initial sequential director instruction format grow to support calls, errors, and control flow without becoming a general-purpose bytecode prematurely?
 11. **Artifact integrity and provenance:** When are hashes, signatures, dependency manifests, reproducible builds, or separate build records required?
 12. **Success criteria:** What experiment demonstrates value—lower build-agent context use, fewer regressions, safer customization, or faster human repair?
 13. **Project terminology:** `box`, `director`, `contract`, and `runtime agent` are useful working terms but are not finalized product vocabulary.
