@@ -1,0 +1,13 @@
+
+system   Whitespace
+{
+  director   Main
+  {
+    on   start
+    {
+      print( "formatted" )
+
+      print("after blank line")
+    }
+  }
+}

@@ -1,0 +1,7 @@
+system Unknown {
+  director Main {
+    on start {
+      say("not supported")
+    }
+  }
+}

@@ -1,0 +1,7 @@
+system Malformed {
+  director Main {
+    on start {
+      print("unterminated)
+    }
+  }
+}

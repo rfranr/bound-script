@@ -1,0 +1,6 @@
+system Missing {
+  director Main {
+    on start {
+      print("incomplete")
+    }
+  }
