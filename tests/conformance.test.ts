@@ -65,8 +65,8 @@ describe('BoundScript language conformance fixtures', () => {
     const first = await compileSource('system Demo { director Main { on start { print("before") } } }');
     const second = await compileSource('system Demo { director Main { on start { print("after") } } }');
 
-    expect(runArtifact(first)).toEqual(['before']);
-    expect(runArtifact(second)).toEqual(['after']);
+    expect(await runArtifact(first)).toEqual(['before']);
+    expect(await runArtifact(second)).toEqual(['after']);
   });
 
   it('compiles identical source into identical artifacts', async () => {
@@ -94,10 +94,10 @@ async function compileSource(text: string) {
   return result.artifact;
 }
 
-function runArtifact(artifact: Awaited<ReturnType<typeof compileSource>>): string[] {
+async function runArtifact(artifact: Awaited<ReturnType<typeof compileSource>>): Promise<string[]> {
   const output: string[] = [];
   const runtime = new BoundScriptRuntime({ writeLine: (value) => output.push(value) });
-  void runtime.execute(artifact, { entrypoint: 'start' });
+  await runtime.execute(artifact, { entrypoint: 'start' });
   return output;
 }
 
