@@ -35,7 +35,7 @@ See [`examples/hello-world.bound`](examples/hello-world.bound) for broader, non-
 
 ```text
 packages/
-  language/   Source documents, diagnostics, and the future parser/validator boundary
+  language/   Langium grammar, generated typed AST, parsing, and diagnostics
   artifact/   Shared executable-artifact contract between compiler and runtime
   compiler/   Deterministic resolved-input to artifact compilation boundary
   runtime/    Provider-neutral artifact execution boundary; does not know the source DSL
@@ -65,9 +65,12 @@ npm run build
 
 npm 12 blocks unreviewed dependency install scripts by default. The current dependency graph requires no install-script approvals; new scripts will remain blocked until explicitly reviewed.
 
+Langium-generated TypeScript sources are reproducible and ignored by Git. Build and test commands regenerate them from `packages/language/src/boundscript.langium`.
+
 Useful commands:
 
-- `npm run typecheck` — compile all TypeScript project references
+- `npm run langium:generate` — regenerate the parser, typed AST, and language metadata
+- `npm run typecheck` — generate language sources and compile all TypeScript project references
 - `npm test` — run the Vitest suite
 - `npm run check` — run type checking and tests
 - `npm run clean` — remove TypeScript build outputs

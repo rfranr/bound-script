@@ -13,7 +13,7 @@
 9. **Distinguish build-time and runtime agents.** Build-time agents generate implementations before compilation. Runtime agents, if later supported, are explicit application components governed by runtime contracts and capabilities.
 10. **Start as a TypeScript monorepo.** npm workspaces and TypeScript project references provide enough isolation without extra build tooling.
 11. **Review dependency install scripts explicitly.** npm's install-script protection remains enabled. Any future approval must be package- and version-specific rather than globally disabling the policy.
-12. **Start with a hand-written parser.** The first grammar is small enough that adding parser infrastructure would cost more than it provides. Parser tooling can be reconsidered when the language expands.
+12. **Use Langium as the language frontend.** The grammar is the source of truth for parser and AST generation. Core services are used without an LSP host so editor integration can be added later without coupling it to compilation.
 13. **Compile to a versioned instruction asset.** The first runtime profile uses deterministic JSON with sequential `print` instructions, keeping the runtime independent from the source AST.
 14. **Treat `print` as a temporary built-in.** It writes through an injected runtime sink and makes no sandbox or capability-security claim.
 15. **Keep the CLI as composition only.** It loads source and connects language, compiler, artifact, and runtime packages without interpreting the program itself.
@@ -33,6 +33,6 @@
 - **Interfaces before implementations:** enables parallel design, but some types will change once semantics are validated.
 - **Byte-oriented assets:** support text and binary implementations uniformly, at the cost of requiring explicit encoding outside the contract.
 - **Opaque targets and media types:** avoid committing to JavaScript modules or another execution technology, but defer validation details to future runtime profiles.
-- **Custom DSL remains likely, not decided:** it best matches the desired readability, but parser technology such as Langium is not yet adopted.
+- **Generated language sources:** Langium removes handwritten parsing code and prepares future LSP support, but adds a required generation step and framework dependency. Generated files remain ignored and reproducible from the committed grammar.
 - **No embedded implementation code:** keeps blueprints readable and preserves isolation, at the cost of managing separate box artifacts.
 - **No concrete sandbox:** avoids a premature Docker/WebAssembly/process choice, but means security claims are not yet implemented.

@@ -8,7 +8,9 @@ BoundScript aims to keep machine-produced software governable and locally repair
 
 ### `@boundscript/language`
 
-Owns source-level concerns: documents, the typed AST, parsing, validation, and language diagnostics. The current hand-written parser intentionally supports only one system, one director, one `on start` handler, and string-literal `print()` statements. A full grammar and parser technology remain undecided.
+Owns source-level concerns: documents, the typed AST, parsing, validation, and language diagnostics. Langium generates the parser, typed AST, grammar model, and language metadata from `boundscript.langium`. The grammar intentionally supports only one system, one director, one `on start` handler, and string-literal `print()` statements.
+
+Core Langium services are composed without an LSP host. The generated language metadata and service structure establish the foundation for later editor support without introducing a VS Code extension now. Generated TypeScript sources are reproducible build artifacts and are not committed.
 
 ### `@boundscript/artifact`
 
@@ -116,7 +118,7 @@ The runtime must not depend on `language` or `compiler`. The artifact package co
 
 ## Future, not scaffolded
 
-- a complete grammar and semantic model beyond the minimal typed AST;
+- grammar and semantic-model expansion beyond the executable subset;
 - contract semantics and verification;
 - a resolved compilation-input model for boxes;
 - director control flow beyond sequential `print` instructions;

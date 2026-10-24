@@ -1,0 +1,11 @@
+{
+  "projectName": "BoundScript",
+  "languages": [
+    {
+      "id": "boundscript",
+      "grammar": "src/boundscript.langium",
+      "fileExtensions": [".bound"]
+    }
+  ],
+  "out": "src/generated"
+}

@@ -47,8 +47,8 @@ describe('first executable BoundScript program', () => {
 
     expect(exitCode).toBe(1);
     expect(output.stdout()).toBe('');
-    expect(output.stderr()).toContain(`${sourcePath}:5:9: error language.unexpected-token`);
-    expect(output.stderr()).toContain('Expected ")" after the print argument.');
+    expect(output.stderr()).toContain(`${sourcePath}:5:9: error language.parser-error`);
+    expect(output.stderr()).toContain("Expecting token of type ')' but found `}`.");
   });
 
   it('compiles the same AST into identical artifacts', async () => {
@@ -56,7 +56,9 @@ describe('first executable BoundScript program', () => {
       uri: 'memory:deterministic.bound',
       text: 'system Demo { director Main { on start { print("same") } } }'
     });
-    expect(parsed.program).toBeDefined();
+    expect(parsed.program?.$type).toBe('SystemNode');
+    expect(parsed.program?.director.$type).toBe('DirectorNode');
+    expect(parsed.program?.director.start.statements[0]?.$type).toBe('PrintStatementNode');
     const compiler = new BoundScriptCompiler();
 
     const first = await compiler.compile(parsed.program!);

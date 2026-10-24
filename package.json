@@ -12,16 +12,18 @@
     "packages/*"
   ],
   "scripts": {
-    "build": "tsc -b",
-    "bound": "npm run build --silent && node packages/cli/dist/bin.js",
-    "clean": "tsc -b --clean",
-    "test": "vitest run",
-    "test:watch": "vitest",
-    "typecheck": "tsc -b --pretty false",
+    "langium:generate": "langium generate -f packages/language/langium-config.json",
+    "build": "npm run langium:generate --silent && tsc -b",
+    "bound": "npm run build --silent 1>&2 && node packages/cli/dist/bin.js",
+    "clean": "tsc -b --clean && node -e \"require('node:fs').rmSync('packages/language/src/generated', { recursive: true, force: true })\"",
+    "test": "npm run langium:generate --silent && vitest run",
+    "test:watch": "npm run langium:generate --silent && vitest",
+    "typecheck": "npm run langium:generate --silent && tsc -b --pretty false",
     "check": "npm run typecheck && npm test"
   },
   "devDependencies": {
     "@types/node": "^24.0.0",
+    "langium-cli": "^4.4.0",
     "typescript": "^5.9.0",
     "vitest": "^5.0.5"
   }

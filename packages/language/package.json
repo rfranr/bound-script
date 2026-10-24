@@ -11,8 +11,14 @@
       "import": "./dist/index.js"
     }
   },
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "scripts": {
-    "build": "tsc -b"
+    "langium:generate": "langium generate -f langium-config.json",
+    "build": "npm run langium:generate --silent && tsc -b"
+  },
+  "dependencies": {
+    "langium": "^4.4.0"
   }
 }
