@@ -13,10 +13,27 @@
 - Keep the subject under 72 characters.
 - Avoid generic descriptions, redundant information and unnecessarily verbose commit bodies.
 - Do not include trivial implementation details, obvious statements (e.g., "updated files" or "ran npm install"), or a chronological list of commands executed. Focus on meaningful changes, their purpose and their impact.
+
+### Commit metadata
+
+- Append the following Git trailers to commits produced by AI coding agents:
+  - `Assignment: <id>`
+  - `AI-Tool: <tool-name>`
+  - `AI-Model: <model-id>`
+  - `AI-Reasoning: <effort-level>`
+- Record the actual model and reasoning effort used, not the recommended or configured defaults.
+- If multiple models materially contributed, list them in the commit body.
+- Never fabricate metadata. Use `unknown` when the information cannot be determined.
+- Do not include token usage, credentials, prompts or conversation transcripts in commit messages.
+- Separate the trailers from the descriptive body with a blank line.
+
+### Repository safety
+
 - Never commit generated artifacts, secrets or temporary files.
 - Never amend, rebase, reset or rewrite existing commits without explicit authorization.
 - Never push to remote repositories unless explicitly instructed.
 - Report the commit hash, summary of changes and verification results after each assignment.
+
 
 ## Assignment workflow
 
@@ -30,6 +47,7 @@
 - Reference the assignment identifier in the commit body (e.g., `Assignment: 0003`).
 - Report deviations, unresolved questions and verification results without modifying the original assignment.
 - Do not include unrelated changes in the assignment commit.
+
 
 ## Project context
 
