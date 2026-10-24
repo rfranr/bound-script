@@ -2,8 +2,10 @@
   "files": [],
   "references": [
     { "path": "./packages/language" },
+    { "path": "./packages/artifact" },
     { "path": "./packages/compiler" },
     { "path": "./packages/runtime" },
-    { "path": "./packages/sandbox" }
+    { "path": "./packages/sandbox" },
+    { "path": "./tsconfig.tests.json" }
   ]
 }

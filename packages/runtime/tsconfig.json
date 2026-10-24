@@ -6,5 +6,8 @@
     "outDir": "dist",
     "tsBuildInfoFile": "dist/.tsbuildinfo"
   },
+  "references": [
+    { "path": "../artifact" }
+  ],
   "include": ["src/**/*.ts"]
 }

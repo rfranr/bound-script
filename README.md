@@ -12,7 +12,7 @@ The design context suggests a hybrid language:
 
 - declarative definitions for systems, isolated implementation units ("boxes"), contracts, permissions, and tests;
 - explicit imperative control flow for human-governed coordinators ("directors");
-- implementations hidden behind contracts and potentially produced by humans or agents;
+- implementations hidden behind contracts and potentially produced by humans or build-time AI agents;
 - capability restrictions enforced by a sandbox, not trusted to prompts or static types;
 - no assumption that every workflow is a DAG;
 - no dependency on a particular LLM provider or agent framework.
@@ -24,9 +24,10 @@ See [`examples/hello-world.bound`](examples/hello-world.bound) for non-executabl
 ```text
 packages/
   language/   Source documents, diagnostics, and the future parser/validator boundary
-  compiler/   Deterministic validated-model to artifact compilation boundary
-  runtime/    Provider-neutral execution boundary; does not know the source DSL
-  sandbox/    Capability policies and isolated command execution boundary
+  artifact/   Shared executable-artifact contract between compiler and runtime
+  compiler/   Deterministic resolved-input to artifact compilation boundary
+  runtime/    Provider-neutral artifact execution boundary; does not know the source DSL
+  sandbox/    Capability and resource policy definitions
 docs/
   architecture.md
   decisions.md
@@ -37,11 +38,11 @@ tests/
   scaffolding.test.ts
 ```
 
-The agent-driven implementation pipeline and CLI are intentionally deferred until their requirements are concrete.
+Build-time AI-agent orchestration and the CLI are intentionally deferred until their requirements are concrete. Build-time agents are development tooling, not runtime components. Runtime agents, if supported later, will be explicit language-level application behavior and will remain provider-neutral.
 
 ## Development
 
-Requirements: Node.js 22+ and npm.
+Requirements: Node.js 22.12+ and npm.
 
 ```bash
 npm install

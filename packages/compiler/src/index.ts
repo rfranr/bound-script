@@ -1,17 +1,7 @@
+import type { ExecutableArtifact } from '@boundscript/artifact';
+
 /** Public API version for the deterministic compilation boundary. */
 export const COMPILER_API_VERSION = '0.1' as const;
-
-export interface GeneratedFile {
-  readonly path: string;
-  readonly content: string;
-}
-
-export interface CompilationArtifact {
-  readonly format: string;
-  readonly entrypoint: string;
-  readonly files: readonly GeneratedFile[];
-  readonly metadata: Readonly<Record<string, unknown>>;
-}
 
 export interface CompilationDiagnostic {
   readonly code: string;
@@ -19,15 +9,21 @@ export interface CompilationDiagnostic {
   readonly severity: 'error' | 'warning' | 'info';
 }
 
-export interface CompilationResult {
-  readonly artifact?: CompilationArtifact;
-  readonly diagnostics: readonly CompilationDiagnostic[];
-}
+export type CompilationResult =
+  | {
+      readonly ok: true;
+      readonly artifact: ExecutableArtifact;
+      readonly diagnostics: readonly CompilationDiagnostic[];
+    }
+  | {
+      readonly ok: false;
+      readonly diagnostics: readonly CompilationDiagnostic[];
+    };
 
 /**
- * Deterministically transforms a validated language model into runtime artifacts.
- * Agent-driven implementation generation belongs outside this boundary.
+ * Deterministically transforms a fully resolved compilation input into an
+ * executable artifact. The compiler must not invoke build-time AI agents.
  */
-export interface Compiler<TProgram> {
-  compile(program: TProgram): Promise<CompilationResult>;
+export interface Compiler<TCompilationInput> {
+  compile(input: TCompilationInput): Promise<CompilationResult>;
 }
