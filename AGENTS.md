@@ -17,3 +17,16 @@
 - Never amend, rebase, reset or rewrite existing commits without explicit authorization.
 - Never push to remote repositories unless explicitly instructed.
 - Report the commit hash, summary of changes and verification results after each assignment.
+
+## Assignment workflow
+
+- Development assignments are authored and owned by the human product owner.
+- Assignments are stored in `docs/assignments/` with sequential identifiers and descriptive filenames.
+- Treat assignment files as immutable requirements during implementation.
+- Never create, rewrite or modify assignment files unless explicitly instructed by the human.
+- Read the specified assignment and implement its requirements.
+- Ask for clarification only when a decision materially affects the requirements or cannot be resolved safely.
+- Include the assignment file and its implementation in the same commit when the assignment file is not already committed.
+- Reference the assignment identifier in the commit body (e.g., `Assignment: 0003`).
+- Report deviations, unresolved questions and verification results without modifying the original assignment.
+- Do not include unrelated changes in the assignment commit.
