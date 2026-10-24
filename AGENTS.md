@@ -1,63 +1,41 @@
-## Git workflow
+# Agent Guidelines
 
-- Follow Conventional Commits.
-- Create one focused commit per completed assignment.
-- Run relevant tests and build checks before committing.
-- Every commit must include:
-  - A concise subject following `<type>(<scope>): <description>`.
-  - A blank line.
-  - A descriptive body explaining the actual changes made.
-  - Bullet points for significant changes when appropriate.
-  - A brief explanation of important architectural decisions or trade-offs, when relevant.
-- Describe **what changed and why**, not merely the task requested.
-- Keep the subject under 72 characters.
-- Avoid generic descriptions, redundant information and unnecessarily verbose commit bodies.
-- Do not include trivial implementation details, obvious statements (e.g., "updated files" or "ran npm install"), or a chronological list of commands executed. Focus on meaningful changes, their purpose and their impact.
+## Project context
 
-### Commit metadata
-
-- Append the following Git trailers to commits produced by AI coding agents:
-  - `Assignment: <id>`
-  - `AI-Tool: <tool-name>`
-  - `AI-Model: <model-id>`
-  - `AI-Reasoning: <effort-level>`
-- Record the actual model and reasoning effort used, not the recommended or configured defaults.
-- If multiple models materially contributed, list them in the commit body.
-- Never fabricate metadata. Use `unknown` when the information cannot be determined.
-- Do not include token usage, credentials, prompts or conversation transcripts in commit messages.
-- Separate the trailers from the descriptive body with a blank line.
-
-### Repository safety
-
-- Never commit generated artifacts, secrets or temporary files.
-- Never amend, rebase, reset or rewrite existing commits without explicit authorization.
-- Never push to remote repositories unless explicitly instructed.
-- Report the commit hash, summary of changes and verification results after each assignment.
+- Architecture and technical decisions are documented in `docs/`.
+- Requirements are defined in `docs/assignments/`.
+- Historical AI conversations are local reference material, excluded from Git. Do not read them unless necessary, and retrieve only relevant sections.
+- Treat historical conversations as exploratory context, not authoritative requirements.
 
 
 ## Assignment workflow
 
-- Development assignments are authored and owned by the human product owner.
-- Assignments are stored in `docs/assignments/` with sequential identifiers and descriptive filenames.
-- Treat assignment files as immutable requirements during implementation.
-- Never create, rewrite or modify assignment files unless explicitly instructed by the human.
-- Read the specified assignment and implement its requirements.
-- Ask for clarification only when a decision materially affects the requirements or cannot be resolved safely.
-- Include the assignment file and its implementation in the same commit when the assignment file is not already committed.
-- Reference the assignment identifier in the commit body (e.g., `Assignment: 0003`).
-- Report deviations, unresolved questions and verification results without modifying the original assignment.
-- Do not include unrelated changes in the assignment commit.
+- Assignments are owned by the Product Owner; reviews are owned by the Reviewer. Do not modify them without explicit authorization.
+- Read and implement the specified assignment in `docs/assignments/`.
+- Stay within scope. Ask only when a decision materially affects requirements.
+- Address review corrections under the original assignment unless the scope changes.
+- An assignment may require multiple commits.
+- Include uncommitted assignment or review files in the corresponding implementation or correction commit.
+- Report deviations, unresolved questions and verification results.
+- Developer workflow: `docs/development/developer-workflow.md`.
+  Consult only when clarification about the development process is needed.
 
 
-## Project context
+## Git workflow
 
-- Architecture and decisions are documented in `docs/`.
-- Development requirements are defined in `docs/assignments/`.
-- Historical ChatGPT conversations are available locally
-  as reference material and are excluded from Git.
-- Do not read historical conversations by default.
-- Consult them only when the current documentation is
-  insufficient to resolve a specific design question.
-- When consulting historical conversations, retrieve only
-  the relevant sections rather than loading entire files.
-- Treat historical discussions as exploratory context, not as authoritative requirements.
+- Follow Conventional Commits: `<type>(<scope>): <description>` (max. 72 characters).
+- Write a meaningful commit body explaining what changed and why, including important technical decisions when relevant.
+- Avoid trivial details, command logs and redundant descriptions.
+- Keep commits focused and run relevant checks before committing.
+- Append Git trailers separated from the body by a blank line:
+
+  `Assignment: <id>`  
+  `AI-Tool: <tool-name>`  
+  `AI-Model: <model-id>`  
+  `AI-Reasoning: <effort-level>`
+
+- Report actual model usage. If multiple models contributed materially, identify them in the body. Use `unknown` when metadata cannot be determined.
+- Never include secrets, transcripts, generated artifacts or temporary files in commits.
+- Never amend, reset, rebase or rewrite history without explicit authorization.
+- Never push without explicit authorization.
+- Report the commit hash and summary after completing the work.
