@@ -30,3 +30,16 @@
 - Reference the assignment identifier in the commit body (e.g., `Assignment: 0003`).
 - Report deviations, unresolved questions and verification results without modifying the original assignment.
 - Do not include unrelated changes in the assignment commit.
+
+## Project context
+
+- Architecture and decisions are documented in `docs/`.
+- Development requirements are defined in `docs/assignments/`.
+- Historical ChatGPT conversations are available locally
+  as reference material and are excluded from Git.
+- Do not read historical conversations by default.
+- Consult them only when the current documentation is
+  insufficient to resolve a specific design question.
+- When consulting historical conversations, retrieve only
+  the relevant sections rather than loading entire files.
+- Treat historical discussions as exploratory context, not as authoritative requirements.
