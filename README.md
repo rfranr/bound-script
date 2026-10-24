@@ -39,6 +39,20 @@ Hello, World!
 
 See [`examples/hello-world.bound`](examples/hello-world.bound) for broader, non-executable syntax exploration.
 
+## Target use cases
+
+The following are minimum **behavioral targets** for the language, not implemented features or finalized syntax:
+
+| Target | Capability to demonstrate |
+| --- | --- |
+| [UC-01](docs/use-cases/01-system-box-execution.md) | A director invokes a bound box implementation and consumes its output |
+| [UC-02](docs/use-cases/02-contract-enforcement.md) | Input and output contract violations produce identifiable failures |
+| [UC-03](docs/use-cases/03-director-control-flow.md) | Branches and repetition control box execution |
+| [UC-04](docs/use-cases/04-modules-and-imports.md) | Reusable declarations can be imported by multiple systems |
+| [UC-05](docs/use-cases/05-capability-isolation.md) | The execution environment denies undeclared capabilities |
+
+Each target includes success and failure criteria. See [the target use case index](docs/use-cases/README.md) for scope and acceptance guidance. These targets are independent of whether the eventual execution backend interprets artifacts or generates JavaScript.
+
 ## Repository layout
 
 ```text
@@ -57,6 +71,7 @@ docs/
   reviews/
   development/
     workflow.md
+  use-cases/
 examples/
   hello-minimal.bound
   hello-world.bound
