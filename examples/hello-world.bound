@@ -1,0 +1,30 @@
+system HelloWorld {
+    box Greeter {
+        greet(name: String) -> String
+        ensure result == "Hello, " + name + "!"
+    }
+
+    box Display {
+        show(message: String)
+        allow screen.write
+    }
+
+    director Main {
+        use Greeter
+        use Display
+
+        on start {
+            message = Greeter.greet("World")
+            Display.show(message)
+        }
+    }
+
+    test "Hello World" {
+        mock Greeter.greet("World") => "Hello, World!"
+
+        run Main.start()
+
+        expect Display.show("Hello, World!") called once
+        expect no other calls
+    }
+}
