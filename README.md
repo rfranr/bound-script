@@ -42,6 +42,22 @@ See [`examples/hello-world.bound`](examples/hello-world.bound) for broader, non-
 
 ## Director → Box invocation
 
+After `npm install`, run this command from the repository root:
+
+```bash
+npm run --silent demo:director-box
+```
+
+It builds the TypeScript packages and demo host, then prints exactly:
+
+```text
+Hello, World!
+```
+
+`--silent` suppresses npm's command banner; build-tool output is sent to stderr. The [demo host](examples/director-box/host.ts) loads the real `.bound` source, parses and validates it, compiles with the explicit `Greeter` → `demo.greeter` binding, and executes the artifact with the separate [TypeScript Greeter](examples/director-box/greeter.ts) registered under that ID.
+
+Running `npm run bound -- examples/director-box.bound` is **not supported**: the current CLI supplies neither compile-time box bindings nor runtime implementation registrations, so compilation reports `compiler.missing-implementation`. It does not load or discover TypeScript implementations. Use the demo host for this example; `npm run bound -- examples/hello-minimal.bound` continues to work without bindings.
+
 [`examples/director-box.bound`](examples/director-box.bound) declares one string-in/string-out operation and invokes it from a director:
 
 ```boundscript
@@ -143,6 +159,7 @@ Langium-generated TypeScript sources are reproducible and ignored by Git. Build 
 
 Useful commands:
 
+- `npm run --silent demo:director-box` — build and run the bound TypeScript Greeter demo
 - `npm run langium:generate` — regenerate the parser, typed AST, and language metadata
 - `npm run typecheck` — generate language sources and compile all TypeScript project references
 - `npm test` — run the Vitest suite
