@@ -1,6 +1,6 @@
 # Proposal 0013 — Deterministic Architecture for Probabilistic Software Construction
 
-**Status:** Proposed roadmap — pending approval.  
+**Status:** Accepted.  
 **Scope:** Product direction, architectural boundaries, development workflow, and validation strategy.  
 **Nature:** Roadmap proposal, not an implementation assignment or authorization to change existing language semantics.
 
