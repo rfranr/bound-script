@@ -6,19 +6,21 @@ This is the authoritative **current execution plan and milestone tracker**. [Acc
 
 **M0 — Completed:** Proposal 0013 establishes the approved product direction; the supporting documentation and governance deliverables are present (see M0 evidence below).
 
-**Current execution priority: M1 — In Progress**. Assignment 0016's design is approved with Product Owner clarifications; Assignment 0017 delivers standalone trusted-function verification and remains pending Product Owner review and acceptance. M1 is not marked Completed. Detailed pilot design belongs to M3 and comparative baseline/evaluation design to M6; neither is an outstanding M0 deliverable or a prerequisite to starting M1. The evaluation protocol and baseline must, however, be defined before M3 implementation begins. As Proposal 0013 recommends, preparation can proceed alongside M1, before additional infrastructure; milestone order does not prohibit that overlap.
+**M1 — Completed:** The Product Owner accepted Assignment 0017 after all mandatory checks passed on the corrected implementation (`5d15c9b`). The criterion-by-criterion evidence below confirms M1's exit gate, not merely assignment delivery.
+
+**Next execution priority: M2 — Planned**, deterministic task derivation; no M2 execution assignment is defined or started. Detailed pilot design remains M3 work and comparative baseline/evaluation design remains M6 work. The evaluation protocol and baseline must be defined before M3 implementation begins. No later milestone is completed or authorized by M1 closure.
 
 | Milestone | Status | Execution assignments | Existing foundations |
 | --- | --- | --- | --- |
 | M0 — Approve the product thesis | Completed | 0014, 0015 | Proposal 0013 |
-| M1 — Standalone contract verification | In Progress | [0016 — Verifier design](assignments/0016-design-standalone-box-verifier.md), [0017 — Implementation (pending acceptance)](assignments/0017-implement-standalone-box-verifier.md) | 0012, 0013 |
+| M1 — Standalone contract verification | Completed | [0016 — Verifier design](assignments/0016-design-standalone-box-verifier.md), [0017 — Implementation (accepted)](assignments/0017-implement-standalone-box-verifier.md) | 0012, 0013 |
 | M2 — Deterministic task derivation | Planned | Not yet defined | 0013 |
 | M3 — Independent implementation pilot | Planned | Not yet defined | M1 verification, M2 handoffs |
 | M4 — Integration and evidence | Planned | Not yet defined | M1–M3 outputs |
 | M5 — Architectural evolution experiment | Planned | Not yet defined | M2–M4 workflow |
 | M6 — Comparative evaluation | Planned | Not yet defined | M3–M5 evidence |
 
-M0 is the only Completed milestone. Its product-direction approval is distinct from M3 pilot design/execution and M6 comparative baseline/evaluation. Assignment acceptance remains independently tracked; no future implementation assignments are created by this roadmap.
+M0 and M1 are Completed. Product-direction approval and trusted single-invocation verification are distinct from M3 pilot design/execution and M6 comparative baseline/evaluation. Assignment acceptance remains independently tracked; no future implementation assignments are created by this roadmap.
 
 ## Milestones
 
@@ -33,14 +35,26 @@ M0 is the only Completed milestone. Its product-direction approval is distinct f
 
 ### M1 — Standalone contract verification
 
-- **Status:** In Progress.
+- **Status:** Completed.
 - **Objective:** Check Box implementations independently of executable director programs.
 - **Scope/deliverables:** Minimal verifier consuming existing portable Box specifications and trusted fixture implementations, without an executable director or source AST; reuse existing runtime validation semantics.
 - **Completion criteria:** Valid cases pass; invalid inputs, candidate execution failures, invalid outputs, and postcondition failures are distinguishable. Existing examples remain compatible.
-- **Execution assignments:** [0016 — Design Standalone Box Verifier](assignments/0016-design-standalone-box-verifier.md) records the approved design and Product Owner clarifications. [0017 — Implement Standalone Box Verifier](assignments/0017-implement-standalone-box-verifier.md) delivers the codec subpath, shared runtime checks, single-invocation verifier, consumer/type/parity tests, and [usage documentation](box-development-spec.md#standalone-verification). Delivery remains pending Product Owner review and acceptance; neither assignment delivery nor passing checks automatically completes M1.
+- **Execution assignments:** [0016 — Design Standalone Box Verifier](assignments/0016-design-standalone-box-verifier.md) records the approved design and Product Owner clarifications. [0017 — Implement Standalone Box Verifier](assignments/0017-implement-standalone-box-verifier.md) delivers the codec subpath, shared runtime checks, single-invocation verifier, consumer/type/parity tests, and [usage documentation](box-development-spec.md#standalone-verification). The Product Owner explicitly accepted Assignment 0017 after all mandatory checks passed. Its [acceptance record](assignments/0017-implement-standalone-box-verifier.md#product-owner-acceptance-and-completion-evidence) identifies implementation `ea2a8dc` and accepted correction `5d15c9b`. M1 closure follows the exit-criterion verification below, not automatic completion from assignment delivery.
 - **Existing foundations:** [0012 — Specification extraction](assignments/0012-box-specification-extraction.md) and [0013 — Specification portability](assignments/0013-box-specification-portability.md) provide existing foundations, not verifier execution.
 - **Dependencies/evidence:** Builds on M0's direction and existing contracts. Extraction was delivered in `4a63eff`; portability/CLI export in `9beec9b`, documented in the [Box spec reference](box-development-spec.md). Assignment 0013 explicitly records Assignment 0012 as implemented, reviewed, and accepted. No equivalent formal acceptance record was found for Assignment 0013. Neither delivery completes M1.
-- **0017 delivery checks:** Type checking and all 374 tests (15 files) pass, including public-import, structured-result, inspection, type-narrowing, and legacy-parity coverage. Review corrections add throwing contract getter/proxy regressions, classified as `invalid-contract` before candidate execution. Build, the three existing Box demos, Hello World CLI, and byte-identical canonical spec export pass. This is implementation verification evidence, not Product Owner acceptance or milestone closure.
+- **0017 delivery checks:** Type checking and all 374 tests (15 files) pass, including public-import, structured-result, inspection, type-narrowing, and legacy-parity coverage. Review corrections add throwing contract getter/proxy regressions, classified as `invalid-contract` before candidate execution. Build, the three existing Box demos, Hello World CLI, and byte-identical canonical spec export pass. These checks were rerun successfully on accepted revision `5d15c9b` before recording Product Owner acceptance and M1 closure.
+
+**M1 exit-criterion verification:**
+
+| Criterion | Supporting evidence | Result |
+| --- | --- | --- |
+| Portable specs and trusted functions without a source AST/executable director | `tests/box-verifier-consumer.test.ts`: published JSON consumption, existing trusted functions, guarded source imports, and built Node public-export smoke test. | Satisfied |
+| Reuse existing runtime validation semantics | Shared `packages/runtime/src/contract-checks.ts`, exercised by verifier and legacy runtime parity/regression tests; artifact/spec versions and legacy behavior remain unchanged. | Satisfied |
+| Valid cases pass | `tests/box-verifier.test.ts` and consumer tests cover primitive/record, synchronous/asynchronous, void, and successful postcondition cases. | Satisfied |
+| Invalid inputs, execution failures, invalid outputs, and postcondition failures are distinguishable | Verifier tests assert the structured failure discriminants, first-failure ordering, no call on invalid input, and output checks before predicates. Inspection and malformed-contract failures remain separate. | Satisfied |
+| Existing examples remain compatible | Full 374-test suite, build, three Box demos, Hello World CLI, and byte-identical canonical export all pass on `5d15c9b`. | Satisfied |
+
+All M1 completion criteria are verified, with no missing evidence. Completion is limited to the approved trusted single-invocation scope; it does not claim candidate isolation, behavioral acceptance infrastructure, or later milestones.
 
 ### M2 — Deterministic task derivation
 

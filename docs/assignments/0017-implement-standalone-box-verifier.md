@@ -1,6 +1,6 @@
 # Assignment 0017 — Implement Standalone Box Verifier
 
-**Status:** Implementation delivered — pending Product Owner review and acceptance.
+**Status:** Completed
 **Milestone:** [M1 — Standalone contract verification](../roadmap.md#m1--standalone-contract-verification)
 **Design:** [Assignment 0016](0016-design-standalone-box-verifier.md), including its Product Owner approval and clarifications.
 **Direction:** [Accepted Proposal 0013](../proposals/0013-deterministic-architecture-for-probabilistic-construction.md).
@@ -123,3 +123,24 @@ Do not execute infinite loops or leave unresolved operations running to test mis
 ## Delivery after authorization
 
 Report the changed files, API usage example, test/build/demo/export results, deviations, and unresolved issues. Preserve source-independent consumption and all compatibility constraints. Follow repository commit conventions only when committing is authorized; never push without explicit authorization. Do not change this assignment's requirements or acceptance status without Product Owner approval.
+
+## Product Owner acceptance and completion evidence
+
+The Product Owner explicitly approved and accepted Assignment 0017, conditional on all mandatory checks passing. Those checks were rerun successfully on the corrected implementation before recording this acceptance. **Assignment 0017 is Completed.**
+
+- **Implementation:** `ea2a8dcc50c90b929be8a6077b828094df3261d5` — standalone verifier, shared runtime checks, public codec subpath, tests, and documentation.
+- **Accepted correction/revision:** `5d15c9b0269146282bc07a1da3edcf522b036609` — exceptions from contract getters/proxy traps during initial validation become `invalid-contract`; regressions confirm the candidate is never invoked. The public failure union and legacy runtime semantics remain unchanged.
+
+### Mandatory-check evidence
+
+| Acceptance criteria | Passing evidence on the accepted revision |
+| --- | --- |
+| AC-01, AC-12 | [`box-verifier-consumer.test.ts`](../../tests/box-verifier-consumer.test.ts) verifies the published portable Greeter spec and existing trusted functions without source/compiler/director execution; source-level guards and a built Node import smoke test exclude the frontend/compiler root/Langium. |
+| AC-02 | [`box-spec-json.test.ts`](../../tests/box-spec-json.test.ts) retains strict decoder diagnostic coverage and confirms invalid portable inputs never invoke the candidate. |
+| AC-03 | [`box-verifier.test.ts`](../../tests/box-verifier.test.ts) covers malformed consumer views, non-functions, and the four throwing contract getter/proxy regressions, with structured failures and no invocation. |
+| AC-04–AC-10 | The same verifier suite covers primitive/record input/output boundaries, execution failures and awaiting, void, exact result/field predicates and ordering, all three inspection phases, reference identity, mutation/revalidation, and no rollback. |
+| AC-11 | [`box-verifier.types.ts`](../../tests/box-verifier.types.ts) passes type checking for decoded-spec assignability, heterogeneous functions, unknown success output, and discriminated result/failure narrowing. Verifier tests exercise every failure kind and first-failure ordering. |
+| AC-13 | Verifier legacy-parity tests and the unchanged-behavior runtime suites ([structured types](../../tests/structured-types.test.ts), [behavioral contracts](../../tests/behavioral-contracts.test.ts), [director invocation](../../tests/director-box-invocation.test.ts)) pass, including errors, ordering, live references, and raw legacy inspection exceptions. |
+| AC-14 | `npm run check` passes type checking and **374 tests in 15 files**; `npm run build` passes. `demo:director-box`, `demo:box-composition`, and `demo:structured-types` each print `Hello, World!`. The Hello World CLI also passes. `npm run --silent bound -- spec examples/structured-types.bound --box Greeter` matches `examples/specs/greeter.box-spec.json` byte-for-byte (`cmp` succeeds). Existing CLI tests pass within the full suite. |
+
+All mandatory criteria have supporting evidence; none remains unverified. This acceptance closes the trusted, single-invocation implementation scope only. It does not approve arbitrary Box candidates or claim behavioral correctness, determinism for arbitrary JavaScript objects, security isolation, or later-roadmap capabilities.
