@@ -1,16 +1,25 @@
 import { execFileSync } from 'node:child_process';
-import { cp, lstat, mkdir, mkdtemp, readFile, readdir, rm, symlink, writeFile } from 'node:fs/promises';
+import * as filesystem from 'node:fs/promises';
+import { cp, lstat, mkdir, mkdtemp, readFile, readdir, readlink, rm, symlink, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 
-import { afterEach, expect, it } from 'vitest';
+import { afterEach, expect, it, vi } from 'vitest';
 import { deriveHandoffs } from '../tooling/handoff.js';
 import { DERIVATION_VERSION } from '../tooling/handoff-render.js';
+
+vi.mock('node:fs/promises', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('node:fs/promises')>();
+  return { ...actual, symlink: vi.fn(actual.symlink) };
+});
 
 const repository = process.cwd();
 const temps: string[] = [];
 async function temp() { const dir = await mkdtemp(path.join(os.tmpdir(), 'bound-handoff-')); temps.push(dir); return dir; }
-afterEach(async () => { await Promise.all(temps.splice(0).map((dir) => rm(dir, { recursive: true, force: true }))); });
+afterEach(async () => {
+  vi.mocked(filesystem.symlink).mockReset();
+  await Promise.all(temps.splice(0).map((dir) => rm(dir, { recursive: true, force: true })));
+});
 async function fixture() {
   const root = await temp();
   await mkdir(path.join(root, 'examples'));
@@ -117,7 +126,7 @@ it.each(badBindings)('AC-04: rejects %s without publishing any Box', async (_nam
   const f = await fixture(); mutate(f.input); await f.save();
   await expect(f.derive('out')).rejects.toThrow(/\[.+\]/);
   await expect(lstat(path.join(f.root, 'out'))).rejects.toMatchObject({ code: 'ENOENT' });
-  expect((await readdir(f.root)).filter((p) => p.startsWith('.handoff-stage-'))).toEqual([]);
+  expect((await readdir(f.root)).filter((p) => p.startsWith('.handoff-data-'))).toEqual([]);
 });
 it.each(['empty', 'invalid UTF8', 'source UTF8', 'binding UTF8', 'symlink', 'parent symlink', 'fifo', 'missing director', 'invalid unused', 'invalid JSON'])('AC-04: rejects %s before publication', async (kind) => {
   const f = await fixture();
@@ -149,6 +158,63 @@ it('AC-04: existing outputs and candidate destinations remain untouched; unknown
   await expect(f.derive('candidate')).rejects.toThrow('already exists');
   expect(await readFile(path.join(f.root, 'candidate/implementation.ts'), 'utf8')).toBe('protected');
   await expect(f.derive('unknown', { system: 'GreetingSystem', box: 'Unknown' })).rejects.toThrow('Unknown explicit selection');
+});
+
+it('AC-04: publication exposes the complete tree through an exclusive relative symlink', async () => {
+  const f = await fixture();
+  await f.derive('out');
+  const output = path.join(f.root, 'out');
+  expect((await lstat(output)).isSymbolicLink()).toBe(true);
+  const backing = await readlink(output);
+  expect(backing).toMatch(/^\.handoff-data-[^/]+$/);
+  expect(await tree(output)).toEqual(await tree(path.join(f.root, backing)));
+  expect(Object.keys(await tree(output))).toHaveLength(16);
+});
+
+it.each(['empty directory', 'populated directory', 'file', 'symlink'])('AC-04: concurrent %s at publication is never overwritten', async (kind) => {
+  const f = await fixture();
+  const output = path.join(f.root, 'out');
+  await mkdir(path.join(f.root, 'protected'));
+  await writeFile(path.join(f.root, 'protected/marker'), 'protected target');
+  const originalSymlink = (await vi.importActual<typeof import('node:fs/promises')>('node:fs/promises')).symlink;
+  let originalInode: number | undefined;
+  const publish = vi.mocked(filesystem.symlink).mockImplementationOnce(async (target, destination, type) => {
+    expect(destination).toBe(output);
+    // All packages exist before publication. A separate process wins the destination
+    // immediately before the actual exclusive syscall, with no timing/sleep dependency.
+    expect(Object.keys(await tree(path.join(f.root, String(target))))).toHaveLength(16);
+    execFileSync(process.execPath, ['--input-type=module', '--eval', `
+      import { mkdirSync, writeFileSync, symlinkSync } from 'node:fs';
+      const [output, kind] = process.argv.slice(1);
+      if (kind.endsWith('directory')) {
+        mkdirSync(output);
+        if (kind === 'populated directory') writeFileSync(output + '/marker', 'concurrent contents');
+      } else if (kind === 'file') writeFileSync(output, 'concurrent contents');
+      else symlinkSync('protected', output, 'dir');
+    `, output, kind], { stdio: 'pipe' });
+    originalInode = (await lstat(output)).ino;
+    return originalSymlink(target, destination, type);
+  });
+  await expect(f.derive('out')).rejects.toThrow(/publication.*Destination already exists/);
+  expect(publish).toHaveBeenCalledTimes(1);
+  expect((await lstat(output)).ino).toBe(originalInode);
+  if (kind === 'empty directory') expect(await readdir(output)).toEqual([]);
+  if (kind === 'populated directory') {
+    expect(await readdir(output)).toEqual(['marker']);
+    expect(await readFile(path.join(output, 'marker'), 'utf8')).toBe('concurrent contents');
+  }
+  if (kind === 'file') expect(await readFile(output, 'utf8')).toBe('concurrent contents');
+  if (kind === 'symlink') expect(await readlink(output)).toBe('protected');
+  expect(await readFile(path.join(f.root, 'protected/marker'), 'utf8')).toBe('protected target');
+  expect((await readdir(f.root)).filter((p) => p.startsWith('.handoff-data-'))).toEqual([]);
+});
+
+it('AC-04: unsupported exclusive publication fails closed and cleans its backing tree', async () => {
+  const f = await fixture();
+  vi.mocked(filesystem.symlink).mockRejectedValueOnce(Object.assign(new Error('symlink unavailable'), { code: 'ENOTSUP' }));
+  await expect(f.derive('out')).rejects.toThrow(/publication.*symlink unavailable/);
+  await expect(lstat(path.join(f.root, 'out'))).rejects.toMatchObject({ code: 'ENOENT' });
+  expect((await readdir(f.root)).filter((p) => p.startsWith('.handoff-data-'))).toEqual([]);
 });
 
 it('AC-02: built command works from another cwd with identical bytes and nonzero diagnostics', async () => {

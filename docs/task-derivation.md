@@ -17,14 +17,21 @@ From the repository, with its locked dependencies installed:
 
 ```sh
 npm ci
-npm run handoff -- "$PWD" tests/fixtures/handoff/input.json /tmp/bound-handoffs-0019 --all
+delivery=$(mktemp -d /tmp/bound-handoff-delivery.XXXXXX)
+npm run handoff -- "$PWD" tests/fixtures/handoff/input.json "$delivery/all" --all
 # Or select exactly one explicitly listed pair, not a director invocation:
-npm run handoff -- "$PWD" tests/fixtures/handoff/input.json /tmp/bound-greeter-0019 GreetingSystem Greeter
+npm run handoff -- "$PWD" tests/fixtures/handoff/input.json "$delivery/greeter" GreetingSystem Greeter
+# After use, removing the dedicated delivery parent removes links AND backing data:
+# rm -r -- "$delivery"
 ```
 
 Use fresh destinations for every invocation. The trusted fixture associates `examples/structured-types.bound` with two human-readable tasks and shared scope/policy. It is a small test demonstration, not operational approval or the M3 pilot. Output may live outside the repository and must not be committed. The script is `tooling/derive-handoff.ts`; the pure renderer is `tooling/handoff-render.ts`. `npm run build` builds tooling into disposable `.tool-dist/`.
 
-The positional interface requires an explicit root, repository-relative binding path, output directory, and `--all` or exact `system box`. Root and output are resolved by the caller's cwd; input paths are always relative to the explicit root. Errors exit nonzero with stage and applicable path/Box. They do not assert anything about approval. Existing output directories (including candidate destinations) are rejected. All selected packages are validated/rendered before staging and final rename; failures clean temporary staging without publishing partial packages. This is a trusted local-filesystem operation: inputs and destinations must remain stable during invocation, not be concurrently mutated by adversarial processes.
+The positional interface requires an explicit root, repository-relative binding path, output directory, and `--all` or exact `system box`. Root and output are resolved by the caller's cwd; input paths are always relative to the explicit root. Errors exit nonzero with stage and applicable path/Box. They do not assert anything about approval. Existing output entries (including candidate directories, files, and symlinks) are rejected. All selected packages are validated/rendered before publication. The complete tree is written into a unique sibling `.handoff-data-*` directory, then exposed by **one atomic, exclusive relative symlink creation** at the requested output path. Unlike ordinary directory rename, this cannot replace even an empty destination created concurrently. An `EEXIST` failure leaves the winning destination untouched and removes only this invocation's unpublished backing tree. Other publication failures also clean that tree and fail closed; there is no non-atomic fallback if directory symlink creation is unavailable.
+
+On success the sibling directory is the actual output data, not job state. The output symlink and backing directory must stay together; moving or removing only the symlink does not move or remove its data. Prefer a dedicated disposable delivery parent as above, and remove that parent after use. Alternatively inspect the relative symlink target and remove both generated entries. The eight-file per-Box layout and all rendered bytes remain unchanged; publication metadata is outside the byte guarantee and derivation rules remain version 1. This adds no lock, manager, orchestration, or persistent execution record.
+
+This is still a trusted local-filesystem operation: source inputs and ancestor directories must not be adversarially replaced during invocation. Atomic publication protects the final destination from concurrent creation, not from subsequent deletion/modification or hostile ancestor-directory changes, and is not a security boundary.
 
 ## Exact input
 
@@ -118,7 +125,7 @@ Compare fresh directory file sets and bytes directly, not hashes. Same explicit 
 
 Tested with **Node v24.16.0**, **TypeScript 5.9.3**, locked repository dependencies on Linux. The repository engine floor remains Node >=22.12.0; no broader handoff cross-version reproducibility claim is made.
 
-- `tests/handoff.test.ts`: exact eight-file golden; canonical Greeter byte equality; repeated roots/order/cwd; snapshots; structural failures; all-or-nothing publication; conservative two-Box regeneration matrix. Comment edits demonstrate validation failure, not comment support.
+- `tests/handoff.test.ts`: exact eight-file golden; canonical Greeter byte equality; repeated roots/order/cwd; snapshots; structural failures; all-or-nothing publication; concurrent empty/populated directory, file, and symlink destinations created by a separate process immediately before the real publication syscall (identity and contents preserved, unpublished backing tree cleaned); fail-closed unsupported publication; conservative two-Box regeneration matrix. Comment edits demonstrate validation failure, not comment support.
 - `tests/handoff-consumer.test.ts`: 16 design-spike cases plus all primitives, sorted/deduplicated aliases and prefix collisions (20 independent strict compilation cases); successful built ESM imports without runtime declarations. Separate LoadUser/Greeter packages consume fixed trusted implementations and prewritten wiring, strictly decode packaged JSON, and verify human-owned expected outputs. A guarded Node consumption process forbids compiler-root/frontend/Langium loading and director execution; malformed output is rejected rather than repaired.
 - Existing verifier tests retain coverage for finite numbers, exact own fields/symbol extras, and output-before-postcondition ordering. No duplicate evaluator or changed formal/runtime semantics.
 

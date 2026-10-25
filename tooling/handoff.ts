@@ -1,4 +1,4 @@
-import { lstat, readFile, realpath, mkdir, mkdtemp, rename, rm, writeFile } from 'node:fs/promises';
+import { lstat, readFile, realpath, mkdir, mkdtemp, symlink, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 
 import { extractBoxDevelopmentSpec } from '@boundscript/compiler';
@@ -114,7 +114,7 @@ export async function deriveHandoffs(options: {
     context = output;
     // Only the output parent is prepared. Every package is validated before staging.
     await mkdir(path.dirname(output), { recursive: true });
-    staging = await mkdtemp(path.join(path.dirname(output), '.handoff-stage-'));
+    staging = await mkdtemp(path.join(path.dirname(output), '.handoff-data-'));
     for (const pkg of packages) {
       for (const [file, bytes] of Object.entries(pkg.files)) {
         const destination = path.join(staging, pkg.system, pkg.box, file);
@@ -122,8 +122,18 @@ export async function deriveHandoffs(options: {
         await writeFile(destination, bytes, { flag: 'wx' });
       }
     }
-    await absent(output);
-    await rename(staging, output);
+    // Directory rename can replace a concurrently created empty destination. Instead,
+    // publish the complete tree with one exclusive symlink creation: EEXIST never
+    // replaces any destination entry. The sibling tree becomes output data on success,
+    // not persistent job state; it is removed on every unsuccessful publication.
+    try {
+      await symlink(path.basename(staging), output, 'dir');
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === 'EEXIST') {
+        fail(stage, output, 'Destination already exists; use a fresh output');
+      }
+      throw error;
+    }
     staging = undefined;
   } catch (error) {
     throw new Error(`${stage} [${context}]: ${error instanceof Error ? error.message : String(error)}`);

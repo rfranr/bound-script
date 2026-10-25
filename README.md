@@ -184,10 +184,11 @@ The runtime awaits the host, validates the **entire output data type first**, ch
 ## Deterministic task packages
 
 ```sh
-npm run handoff -- "$PWD" tests/fixtures/handoff/input.json /tmp/bound-handoffs --all
+delivery=$(mktemp -d)
+npm run handoff -- "$PWD" tests/fixtures/handoff/input.json "$delivery/handoffs" --all
 ```
 
-Use a fresh output and human-approved inputs for operational use. See [usage, protected-context boundaries, regeneration policy, and independent consumer checks](docs/task-derivation.md). No candidate execution, sandbox, orchestration, or evidence enforcement is included.
+Use a fresh output and human-approved inputs for operational use. Publication atomically creates an output symlink to complete sibling data; keep both together and discard the dedicated delivery parent after use. See [usage, protected-context boundaries, regeneration policy, and independent consumer checks](docs/task-derivation.md). No candidate execution, sandbox, orchestration, or evidence enforcement is included.
 
 ## Box development specification
 
