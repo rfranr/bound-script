@@ -2,9 +2,61 @@
 
 ## Goal
 
-BoundScript aims to keep machine-produced software governable and locally repairable by humans. A human defines understandable boundaries and control flow; implementations remain isolated behind explicit contracts.
+BoundScript aims to reduce human coordination in independently delegated, probabilistic software construction through deterministic, readable architectural boundaries. [Accepted Proposal 0013](proposals/0013-deterministic-architecture-for-probabilistic-construction.md) defines the product direction; it does not authorize new language semantics. BoundScript separates architectural authority, implementation freedom, and verification authority rather than making code generation deterministic.
 
-## Modules
+## Target conceptual architecture — not implemented modules
+
+The roles and workflow below are the target design, not additional packages or claims of current automation.
+
+### 1. Build-time architecture planning and approval
+
+Humans own requirements, representative examples, acceptance criteria, trust policy, architectural approval, and final acceptance. An **Architect**, human or LLM, proposes Box decomposition, responsibilities, interfaces, dependencies, task allocation, and integration plans. An LLM Architect is probabilistic; its output becomes authoritative only after approval. Initially, public architectural changes require human approval.
+
+A Box is a unit of delegated responsibility, not necessarily a function, class, agent, service, container, or deployment unit. Multiple Boxes may live in one monolith. Responsibility, dependencies, inputs, outputs, constraints, and execution conditions are conceptual dimensions, not a claim that all have DSL declarations today.
+
+The build-time Architect does not replace or rename the runtime `director`. The latter remains application orchestration in the existing execution backend.
+
+### 2. Deterministic parsing, validation, and contract extraction
+
+Approved BoundScript source is intended to be the authoritative machine-readable architectural boundary. Deterministic tooling parses declarations, resolves supported types and contracts, and emits portable specifications. It must not call an LLM during compilation, extraction, or deterministic verification. Identical approved inputs should yield identical specifications and validation decisions under explicitly versioned tools and rules.
+
+Today parsing, semantic diagnostics, shared declaration lowering, `extractBoxDevelopmentSpec`, the strict version-1 JSON codec, and `bound spec` provide this foundation. They describe only the supported one-operation interfaces, primitive/flat-record types, and minimal `ensure` predicates. Dependencies and capabilities are not formal declarations yet. Source extraction still validates a whole system that requires a runtime director, even though the exported JSON contains no director. Specification semantics must evolve through explicit, compatible version decisions.
+
+Deterministic task derivation is planned. Each handoff should combine the canonical Box contract and relevant shared types with an external functional task, examples, fixed entrypoint, permitted dependencies/tools, and controlled candidate workspace. Task metadata, instructions, workspace configuration, and evidence stay separate from the formal contract. The current spec is not a complete implementation brief.
+
+### 3. Independent implementation
+
+Implementers receive bounded contexts and choose algorithms, private code organization, helpers, and permitted tools. They may not silently change public interfaces, shared types, approved dependencies, responsibilities, acceptance criteria, or protected policies. Discovering a better decomposition leads to a change proposal, impact assessment, human approval, regenerated handoffs, and reverification—not an unauthorized contract edit.
+
+Implementation generation remains outside deterministic compilation. Independent work may be sequential and use existing tools; neither an agent runner nor distributed scheduling is required for the first pilot. Candidate workspaces must protect authoritative specifications, tests, and credentials. Separate directories or Git worktrees are organizational boundaries, not security isolation; a Node subprocess alone is not a security boundary. Untrusted generated code must not execute inside the trusted development process. Production isolation is a separate, deferred concern.
+
+### 4. Verification, integration, and promotion
+
+Planned independent verification consumes the approved spec, selected candidate, fixed inputs, and trusted tests rather than trusting implementer claims. It should distinguish invalid inputs, execution failures, invalid output types, postcondition failures, behavioral acceptance failures, integration failures, and unverified properties. Evidence must identify the candidate and contract/task/test versions; affected evidence becomes stale when any of those inputs change.
+
+Integration uses pre-established wiring and approved interfaces. Failed candidates return for revision, or an architectural change is proposed; the integrator must not silently repair them. Human-readable evidence should explain the architecture and the scope of observed behavior before explicit promotion. Runtime checks exist today, but no standalone verifier, candidate evidence workflow, or promotion mechanism exists.
+
+Declarations, static checks, test observations, runtime enforcement, and unverified properties must be distinguished. A declared permission restriction is not enforcement, and a type check or deterministic test result is not proof of arbitrary behavior. Postconditions cannot undo side effects.
+
+### Relationship to the current backend
+
+```text
+Target construction workflow (not yet automated end to end):
+human requirements -> Architect proposal -> human approval
+    -> approved BoundScript -> deterministic validation/extraction
+    -> bounded tasks -> independent implementations
+    -> independent verification -> integration checks -> evidence -> promotion
+
+Existing paths:
+BoundScript source -> language frontend -> validated model
+    +-> spec extraction -> strict canonical JSON codec -> portable Box spec
+    +-> compiler + explicit host bindings -> ExecutableArtifact
+        -> runtime + trusted host registry -> runtime director execution
+```
+
+The compiler, artifact contract, runtime, runtime `director`, and host bindings remain supported. They are a valid execution backend, not a mandatory dependency of every future Box implementation workflow. The immediate roadmap starts with standalone verification of existing portable specs using trusted fixtures and existing validation semantics, then task derivation and an independent two-Box pilot. Evidence, controlled evolution, and comparison against conventional TypeScript tooling follow. Richer DSL features, production sandboxes, and general agent orchestration require demonstrated need rather than being prerequisites.
+
+## Existing implementation modules
 
 ### `@boundscript/language`
 
@@ -71,9 +123,9 @@ The word **agent** describes two separate concepts.
 
 ### Build-time AI agents
 
-Build-time agents are development tooling. They may generate or repair box implementations from human-authored contracts. They execute before compilation and are outside both the language runtime and deterministic compiler.
+Build-time agents are development tooling. They may generate or repair Box implementations from approved contracts and external functional tasks. Their work precedes acceptance and integration; for the current executable backend, implementation identities are resolved before compilation. Agent execution is outside both the language runtime and deterministic compiler. No agent integration is implemented today.
 
-Their prompts, conversations, provider APIs, model identifiers, and workspaces are not included in `ExecutableArtifact`. If reproducibility or provenance is later required, it will be represented by a separate build record rather than runtime metadata.
+Their prompts, conversations, provider APIs, model identifiers, and workspaces are not included in `ExecutableArtifact`. Proposal 0013 now requires traceable candidate and verification evidence in the target workflow; that evidence remains separate from runtime metadata and is not implemented yet.
 
 ### Runtime agents
 
@@ -83,32 +135,7 @@ Supporting build-time agents does not imply that BoundScript programs contain ru
 
 ## Dependency direction
 
-```text
-human source
-    |
-    v
-language frontend
-    |
-    v
-validated model
-    |
-    +----> optional build orchestration / build-time AI agents
-    |                         |
-    |                         v
-    +----------------> resolved compilation input
-                              |
-                              v
-                         compiler
-                              |
-                              v
-                    ExecutableArtifact
-                              |
-                              v
-                           runtime
-                              |
-                              v
-                    sandbox enforcement
-```
+The current execution path is source → language frontend → validated model plus explicit host bindings → compiler → `ExecutableArtifact` → runtime plus trusted host functions. Contract extraction branches from the validated model and does not require those bindings or an executable artifact. Build-time planning/generation and concrete sandbox enforcement are not implemented stages of this path.
 
 Package dependencies reflect the shared boundary:
 
@@ -120,9 +147,11 @@ The runtime must not depend on `language` or `compiler`. The artifact package co
 
 ## Testing
 
-BoundScript has no language-level `test`, `mock`, or `expect` constructs. Use Vitest to test BoundScript systems and their orchestration externally. Contracts and capabilities remain language concepts; `ensure` and `allow` are reserved for those concerns rather than testing DSL behavior.
+BoundScript has no language-level `test`, `mock`, or `expect` constructs. Use Vitest to test BoundScript systems and their orchestration externally. `ensure` has the limited implemented postcondition semantics described above; capability declarations and explored `allow` syntax remain design material, not implemented language features.
 
 ## Future, not scaffolded
+
+Proposal 0013 prioritizes standalone verification, deterministic task derivation, the independent implementation pilot, evidence/integration, controlled architectural evolution, and comparative evaluation. These capabilities are not implemented modules. The older exploration list below is retained as possible future work, not the immediate roadmap:
 
 - grammar and semantic-model expansion beyond the executable subset;
 - richer behavioral contracts beyond single string-inequality postconditions;
