@@ -16,6 +16,8 @@ A **Box** is a unit of delegated responsibility with an explicit architectural b
 
 ## Current capabilities and planned direction
 
+See the [roadmap](docs/roadmap.md) for the current milestone, completion criteria, related assignments, and execution status.
+
 Today the repository implements a Langium parser and diagnostics, deterministic compiler, versioned executable artifacts, artifact-driven runtime, and CLI. It supports sequential director-to-box invocation, primitive and flat-record data contracts, minimal string postconditions, and portable canonical Box contract extraction through `bound spec`.
 
 It does **not** implement agent-driven construction, standalone candidate verification, task derivation, evidence reports, candidate promotion, dependency/capability declarations, or sandbox enforcement. Imports and general control flow are also unsupported. Current host implementations are trusted functions running in the host process.
