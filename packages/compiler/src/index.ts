@@ -13,6 +13,7 @@ import { resolveBoxOperation } from './box-development-spec.js';
 
 export { extractBoxDevelopmentSpec } from './box-development-spec.js';
 export type { BoxDevelopmentSpec, BoxSpecResult } from './box-development-spec.js';
+export { BoxSpecValidationError, parseBoxDevelopmentSpec, serializeBoxDevelopmentSpec } from './box-spec-json.js';
 
 /** Explicit box name to host implementation ID bindings, resolved before compilation. */
 export type BoxBindings = Readonly<Record<string, string>>;

@@ -1,6 +1,6 @@
 import { readFile } from 'node:fs/promises';
 
-import { BoundScriptCompiler } from '@boundscript/compiler';
+import { BoundScriptCompiler, extractBoxDevelopmentSpec, serializeBoxDevelopmentSpec } from '@boundscript/compiler';
 import {
   BoundScriptLanguageFrontend,
   type LanguageDiagnostic,
@@ -16,9 +16,11 @@ export interface CliIo {
 }
 
 export async function runBoundCli(arguments_: readonly string[], io: CliIo): Promise<number> {
-  const sourcePath = arguments_[0];
-  if (!sourcePath || arguments_.length !== 1) {
-    io.stderr.write('Usage: bound <source.bound>\n');
+  const exportSpec = arguments_[0] === 'spec';
+  const sourcePath = arguments_[exportSpec ? 1 : 0];
+  const boxName = exportSpec && arguments_[2] === '--box' ? arguments_[3] : undefined;
+  if (!sourcePath || (exportSpec ? arguments_.length !== 4 || !boxName : arguments_.length !== 1)) {
+    io.stderr.write('Usage: bound <source.bound>\n       bound spec <source.bound> --box <name>\n');
     return 1;
   }
 
@@ -35,6 +37,18 @@ export async function runBoundCli(arguments_: readonly string[], io: CliIo): Pro
         io.stderr.write(`${formatDiagnostic(document, diagnostic)}\n`);
       }
       return 1;
+    }
+
+    if (exportSpec) {
+      const extraction = extractBoxDevelopmentSpec(parsed.program, boxName!);
+      if (!extraction.ok) {
+        for (const diagnostic of extraction.diagnostics) {
+          io.stderr.write(`${formatDiagnostic(document, diagnostic)}\n`);
+        }
+        return 1;
+      }
+      io.stdout.write(serializeBoxDevelopmentSpec(extraction.spec));
+      return 0;
     }
 
     const validationDiagnostics = await language.validate(parsed.program);

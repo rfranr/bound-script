@@ -1,6 +1,8 @@
 import type { ValueType } from '@boundscript/artifact';
 import {
   extractBoxDevelopmentSpec,
+  parseBoxDevelopmentSpec,
+  serializeBoxDevelopmentSpec,
   type BoxDevelopmentSpec,
   type BoxSpecResult
 } from '@boundscript/compiler';
@@ -8,6 +10,8 @@ import type { SystemNode } from '@boundscript/language';
 
 // Extraction is synchronous and does not accept implementation bindings.
 const extract: (system: SystemNode, name: string) => BoxSpecResult = extractBoxDevelopmentSpec;
+const parse: (json: string) => BoxSpecResult = parseBoxDevelopmentSpec;
+const serialize: (spec: BoxDevelopmentSpec) => string = serializeBoxDevelopmentSpec;
 
 function consume(result: BoxSpecResult): void {
   if (result.ok) {
@@ -25,4 +29,6 @@ function consume(result: BoxSpecResult): void {
 }
 
 void extract;
+void parse;
+void serialize;
 void consume;

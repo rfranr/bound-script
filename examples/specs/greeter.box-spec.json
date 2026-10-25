@@ -1,0 +1,56 @@
+{
+  "format": "boundscript/box-development-spec",
+  "version": 1,
+  "system": "GreetingSystem",
+  "box": "Greeter",
+  "operation": {
+    "name": "greet",
+    "input": {
+      "name": "user",
+      "type": {
+        "kind": "record",
+        "name": "User",
+        "fields": [
+          {
+            "name": "active",
+            "type": "boolean"
+          },
+          {
+            "name": "id",
+            "type": "string"
+          },
+          {
+            "name": "name",
+            "type": "string"
+          },
+          {
+            "name": "score",
+            "type": "number"
+          }
+        ]
+      }
+    },
+    "resultType": {
+      "kind": "record",
+      "name": "Greeting",
+      "fields": [
+        {
+          "name": "message",
+          "type": "string"
+        },
+        {
+          "name": "recipientId",
+          "type": "string"
+        }
+      ]
+    },
+    "postcondition": {
+      "kind": "string-not-equal",
+      "target": {
+        "kind": "field",
+        "name": "message"
+      },
+      "value": ""
+    }
+  }
+}

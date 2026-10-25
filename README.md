@@ -175,7 +175,15 @@ Only `ensure result != "literal"` on a string result, or `ensure result.field !=
 
 The runtime awaits the host, validates the **entire output data type first**, checks the postcondition, and only then binds the result and continues. Host exceptions remain execution errors and malformed outputs remain data-contract errors, not postcondition violations. Predicates are serialized as explicit descriptors and interpreted without `eval` or generated code. These checks are **not security boundaries**: trusted host code may already have caused side effects, and failure provides no rollback or side-effect isolation.
 
-## Box development specification (in memory)
+## Box development specification
+
+Export the structured demo's Greeter contract after dependency installation:
+
+```bash
+npm run --silent bound -- spec examples/structured-types.bound --box Greeter
+```
+
+Stdout contains only canonical JSON, including the resolved `User`/`Greeting` schemas and postcondition; build output and diagnostics go to stderr. No bindings or implementations are required. See the [reference export](examples/specs/greeter.box-spec.json) and [format/API documentation](docs/box-development-spec.md).
 
 `@boundscript/compiler` exports the synchronous, pure `extractBoxDevelopmentSpec(system, boxName)` API, plus `BoxDevelopmentSpec` and the discriminated `BoxSpecResult` types. Given a successfully parsed `SystemNode`:
 
@@ -194,7 +202,9 @@ For `examples/structured-types.bound`, the result has format `boundscript/box-de
 
 Extraction validates the **whole system**, including unused declarations and director statements. Invalid source returns diagnostics with available source ranges and no partial spec. Selecting a nonexistent box returns `compiler.unknown-box`; there is no source range for a selection supplied outside the source. Declared but unused boxes can be extracted, without bindings, host implementations, file I/O, or artifact compilation.
 
-This API extracts declared contracts, not unstated functional intent or an implementation. JSON serialization/decoding and CLI export are deferred to Assignment 0013; agent orchestration and verifier execution remain outside this slice.
+`serializeBoxDevelopmentSpec(spec)` validates and returns canonical JSON: fixed key order, code-point-sorted record fields, two-space indentation, and one final LF. `parseBoxDevelopmentSpec(json)` strictly validates and returns the same discriminated result shape. Unknown properties/versions/types, conflicting record schemas, and incompatible postconditions fail explicitly. Parsing returns diagnostics; invalid serialization throws `BoxSpecValidationError` with diagnostics. Neither codec performs I/O or loads host implementations.
+
+The document describes **declared contracts**, not unstated functional intent or a complete implementation brief. A human-authored task and independent examples/tests are still required; business behavior is not inferred from box names or director calls. Agent orchestration and verifier execution remain outside this slice.
 
 ## Target use cases
 

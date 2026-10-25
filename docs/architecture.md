@@ -29,7 +29,7 @@ Consumes a fully resolved compilation input and deterministically emits one `Exe
 
 Compilation returns a discriminated success or failure result, preventing a failed compilation from accidentally exposing a partial artifact. The compiler validates the model and lowers statements to the versioned director instruction asset. An optional explicit `BoxBindings` argument maps each declared box name to a host implementation ID; missing bindings fail compilation. Resolution does not load or generate code. Existing box-free programs need no bindings.
 
-The separate pure, synchronous `extractBoxDevelopmentSpec(system, boxName)` API validates the whole system and extracts one declared box's complete in-memory contract without implementation bindings or director invocations. `BoxDevelopmentSpec` version 1 uses the existing resolved `ValueType` and `Postcondition` descriptors; a small internal declaration-lowering helper is shared with normal compilation. The spec contains no ASTs, source paths, implementation IDs, or executable instructions, and is not part of `ExecutableArtifact`. Portable decoding, CLI export, agent orchestration, and verifier execution are not implemented by this API.
+The separate pure, synchronous `extractBoxDevelopmentSpec(system, boxName)` API validates the whole system and extracts one declared box's complete in-memory contract without implementation bindings or director invocations. `BoxDevelopmentSpec` version 1 uses the existing resolved `ValueType` and `Postcondition` descriptors; a small internal declaration-lowering helper is shared with normal compilation. The spec contains no ASTs, source paths, implementation IDs, or executable instructions, and is not part of `ExecutableArtifact`. The separate pure `serializeBoxDevelopmentSpec` / `parseBoxDevelopmentSpec` codec strictly validates the portable version-1 shape and postcondition/type compatibility, reconstructing canonical key order and code-point-sorted fields. The codec has only type-level dependencies on compiler/artifact data contracts, so JSON consumption needs no language frontend. Invalid decoding returns diagnostics; invalid serialization throws `BoxSpecValidationError`. The development spec is a declared contract, not a complete implementation brief; human-owned tasks and independent examples/tests are still required. Agent orchestration and verifier execution remain outside the compiler.
 
 ### `@boundscript/runtime`
 
@@ -43,7 +43,7 @@ Defines declarative capability and resource-limit policies. Concrete process, co
 
 ### `@boundscript/cli`
 
-Connects file loading, parsing, deterministic compilation, and artifact execution. It reports source diagnostics and returns a non-zero status on failure. It does not interpret source directly or bypass the compiler/runtime artifact boundary.
+Connects file loading, parsing, deterministic compilation, and artifact execution. It reports source diagnostics and returns a non-zero status on failure. It does not interpret source directly or bypass the compiler/runtime artifact boundary. The small `bound spec <source.bound> --box <name>` branch instead connects parsing, validated extraction, and canonical serialization, writing only JSON to stdout. It does not compile executable artifacts or require host bindings.
 
 ## Compiler/runtime artifact boundary
 
