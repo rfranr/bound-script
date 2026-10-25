@@ -9,6 +9,7 @@
     { "path": "./packages/cli" },
     { "path": "./examples/director-box" },
     { "path": "./examples/box-composition" },
+    { "path": "./examples/structured-types" },
     { "path": "./tsconfig.tests.json" }
   ]
 }

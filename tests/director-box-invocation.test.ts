@@ -73,7 +73,7 @@ describe('Director → Box invocation', () => {
     expect(await compile()).toEqual(first);
     const program = JSON.parse(new TextDecoder().decode(first.assets[0]!.bytes));
     expect(program.instructions).toEqual([
-      { operation: 'invoke', implementation: 'host.greeter', argument: { kind: 'literal', value: 'World' }, resultType: 'string', result: 'greeting' },
+      { operation: 'invoke', implementation: 'host.greeter', box: 'Greeter', boxOperation: 'greet', inputType: 'string', argument: { kind: 'literal', value: 'World' }, resultType: 'string', result: 'greeting' },
       { operation: 'print-variable', variable: 'greeting' }
     ]);
   });
@@ -156,7 +156,7 @@ describe('Director → Box invocation', () => {
   });
 
   it.each([
-    source.replace('name: string', 'name: number'),
+    source.replace('name: string', 'name: string[]'),
     source.replace('greet(name: string): string', 'greet(name: string, extra: string): string'),
     source.replace('greet("World")', 'greet()'),
     source.replace('greet("World")', 'greet("World", "extra")'),

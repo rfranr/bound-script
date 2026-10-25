@@ -11,8 +11,18 @@ export const EXECUTABLE_ARTIFACT_VERSION = 1 as const;
 export const DIRECTOR_PROGRAM_MEDIA_TYPE =
   'application/vnd.boundscript.director-program+json' as const;
 
-/** Version 2 adds tagged invocation arguments and explicit string/void result categories. */
-export const DIRECTOR_PROGRAM_VERSION = 2 as const;
+/** Version 3 carries resolved primitive/flat-record contracts at each invocation. */
+export const DIRECTOR_PROGRAM_VERSION = 3 as const;
+
+export type PrimitiveType = 'string' | 'number' | 'boolean';
+
+export interface RecordType {
+  readonly kind: 'record';
+  readonly name: string;
+  readonly fields: readonly { readonly name: string; readonly type: PrimitiveType }[];
+}
+
+export type ValueType = PrimitiveType | RecordType;
 
 export interface PrintInstruction {
   readonly operation: 'print';
@@ -31,9 +41,12 @@ export type InvocationArgument =
 export type InvokeInstruction = {
   readonly operation: 'invoke';
   readonly implementation: string;
+  readonly box: string;
+  readonly boxOperation: string;
+  readonly inputType: ValueType;
   readonly argument: InvocationArgument;
 } & (
-  | { readonly resultType: 'string'; readonly result: string }
+  | { readonly resultType: ValueType; readonly result: string }
   | { readonly resultType: 'void'; readonly result?: never }
 );
 

@@ -17,6 +17,7 @@
     "bound": "npm run build --silent 1>&2 && node packages/cli/dist/bin.js",
     "demo:director-box": "npm run build --silent 1>&2 && node examples/director-box/dist/run.js",
     "demo:box-composition": "npm run build --silent 1>&2 && node examples/box-composition/dist/run.js",
+    "demo:structured-types": "npm run build --silent 1>&2 && node examples/structured-types/dist/run.js",
     "clean": "tsc -b --clean && node -e \"require('node:fs').rmSync('packages/language/src/generated', { recursive: true, force: true })\"",
     "test": "npm run langium:generate --silent && vitest run",
     "test:watch": "npm run langium:generate --silent && vitest",

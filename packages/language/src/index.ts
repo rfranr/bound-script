@@ -5,6 +5,8 @@ import type { SystemNode } from './generated/ast.js';
 
 export type {
   BoxNode,
+  RecordTypeNode,
+  FieldNode,
   InvocationStatementNode,
   StatementNode,
   DirectorNode,
@@ -104,12 +106,39 @@ export function validateBoundScript(program: SystemNode): readonly LanguageDiagn
       } : {})
     });
   };
+  const primitiveTypes = new Set(['string', 'number', 'boolean']);
+  const types = new Set<string>();
+  for (const type of program.types) {
+    if (types.has(type.name)) report('duplicate-type', `Duplicate type "${type.name}".`, type, 'name');
+    types.add(type.name);
+  }
+  for (const type of program.types) {
+    const fields = new Set<string>();
+    for (const field of type.fields) {
+      if (fields.has(field.name)) report('duplicate-field', `Duplicate field "${field.name}" in type "${type.name}".`, field, 'name');
+      fields.add(field.name);
+      if (!primitiveTypes.has(field.type)) {
+        const known = field.type === 'void' || types.has(field.type);
+        report(known ? 'invalid-field-type' : 'unknown-type',
+          known ? `Field "${type.name}.${field.name}" must have a primitive type, not "${field.type}".`
+            : `Unknown type "${field.type}".`, field, 'type');
+      }
+    }
+  }
   const boxes = new Map<string, SystemNode['boxes'][number]>();
   for (const box of program.boxes) {
     if (boxes.has(box.name)) report('duplicate-box', `Duplicate box "${box.name}".`, box, 'name');
     boxes.set(box.name, box);
+    for (const property of ['inputType', 'resultType'] as const) {
+      const type = box[property];
+      if (type === 'void' && property === 'inputType') {
+        report('void-input', `Input of "${box.name}.${box.operation}" cannot be void.`, box, property);
+      } else if (type !== 'void' && !primitiveTypes.has(type) && !types.has(type)) {
+        report('unknown-type', `Unknown type "${type}".`, box, property);
+      }
+    }
   }
-  const variables = new Set<string>();
+  const variables = new Map<string, string>();
   for (const statement of program.director.start.statements) {
     if (statement.$type === 'InvocationStatementNode') {
       const box = boxes.get(statement.box);
@@ -118,21 +147,32 @@ export function validateBoundScript(program: SystemNode): readonly LanguageDiagn
         report('unknown-operation', `Unknown operation "${statement.operation}" on box "${box.name}".`, statement, 'operation');
       } else if (box.resultType === 'void' && statement.name) {
         report('void-result-assignment', `Cannot assign the void result of "${box.name}.${box.operation}".`, statement, 'name');
-      } else if (box.resultType === 'string' && !statement.name) {
-        report('unassigned-string-result', `String result of "${box.name}.${box.operation}" must be assigned.`, statement, 'operation');
+      } else if (box.resultType !== 'void' && !statement.name) {
+        report(box.resultType === 'string' ? 'unassigned-string-result' : 'unassigned-result',
+          `${box.resultType === 'string' ? 'String' : `Type "${box.resultType}"`} result of "${box.name}.${box.operation}" must be assigned.`, statement, 'operation');
       }
       // Check the argument before declaring the result, so self-references are invalid.
       if (statement.variable && !variables.has(statement.variable)) {
         report('unknown-variable', `Unknown variable "${statement.variable}".`, statement, 'variable');
       }
+      const argumentType = statement.variable ? variables.get(statement.variable) : 'string';
+      if (box && box.operation === statement.operation && argumentType !== undefined && argumentType !== box.inputType) {
+        report('incompatible-argument', `Argument of "${box.name}.${box.operation}" expects "${box.inputType}", got "${argumentType}".`,
+          statement, statement.variable ? 'variable' : 'argument');
+      }
       if (statement.name) {
         if (variables.has(statement.name)) {
           report('duplicate-variable', `Duplicate variable "${statement.name}".`, statement, 'name');
         }
-        variables.add(statement.name);
+        // The type comes only from the declared operation result, not expression inference.
+        variables.set(statement.name, box?.resultType ?? 'void');
       }
-    } else if (statement.variable && !variables.has(statement.variable)) {
-      report('unknown-variable', `Unknown variable "${statement.variable}".`, statement, 'variable');
+    } else if (statement.variable) {
+      if (!variables.has(statement.variable)) {
+        report('unknown-variable', `Unknown variable "${statement.variable}".`, statement, 'variable');
+      } else if (variables.get(statement.variable) !== 'string') {
+        report('incompatible-print', `print expects "string", got "${variables.get(statement.variable)}".`, statement, 'variable');
+      }
     }
   }
   return diagnostics;

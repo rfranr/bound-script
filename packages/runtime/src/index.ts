@@ -5,7 +5,8 @@ import {
   EXECUTABLE_ARTIFACT_VERSION,
   type DirectorProgram,
   type ExecutableArtifact,
-  type InvocationArgument
+  type InvocationArgument,
+  type ValueType
 } from '@boundscript/artifact';
 
 /** Public API version for the execution-runtime boundary. */
@@ -42,8 +43,9 @@ export interface ExecutionRuntime {
 }
 
 /** Host-provided code is trusted: this registry is not a sandbox. */
-export type BoxImplementation = (input: string) => string | void | Promise<string | void>;
-export type BoxImplementations = Readonly<Record<string, BoxImplementation>>;
+export type BoxImplementation<Input = string, Output = unknown> = (input: Input) => Output | Promise<Output>;
+/** Heterogeneous host signatures are erased here; the artifact contracts are checked before calling. */
+export type BoxImplementations = Readonly<Record<string, BoxImplementation<any>>>;
 
 /** Runtime for the supported director instruction format. `print` is a temporary built-in operation. */
 export class BoundScriptRuntime implements ExecutionRuntime {
@@ -74,7 +76,7 @@ export class BoundScriptRuntime implements ExecutionRuntime {
 
     const program = decodeDirectorProgram(asset.bytes);
     // Resolve every dependency before executing any instructions or producing output.
-    const implementations = new Map<string, BoxImplementation>();
+    const implementations = new Map<string, BoxImplementations[string]>();
     for (const instruction of program.instructions) {
       if (instruction.operation !== 'invoke') continue;
       const implementation = Object.hasOwn(this.implementations, instruction.implementation)
@@ -86,11 +88,13 @@ export class BoundScriptRuntime implements ExecutionRuntime {
       implementations.set(instruction.implementation, implementation);
     }
 
-    const variables = new Map<string, string>();
+    const variables = new Map<string, unknown>();
     for (const instruction of program.instructions) {
       if (request.signal?.aborted) throw new RuntimeExecutionError('Execution was aborted.');
       if (instruction.operation === 'invoke') {
         const argument = resolveArgument(instruction.argument, variables);
+        const boundary = `Box "${instruction.box}.${instruction.boxOperation}"`;
+        assertBoundaryValue(argument, instruction.inputType, instruction.implementation, boundary, 'input');
         let result: unknown;
         try {
           result = await implementations.get(instruction.implementation)!(argument);
@@ -98,19 +102,18 @@ export class BoundScriptRuntime implements ExecutionRuntime {
           const message = error instanceof Error ? error.message : String(error);
           throw new RuntimeExecutionError(`Implementation "${instruction.implementation}" failed: ${message}`);
         }
-        if (instruction.resultType === 'string') {
-          if (typeof result !== 'string') {
-            throw new RuntimeExecutionError(`Implementation "${instruction.implementation}" must return a string.`);
-          }
+        if (instruction.resultType !== 'void') {
+          assertBoundaryValue(result, instruction.resultType, instruction.implementation, boundary, 'output');
           variables.set(instruction.result, result);
         } else if (result !== undefined) {
-          throw new RuntimeExecutionError(`Implementation "${instruction.implementation}" must return undefined for a void operation.`);
+          throw new RuntimeExecutionError(`Implementation "${instruction.implementation}" must return undefined for a void operation. ${boundary} output expected "void", got ${valueCategory(result)}.`);
         }
       } else if (instruction.operation === 'print-variable') {
         const value = variables.get(instruction.variable);
         if (value === undefined) {
           throw new RuntimeExecutionError(`Unknown variable "${instruction.variable}".`);
         }
+        if (typeof value !== 'string') throw new RuntimeExecutionError('print expects a string variable.');
         this.output.writeLine(value);
       } else {
         this.output.writeLine(instruction.value);
@@ -159,8 +162,10 @@ function isDirectorProgram(value: unknown): value is DirectorProgram {
       case 'invoke':
         return typeof instruction.implementation === 'string' &&
           instruction.implementation.length > 0 &&
+          typeof instruction.box === 'string' && typeof instruction.boxOperation === 'string' &&
+          isValueType(instruction.inputType) &&
           isInvocationArgument(instruction.argument) &&
-          ((instruction.resultType === 'string' && typeof instruction.result === 'string') ||
+          ((isValueType(instruction.resultType) && typeof instruction.result === 'string') ||
             (instruction.resultType === 'void' && !Object.hasOwn(instruction, 'result')));
       default:
         return false;
@@ -168,11 +173,64 @@ function isDirectorProgram(value: unknown): value is DirectorProgram {
   });
 }
 
-function resolveArgument(argument: InvocationArgument, variables: ReadonlyMap<string, string>): string {
+function resolveArgument(argument: InvocationArgument, variables: ReadonlyMap<string, unknown>): unknown {
   if (argument.kind === 'literal') return argument.value;
-  const value = variables.get(argument.name);
-  if (value === undefined) throw new RuntimeExecutionError(`Unknown variable "${argument.name}".`);
-  return value;
+  if (!variables.has(argument.name)) throw new RuntimeExecutionError(`Unknown variable "${argument.name}".`);
+  return variables.get(argument.name);
+}
+
+function isPrimitiveType(value: unknown): value is 'string' | 'number' | 'boolean' {
+  return value === 'string' || value === 'number' || value === 'boolean';
+}
+
+function isValueType(value: unknown): value is ValueType {
+  if (isPrimitiveType(value)) return true;
+  if (!isRecord(value) || value.kind !== 'record' || typeof value.name !== 'string' ||
+      !value.name || !Array.isArray(value.fields)) return false;
+  const names = new Set<string>();
+  return value.fields.every((field) => {
+    if (!isRecord(field) || typeof field.name !== 'string' || !field.name ||
+        !isPrimitiveType(field.type) || names.has(field.name)) return false;
+    names.add(field.name);
+    return true;
+  });
+}
+
+function valueCategory(value: unknown): string {
+  if (value === null) return 'null';
+  if (Array.isArray(value)) return 'array';
+  if (typeof value === 'number' && !Number.isFinite(value)) return 'non-finite number';
+  return typeof value;
+}
+
+function assertBoundaryValue(
+  value: unknown, type: ValueType, implementation: string, boundary: string, direction: 'input' | 'output'
+): void {
+  const problem = valueTypeProblem(value, type);
+  if (!problem) return;
+  const prefix = direction === 'output' && type === 'string'
+    ? `Implementation "${implementation}" must return a string.`
+    : `Implementation "${implementation}" ${direction} contract failed.`;
+  const name = typeof type === 'string' ? type : type.name;
+  throw new RuntimeExecutionError(`${prefix} ${boundary} ${direction} expected "${name}": ${problem}.`);
+}
+
+function valueTypeProblem(value: unknown, type: ValueType): string | undefined {
+  if (typeof type === 'string') {
+    return typeof value === type && (type !== 'number' || Number.isFinite(value))
+      ? undefined : `got ${valueCategory(value)}`;
+  }
+  if (!isRecord(value) || Array.isArray(value)) return `expected record, got ${valueCategory(value)}`;
+  const fields = new Set(type.fields.map((field) => field.name));
+  for (const field of type.fields) {
+    if (!Object.hasOwn(value, field.name)) return `missing required field "${field.name}"`;
+    const problem = valueTypeProblem(value[field.name], field.type);
+    if (problem) return `field "${field.name}" expected ${field.type}, ${problem}`;
+  }
+  for (const key of Reflect.ownKeys(value)) {
+    if (typeof key !== 'string' || !fields.has(key)) return `unexpected field "${String(key)}"`;
+  }
+  return undefined;
 }
 
 function isInvocationArgument(value: unknown): boolean {

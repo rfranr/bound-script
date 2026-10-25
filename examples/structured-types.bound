@@ -1,0 +1,28 @@
+system GreetingSystem {
+    type User {
+        id: string
+        name: string
+        active: boolean
+        score: number
+    }
+    type Greeting {
+        message: string
+        recipientId: string
+    }
+    box LoadUser {
+        operation load(id: string): User
+    }
+    box Greeter {
+        operation greet(user: User): Greeting
+    }
+    box Display {
+        operation show(greeting: Greeting): void
+    }
+    director Main {
+        on start {
+            let user = LoadUser.load("123")
+            let greeting = Greeter.greet(user)
+            Display.show(greeting)
+        }
+    }
+}

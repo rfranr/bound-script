@@ -5,7 +5,9 @@ import {
   EXECUTABLE_ARTIFACT_VERSION,
   type DirectorProgram,
   type InvocationArgument,
-  type ExecutableArtifact
+  type ExecutableArtifact,
+  type PrimitiveType,
+  type ValueType
 } from '@boundscript/artifact';
 import { validateBoundScript, type SourceRange, type SystemNode } from '@boundscript/language';
 
@@ -56,21 +58,33 @@ export class BoundScriptCompiler implements Compiler<SystemNode> {
     }
     if (diagnostics.length > 0) return { ok: false, diagnostics };
 
+    const resolveType = (name: string): ValueType => {
+      const record = system.types.find((type) => type.name === name);
+      return record ? {
+        kind: 'record',
+        name: record.name,
+        fields: record.fields.map((field) => ({ name: field.name, type: field.type as PrimitiveType }))
+      } : name as PrimitiveType;
+    };
     const target = `directors/${system.director.name}.json`;
     const program: DirectorProgram = {
       version: DIRECTOR_PROGRAM_VERSION,
       instructions: system.director.start.statements.map((statement) => {
         if (statement.$type === 'InvocationStatementNode') {
+          const box = system.boxes.find((box) => box.name === statement.box)!;
           const argument: InvocationArgument = statement.variable
             ? { kind: 'variable', name: statement.variable }
             : { kind: 'literal', value: statement.argument! };
           const invocation = {
             operation: 'invoke' as const,
             implementation: bindings[statement.box]!,
+            box: box.name,
+            boxOperation: box.operation,
+            inputType: resolveType(box.inputType),
             argument
           };
           return statement.name
-            ? { ...invocation, resultType: 'string', result: statement.name }
+            ? { ...invocation, resultType: resolveType(box.resultType), result: statement.name }
             : { ...invocation, resultType: 'void' };
         }
         return statement.variable

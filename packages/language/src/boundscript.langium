@@ -2,14 +2,27 @@ grammar BoundScript
 
 entry SystemNode:
     'system' name=ID '{'
+        types+=RecordTypeNode*
         boxes+=BoxNode*
         director=DirectorNode
     '}'
 ;
 
+RecordTypeNode:
+    'type' name=ID '{' fields+=FieldNode* '}'
+;
+
+FieldNode:
+    name=ID ':' type=TypeName
+;
+
+TypeName returns string:
+    'string' | 'number' | 'boolean' | 'void' | ID
+;
+
 BoxNode:
     'box' name=ID '{'
-        'operation' operation=ID '(' input=ID ':' 'string' ')' ':' resultType=('string' | 'void')
+        'operation' operation=ID '(' input=ID ':' inputType=TypeName ')' ':' resultType=TypeName
     '}'
 ;
 

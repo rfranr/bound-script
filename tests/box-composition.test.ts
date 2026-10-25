@@ -71,9 +71,9 @@ describe('box composition', () => {
     const program = JSON.parse(new TextDecoder().decode(artifact.assets[0]!.bytes));
     expect(program.version).toBe(DIRECTOR_PROGRAM_VERSION);
     expect(program.instructions).toEqual([
-      { operation: 'invoke', implementation: 'demo.greeter', argument: { kind: 'literal', value: 'World' }, resultType: 'string', result: 'message' },
-      { operation: 'invoke', implementation: 'demo.display', argument: { kind: 'variable', name: 'message' }, resultType: 'void' },
-      { operation: 'invoke', implementation: 'demo.display', argument: { kind: 'literal', value: 'message' }, resultType: 'void' }
+      { operation: 'invoke', implementation: 'demo.greeter', box: 'Greeter', boxOperation: 'greet', inputType: 'string', argument: { kind: 'literal', value: 'World' }, resultType: 'string', result: 'message' },
+      { operation: 'invoke', implementation: 'demo.display', box: 'Display', boxOperation: 'show', inputType: 'string', argument: { kind: 'variable', name: 'message' }, resultType: 'void' },
+      { operation: 'invoke', implementation: 'demo.display', box: 'Display', boxOperation: 'show', inputType: 'string', argument: { kind: 'literal', value: 'message' }, resultType: 'void' }
     ]);
     const events: string[] = [];
     await execute(withProgram(artifact, program), {
@@ -174,7 +174,7 @@ describe('box composition', () => {
     { argument: { kind: 'literal', value: 42 } },
     { argument: { kind: 'variable', value: 'message' } },
     { argument: { kind: 'unknown', value: 'message' } },
-    { resultType: 'number' },
+    { resultType: 'unknown' },
     { resultType: 'string', result: undefined },
     { resultType: 'void', result: 'forbidden' }
   ])('rejects malformed invocation artifacts: %j', async (patch) => {

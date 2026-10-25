@@ -66,7 +66,7 @@ box Greeter {
 }
 ```
 
-Inside `on start`, `let greeting = Greeter.greet("World")` stores the result and `print(greeting)` consumes it. Boxes are declared before the director. Each box has exactly one operation, one named string input, and a `string` or `void` result. Calls accept a string literal or a previously assigned variable. Variables hold string call results, are immutable, and are local to one execution. String-returning calls must be assigned with `let`; void-returning calls must be standalone statements.
+Inside `on start`, `let greeting = Greeter.greet("World")` stores the result and `print(greeting)` consumes it. Boxes are declared before the director. Each box has exactly one operation and one named input. Inputs and value results may be `string`, `number`, `boolean`, or a named flat record; results may also be `void`. Calls accept a string literal or a previously assigned variable of the declared input type. Variables hold call results, cannot be reassigned, and are local to one execution. Value-returning calls must be assigned with `let`; void-returning calls must be standalone statements.
 
 Bind developer-provided TypeScript functions through the programmatic API:
 
@@ -95,7 +95,7 @@ const runtime = new BoundScriptRuntime(
 await runtime.execute(compiled.artifact, { entrypoint: 'start' });
 ```
 
-Every declared box requires an explicit binding. Unknown boxes, operations, and variables fail semantic validation/compilation. Missing host functions fail before instruction execution. Thrown/rejected implementation errors and invalid return categories fail execution with contextual errors: string operations must return a string, and void operations must return `undefined` (including implicit returns). Both may be asynchronous. Functions are not generated, loaded dynamically, or embedded in the artifact; the host supplies them. They run **without sandbox enforcement**. The CLI has no implementation-loading option, so use the API for box programs; the existing Hello World CLI remains unchanged.
+Every declared box requires an explicit binding. Unknown boxes, operations, and variables fail semantic validation/compilation. Missing host functions fail before instruction execution. Thrown/rejected implementation errors and invalid return categories fail execution with contextual errors: value operations must satisfy their declared primitive or record type, and void operations must return `undefined` (including implicit returns). All may be asynchronous. Functions are not generated, loaded dynamically, or embedded in the artifact; the host supplies them. They run **without sandbox enforcement**. The CLI has no implementation-loading option, so use the API for box programs; the existing Hello World CLI remains unchanged.
 
 
 ## Two-box composition
@@ -122,6 +122,41 @@ system HelloWorld {
 ```
 
 The [host](examples/box-composition/host.ts) binds `Greeter` to `demo.greeter` and `Display` to `demo.display`, registering separate [Greeter](examples/box-composition/greeter.ts) and [Display](examples/box-composition/display.ts) implementations. The director never calls `print()`: Display receives and writes the Greeter result. Calls execute sequentially, awaiting each implementation before continuing. Literal `"message"` and variable `message` remain distinct in the serialized instruction program. As with the single-box demo, the plain CLI cannot supply these bindings.
+
+## Structured data contracts
+
+Run the three-box structured demo from the repository root after `npm install`:
+
+```bash
+npm run --silent demo:structured-types
+```
+
+Expected stdout is `Hello, World!` followed by a newline (build output goes to stderr). The real [`examples/structured-types.bound`](examples/structured-types.bound) program declares `User` and `Greeting` records, then runs:
+
+```boundscript
+let user = LoadUser.load("123")
+let greeting = Greeter.greet(user)
+Display.show(greeting)
+```
+
+The [host](examples/structured-types/host.ts) explicitly binds three separate TypeScript implementations: [LoadUser](examples/structured-types/load-user.ts), [Greeter](examples/structured-types/greeter.ts), and [Display](examples/structured-types/display.ts). The director passes records directly; it neither constructs nor inspects them and does not call `print()`.
+
+Declare records before boxes, for example:
+
+```boundscript
+type User {
+    id: string
+    name: string
+    active: boolean
+    score: number
+}
+```
+
+Fields are required and must be `string`, finite `number`, or `boolean`. This slice uses **named type identity**: different record names are not interchangeable, even if their fields match. Runtime records must have their declared fields as own properties; missing, wrong-typed, and extra fields are rejected. Inputs are checked immediately before each host call and outputs immediately after it resolves, with box/operation, expected type, and field/category details in errors. Records are passed by reference, without string conversion or copying; trusted host code can mutate them, so inputs are rechecked at every call. Host TypeScript interfaces are handwritten conveniences, not substitutes for runtime validation.
+
+There are no nested/optional fields, arrays, object literals, numeric/boolean literals, property access, or implicit conversions in director code. Numeric/boolean values may be produced by boxes and passed through compatible variables. `print()` remains string-only. These structural checks are data contracts, not behavioral `ensure` predicates or sandbox enforcement. The plain CLI still cannot supply box bindings; use the explicit demo host.
+
+The compiler emits director instruction **version 3**, containing tagged operands and resolved primitive/record metadata, never host functions or AST nodes. The executable-artifact envelope remains version 1. Recompile older source programs to the current instruction version; older instruction versions are rejected.
 
 ## Target use cases
 
@@ -161,6 +196,7 @@ examples/
   hello-world.bound
   director-box.bound
   box-composition.bound
+  structured-types.bound
 tests/
   scaffolding.test.ts
   conformance.test.ts
@@ -187,6 +223,7 @@ Useful commands:
 
 - `npm run --silent demo:director-box` — build and run the bound TypeScript Greeter demo
 - `npm run --silent demo:box-composition` — build and run Greeter → Display composition
+- `npm run --silent demo:structured-types` — build and run LoadUser → Greeter → Display with records
 - `npm run langium:generate` — regenerate the parser, typed AST, and language metadata
 - `npm run typecheck` — generate language sources and compile all TypeScript project references
 - `npm test` — run the Vitest suite
@@ -195,4 +232,4 @@ Useful commands:
 
 ## Status
 
-The executable subset supports one `system`, optional boxes with one string-input operation and a `string` or `void` result each, one `director`, and one sequential `on start` block. Box calls accept literals or previously assigned variables; string results are assigned with `let` and void calls are standalone. `print()` accepts a string literal or previously assigned variable. No imports, general expressions, loops, conditionals, or testing syntax are supported. Use Vitest for external tests. The broader example language remains design material rather than a finalized specification.
+The executable subset supports one `system`, same-system flat record declarations, optional boxes with one typed-input operation and a typed or `void` result each, one `director`, and one sequential `on start` block. Box calls accept string literals or compatible previously assigned variables; value results are assigned with `let` and void calls are standalone. `print()` accepts a string literal or string variable. No imports, general expressions, loops, conditionals, or testing syntax are supported. Use Vitest for external tests. The broader example language remains design material rather than a finalized specification.
