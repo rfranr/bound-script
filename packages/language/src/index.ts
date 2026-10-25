@@ -116,11 +116,21 @@ export function validateBoundScript(program: SystemNode): readonly LanguageDiagn
       if (!box) report('unknown-box', `Unknown box "${statement.box}".`, statement, 'box');
       else if (box.operation !== statement.operation) {
         report('unknown-operation', `Unknown operation "${statement.operation}" on box "${box.name}".`, statement, 'operation');
+      } else if (box.resultType === 'void' && statement.name) {
+        report('void-result-assignment', `Cannot assign the void result of "${box.name}.${box.operation}".`, statement, 'name');
+      } else if (box.resultType === 'string' && !statement.name) {
+        report('unassigned-string-result', `String result of "${box.name}.${box.operation}" must be assigned.`, statement, 'operation');
       }
-      if (variables.has(statement.name)) {
-        report('duplicate-variable', `Duplicate variable "${statement.name}".`, statement, 'name');
+      // Check the argument before declaring the result, so self-references are invalid.
+      if (statement.variable && !variables.has(statement.variable)) {
+        report('unknown-variable', `Unknown variable "${statement.variable}".`, statement, 'variable');
       }
-      variables.add(statement.name);
+      if (statement.name) {
+        if (variables.has(statement.name)) {
+          report('duplicate-variable', `Duplicate variable "${statement.name}".`, statement, 'name');
+        }
+        variables.add(statement.name);
+      }
     } else if (statement.variable && !variables.has(statement.variable)) {
       report('unknown-variable', `Unknown variable "${statement.variable}".`, statement, 'variable');
     }

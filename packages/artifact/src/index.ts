@@ -11,7 +11,8 @@ export const EXECUTABLE_ARTIFACT_VERSION = 1 as const;
 export const DIRECTOR_PROGRAM_MEDIA_TYPE =
   'application/vnd.boundscript.director-program+json' as const;
 
-export const DIRECTOR_PROGRAM_VERSION = 1 as const;
+/** Version 2 adds tagged invocation arguments and explicit string/void result categories. */
+export const DIRECTOR_PROGRAM_VERSION = 2 as const;
 
 export interface PrintInstruction {
   readonly operation: 'print';
@@ -23,12 +24,18 @@ export interface PrintVariableInstruction {
   readonly variable: string;
 }
 
-export interface InvokeInstruction {
+export type InvocationArgument =
+  | { readonly kind: 'literal'; readonly value: string }
+  | { readonly kind: 'variable'; readonly name: string };
+
+export type InvokeInstruction = {
   readonly operation: 'invoke';
   readonly implementation: string;
-  readonly argument: string;
-  readonly result: string;
-}
+  readonly argument: InvocationArgument;
+} & (
+  | { readonly resultType: 'string'; readonly result: string }
+  | { readonly resultType: 'void'; readonly result?: never }
+);
 
 export type DirectorInstruction = PrintInstruction | PrintVariableInstruction | InvokeInstruction;
 

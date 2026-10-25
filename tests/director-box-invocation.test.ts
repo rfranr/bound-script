@@ -73,7 +73,7 @@ describe('Director → Box invocation', () => {
     expect(await compile()).toEqual(first);
     const program = JSON.parse(new TextDecoder().decode(first.assets[0]!.bytes));
     expect(program.instructions).toEqual([
-      { operation: 'invoke', implementation: 'host.greeter', argument: 'World', result: 'greeting' },
+      { operation: 'invoke', implementation: 'host.greeter', argument: { kind: 'literal', value: 'World' }, resultType: 'string', result: 'greeting' },
       { operation: 'print-variable', variable: 'greeting' }
     ]);
   });
@@ -82,6 +82,7 @@ describe('Director → Box invocation', () => {
     ['unknown-box', source.replace('= Greeter.greet', '= Missing.greet')],
     ['unknown-operation', source.replace('= Greeter.greet', '= Greeter.missing')],
     ['unknown-variable', source.replace('print(greeting)', 'print(missing)')],
+    ['unknown-variable', source.replace('greet("World")', 'greet(greeting)')],
     ['unknown-variable', source.replace('let greeting =', 'print(greeting) let greeting =')],
     ['duplicate-variable', source.replace('print(greeting)', 'let greeting = Greeter.greet("again")')],
     ['duplicate-box', source.replace('director Main', 'box Greeter { operation greet(name: string): string } director Main')]
@@ -159,7 +160,6 @@ describe('Director → Box invocation', () => {
     source.replace('greet(name: string): string', 'greet(name: string, extra: string): string'),
     source.replace('greet("World")', 'greet()'),
     source.replace('greet("World")', 'greet("World", "extra")'),
-    source.replace('greet("World")', 'greet(greeting)'),
     source.replace('print(greeting)', 'print("hello" + greeting)')
   ])('rejects syntax outside the minimal subset', (text) => {
     const parsed = parseBoundScript({ uri: 'memory:invalid.bound', text });

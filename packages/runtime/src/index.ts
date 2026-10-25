@@ -4,7 +4,8 @@ import {
   EXECUTABLE_ARTIFACT_FORMAT,
   EXECUTABLE_ARTIFACT_VERSION,
   type DirectorProgram,
-  type ExecutableArtifact
+  type ExecutableArtifact,
+  type InvocationArgument
 } from '@boundscript/artifact';
 
 /** Public API version for the execution-runtime boundary. */
@@ -41,10 +42,10 @@ export interface ExecutionRuntime {
 }
 
 /** Host-provided code is trusted: this registry is not a sandbox. */
-export type BoxImplementation = (input: string) => string | Promise<string>;
+export type BoxImplementation = (input: string) => string | void | Promise<string | void>;
 export type BoxImplementations = Readonly<Record<string, BoxImplementation>>;
 
-/** Runtime for the first instruction format. `print` is a temporary built-in operation. */
+/** Runtime for the supported director instruction format. `print` is a temporary built-in operation. */
 export class BoundScriptRuntime implements ExecutionRuntime {
   constructor(
     private readonly output: PrintSink,
@@ -89,17 +90,22 @@ export class BoundScriptRuntime implements ExecutionRuntime {
     for (const instruction of program.instructions) {
       if (request.signal?.aborted) throw new RuntimeExecutionError('Execution was aborted.');
       if (instruction.operation === 'invoke') {
+        const argument = resolveArgument(instruction.argument, variables);
         let result: unknown;
         try {
-          result = await implementations.get(instruction.implementation)!(instruction.argument);
+          result = await implementations.get(instruction.implementation)!(argument);
         } catch (error) {
           const message = error instanceof Error ? error.message : String(error);
           throw new RuntimeExecutionError(`Implementation "${instruction.implementation}" failed: ${message}`);
         }
-        if (typeof result !== 'string') {
-          throw new RuntimeExecutionError(`Implementation "${instruction.implementation}" must return a string.`);
+        if (instruction.resultType === 'string') {
+          if (typeof result !== 'string') {
+            throw new RuntimeExecutionError(`Implementation "${instruction.implementation}" must return a string.`);
+          }
+          variables.set(instruction.result, result);
+        } else if (result !== undefined) {
+          throw new RuntimeExecutionError(`Implementation "${instruction.implementation}" must return undefined for a void operation.`);
         }
-        variables.set(instruction.result, result);
       } else if (instruction.operation === 'print-variable') {
         const value = variables.get(instruction.variable);
         if (value === undefined) {
@@ -153,12 +159,26 @@ function isDirectorProgram(value: unknown): value is DirectorProgram {
       case 'invoke':
         return typeof instruction.implementation === 'string' &&
           instruction.implementation.length > 0 &&
-          typeof instruction.argument === 'string' &&
-          typeof instruction.result === 'string';
+          isInvocationArgument(instruction.argument) &&
+          ((instruction.resultType === 'string' && typeof instruction.result === 'string') ||
+            (instruction.resultType === 'void' && !Object.hasOwn(instruction, 'result')));
       default:
         return false;
     }
   });
+}
+
+function resolveArgument(argument: InvocationArgument, variables: ReadonlyMap<string, string>): string {
+  if (argument.kind === 'literal') return argument.value;
+  const value = variables.get(argument.name);
+  if (value === undefined) throw new RuntimeExecutionError(`Unknown variable "${argument.name}".`);
+  return value;
+}
+
+function isInvocationArgument(value: unknown): boolean {
+  return isRecord(value) &&
+    ((value.kind === 'literal' && typeof value.value === 'string') ||
+      (value.kind === 'variable' && typeof value.name === 'string'));
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

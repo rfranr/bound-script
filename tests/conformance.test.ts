@@ -31,7 +31,7 @@ const validFixtures = [
 
 const invalidFixtures = [
   { name: 'missing-brace', expectedMessage: "Expecting token of type '}'" },
-  { name: 'unknown-statement', expectedMessage: "Expecting token of type '}'" },
+  { name: 'unknown-statement', expectedMessage: "Expecting token of type '.'" },
   { name: 'malformed-string', expectedMessage: 'unexpected character' }
 ] as const;
 

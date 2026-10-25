@@ -9,7 +9,7 @@ entry SystemNode:
 
 BoxNode:
     'box' name=ID '{'
-        'operation' operation=ID '(' input=ID ':' 'string' ')' ':' 'string'
+        'operation' operation=ID '(' input=ID ':' 'string' ')' ':' resultType=('string' | 'void')
     '}'
 ;
 
@@ -34,7 +34,7 @@ PrintStatementNode:
 ;
 
 InvocationStatementNode:
-    'let' name=ID '=' box=ID '.' operation=ID '(' argument=STRING ')'
+    ('let' name=ID '=')? box=ID '.' operation=ID '(' (argument=STRING | variable=ID) ')'
 ;
 
 terminal ID: /[A-Za-z_][A-Za-z0-9_]*/;

@@ -4,6 +4,7 @@ import {
   EXECUTABLE_ARTIFACT_FORMAT,
   EXECUTABLE_ARTIFACT_VERSION,
   type DirectorProgram,
+  type InvocationArgument,
   type ExecutableArtifact
 } from '@boundscript/artifact';
 import { validateBoundScript, type SourceRange, type SystemNode } from '@boundscript/language';
@@ -60,12 +61,17 @@ export class BoundScriptCompiler implements Compiler<SystemNode> {
       version: DIRECTOR_PROGRAM_VERSION,
       instructions: system.director.start.statements.map((statement) => {
         if (statement.$type === 'InvocationStatementNode') {
-          return {
-            operation: 'invoke',
+          const argument: InvocationArgument = statement.variable
+            ? { kind: 'variable', name: statement.variable }
+            : { kind: 'literal', value: statement.argument! };
+          const invocation = {
+            operation: 'invoke' as const,
             implementation: bindings[statement.box]!,
-            argument: statement.argument,
-            result: statement.name
+            argument
           };
+          return statement.name
+            ? { ...invocation, resultType: 'string', result: statement.name }
+            : { ...invocation, resultType: 'void' };
         }
         return statement.variable
           ? { operation: 'print-variable', variable: statement.variable }

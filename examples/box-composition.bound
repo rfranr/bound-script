@@ -1,0 +1,14 @@
+system HelloWorld {
+    box Greeter {
+        operation greet(name: string): string
+    }
+    box Display {
+        operation show(message: string): void
+    }
+    director Main {
+        on start {
+            let message = Greeter.greet("World")
+            Display.show(message)
+        }
+    }
+}

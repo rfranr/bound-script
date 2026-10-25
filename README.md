@@ -66,7 +66,7 @@ box Greeter {
 }
 ```
 
-Inside `on start`, `let greeting = Greeter.greet("World")` stores the result and `print(greeting)` consumes it. Boxes are declared before the director. Each box has exactly one operation, one named string input, and one string output. Calls accept only a string literal; variables can only hold call results and be passed to `print`. Variables are immutable and local to one execution.
+Inside `on start`, `let greeting = Greeter.greet("World")` stores the result and `print(greeting)` consumes it. Boxes are declared before the director. Each box has exactly one operation, one named string input, and a `string` or `void` result. Calls accept a string literal or a previously assigned variable. Variables hold string call results, are immutable, and are local to one execution. String-returning calls must be assigned with `let`; void-returning calls must be standalone statements.
 
 Bind developer-provided TypeScript functions through the programmatic API:
 
@@ -95,8 +95,33 @@ const runtime = new BoundScriptRuntime(
 await runtime.execute(compiled.artifact, { entrypoint: 'start' });
 ```
 
-Every declared box requires an explicit binding. Unknown boxes, operations, and variables fail semantic validation/compilation. Missing host functions fail before instruction execution. Thrown/rejected implementation errors and non-string results fail execution with contextual errors. Functions are not generated, loaded dynamically, or embedded in the artifact; the host supplies them. They run **without sandbox enforcement**. The CLI has no implementation-loading option, so use the API for box programs; the existing Hello World CLI remains unchanged.
+Every declared box requires an explicit binding. Unknown boxes, operations, and variables fail semantic validation/compilation. Missing host functions fail before instruction execution. Thrown/rejected implementation errors and invalid return categories fail execution with contextual errors: string operations must return a string, and void operations must return `undefined` (including implicit returns). Both may be asynchronous. Functions are not generated, loaded dynamically, or embedded in the artifact; the host supplies them. They run **without sandbox enforcement**. The CLI has no implementation-loading option, so use the API for box programs; the existing Hello World CLI remains unchanged.
 
+
+## Two-box composition
+
+From the repository root after `npm install`:
+
+```bash
+npm run --silent demo:box-composition
+```
+
+Expected stdout is exactly `Hello, World!` followed by a newline; build output goes to stderr. This runs [`examples/box-composition.bound`](examples/box-composition.bound) through parsing, validation, compilation, and artifact execution:
+
+```boundscript
+system HelloWorld {
+    box Greeter { operation greet(name: string): string }
+    box Display { operation show(message: string): void }
+    director Main {
+        on start {
+            let message = Greeter.greet("World")
+            Display.show(message)
+        }
+    }
+}
+```
+
+The [host](examples/box-composition/host.ts) binds `Greeter` to `demo.greeter` and `Display` to `demo.display`, registering separate [Greeter](examples/box-composition/greeter.ts) and [Display](examples/box-composition/display.ts) implementations. The director never calls `print()`: Display receives and writes the Greeter result. Calls execute sequentially, awaiting each implementation before continuing. Literal `"message"` and variable `message` remain distinct in the serialized instruction program. As with the single-box demo, the plain CLI cannot supply these bindings.
 
 ## Target use cases
 
@@ -135,6 +160,7 @@ examples/
   hello-minimal.bound
   hello-world.bound
   director-box.bound
+  box-composition.bound
 tests/
   scaffolding.test.ts
   conformance.test.ts
@@ -160,6 +186,7 @@ Langium-generated TypeScript sources are reproducible and ignored by Git. Build 
 Useful commands:
 
 - `npm run --silent demo:director-box` — build and run the bound TypeScript Greeter demo
+- `npm run --silent demo:box-composition` — build and run Greeter → Display composition
 - `npm run langium:generate` — regenerate the parser, typed AST, and language metadata
 - `npm run typecheck` — generate language sources and compile all TypeScript project references
 - `npm test` — run the Vitest suite
@@ -168,4 +195,4 @@ Useful commands:
 
 ## Status
 
-The executable subset supports one `system`, optional boxes with one string-in/string-out operation each, one `director`, and one sequential `on start` block. Statements are string-literal box calls assigned with `let`, and `print()` with a string literal or previously assigned variable. No imports, general expressions, loops, conditionals, or testing syntax are supported. Use Vitest for external tests. The broader example language remains design material rather than a finalized specification.
+The executable subset supports one `system`, optional boxes with one string-input operation and a `string` or `void` result each, one `director`, and one sequential `on start` block. Box calls accept literals or previously assigned variables; string results are assigned with `let` and void calls are standalone. `print()` accepts a string literal or previously assigned variable. No imports, general expressions, loops, conditionals, or testing syntax are supported. Use Vitest for external tests. The broader example language remains design material rather than a finalized specification.
