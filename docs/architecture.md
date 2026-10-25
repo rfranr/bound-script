@@ -116,6 +116,10 @@ compiler --> artifact <-- runtime
 
 The runtime must not depend on `language` or `compiler`. The artifact package contains data contracts only and depends on no other project package.
 
+## Testing
+
+BoundScript has no language-level `test`, `mock`, or `expect` constructs. Use Vitest to test BoundScript systems and their orchestration externally. Contracts and capabilities remain language concepts; `ensure` and `allow` are reserved for those concerns rather than testing DSL behavior.
+
 ## Future, not scaffolded
 
 - grammar and semantic-model expansion beyond the executable subset;
