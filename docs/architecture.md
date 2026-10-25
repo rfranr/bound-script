@@ -8,7 +8,7 @@ BoundScript aims to keep machine-produced software governable and locally repair
 
 ### `@boundscript/language`
 
-Owns source-level concerns: documents, the typed AST, parsing, validation, and language diagnostics. Langium generates the parser, typed AST, grammar model, and language metadata from `boundscript.langium`. The grammar intentionally supports only one system, one director, one `on start` handler, and string-literal `print()` statements.
+Owns source-level concerns: documents, the typed AST, parsing, validation, and language diagnostics. Langium generates the parser, typed AST, grammar model, and language metadata from `boundscript.langium`. The grammar intentionally supports only one system, optional boxes with exactly one string-in/string-out operation each, one director, and one `on start` handler. Statements are string-literal box invocations assigned to variables and `print()` of a literal or previously assigned variable. Shared semantic validation rejects unknown boxes, operations, and variables, as well as duplicate box and variable names.
 
 Core Langium services are composed without an LSP host. The generated language metadata and service structure establish the foundation for later editor support without introducing a VS Code extension now. Generated TypeScript sources are reproducible build artifacts and are not committed.
 
@@ -21,19 +21,19 @@ Owns the stable hand-off between compiler and runtime. `ExecutableArtifact` is a
 - named runtime entrypoints;
 - byte assets addressed by unique relative paths.
 
-The contract deliberately excludes compiler AST nodes, arbitrary metadata, build logs, prompts, model identities, and build-agent state. The first runtime profile adds a versioned JSON director program containing only `print` instructions; the artifact envelope itself remains independent of the source language.
+The contract deliberately excludes compiler AST nodes, arbitrary metadata, build logs, prompts, model identities, and build-agent state. The first runtime profile uses a versioned JSON director program with `print`, `invoke`, and `print-variable` instructions; the artifact envelope itself remains independent of the source language. Invocation instructions contain a resolved host implementation ID, string argument, and result-variable name, never a JavaScript function or module path.
 
 ### `@boundscript/compiler`
 
-Consumes a fully resolved compilation input and deterministically emits one `ExecutableArtifact`. For the first slice, the typed language AST is already the complete compilation input. Future box implementations must be resolved before compilation; obtaining them will not be the compiler's responsibility.
+Consumes a fully resolved compilation input and deterministically emits one `ExecutableArtifact`. The typed language AST plus explicit box-to-implementation-ID bindings form the compilation input. Box implementation identities must be resolved before compilation; obtaining implementations is not the compiler's responsibility.
 
-Compilation returns a discriminated success or failure result, preventing a failed compilation from accidentally exposing a partial artifact. The current compiler lowers `print()` statements to the versioned director instruction asset.
+Compilation returns a discriminated success or failure result, preventing a failed compilation from accidentally exposing a partial artifact. The compiler validates the model and lowers statements to the versioned director instruction asset. An optional explicit `BoxBindings` argument maps each declared box name to a host implementation ID; missing bindings fail compilation. Resolution does not load or generate code. Existing box-free programs need no bindings.
 
 ### `@boundscript/runtime`
 
-Executes `ExecutableArtifact` values using a named entrypoint and optional input. It is independent of parser, AST, compiler, and build-agent implementation details. The current runtime validates and executes the first director instruction format through an injected output sink.
+Executes `ExecutableArtifact` values using a named entrypoint and optional input. It is independent of parser, AST, compiler, and build-agent implementation details. The runtime validates and executes the director instruction format through an injected output sink and an explicit host implementation registry. IDs map to developer-provided `(input: string) => string | Promise<string>` functions. Required registrations are checked before any instructions execute. Calls are awaited sequentially and results are checked to be strings; variables are local to one execution. Host failures produce contextual runtime errors. The runtime neither imports modules dynamically nor depends on source box declarations.
 
-`print` is a temporary built-in operation, not a sandboxed capability. General control flow, events, tracing, correlation identifiers, and lifecycle hooks are deferred until concrete requirements exist.
+`print` is a temporary built-in operation, not a sandboxed capability. Host box implementations are trusted code running in the same process, without sandbox enforcement. General control flow, events, tracing, correlation identifiers, and lifecycle hooks are deferred until concrete requirements exist.
 
 ### `@boundscript/sandbox`
 
@@ -124,8 +124,8 @@ BoundScript has no language-level `test`, `mock`, or `expect` constructs. Use Vi
 
 - grammar and semantic-model expansion beyond the executable subset;
 - contract semantics and verification;
-- a resolved compilation-input model for boxes;
-- director control flow beyond sequential `print` instructions;
+- richer resolved box compilation inputs beyond explicit host IDs;
+- director control flow beyond sequential invocations and printing;
 - box implementation packaging;
 - build-agent orchestration;
 - optional runtime-agent language semantics;

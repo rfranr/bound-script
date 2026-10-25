@@ -18,9 +18,23 @@ export interface PrintInstruction {
   readonly value: string;
 }
 
+export interface PrintVariableInstruction {
+  readonly operation: 'print-variable';
+  readonly variable: string;
+}
+
+export interface InvokeInstruction {
+  readonly operation: 'invoke';
+  readonly implementation: string;
+  readonly argument: string;
+  readonly result: string;
+}
+
+export type DirectorInstruction = PrintInstruction | PrintVariableInstruction | InvokeInstruction;
+
 export interface DirectorProgram {
   readonly version: typeof DIRECTOR_PROGRAM_VERSION;
-  readonly instructions: readonly PrintInstruction[];
+  readonly instructions: readonly DirectorInstruction[];
 }
 
 export interface ArtifactEntrypoint {

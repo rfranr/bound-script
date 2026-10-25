@@ -2,7 +2,14 @@ grammar BoundScript
 
 entry SystemNode:
     'system' name=ID '{'
+        boxes+=BoxNode*
         director=DirectorNode
+    '}'
+;
+
+BoxNode:
+    'box' name=ID '{'
+        'operation' operation=ID '(' input=ID ':' 'string' ')' ':' 'string'
     '}'
 ;
 
@@ -14,12 +21,20 @@ DirectorNode:
 
 StartHandlerNode:
     'on' 'start' '{'
-        statements+=PrintStatementNode*
+        statements+=StatementNode*
     '}'
 ;
 
+StatementNode:
+    PrintStatementNode | InvocationStatementNode
+;
+
 PrintStatementNode:
-    'print' '(' value=STRING ')'
+    'print' '(' (value=STRING | variable=ID) ')'
+;
+
+InvocationStatementNode:
+    'let' name=ID '=' box=ID '.' operation=ID '(' argument=STRING ')'
 ;
 
 terminal ID: /[A-Za-z_][A-Za-z0-9_]*/;

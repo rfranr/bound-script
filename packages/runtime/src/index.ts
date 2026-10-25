@@ -40,9 +40,16 @@ export interface ExecutionRuntime {
   ): Promise<ExecutionResult>;
 }
 
+/** Host-provided code is trusted: this registry is not a sandbox. */
+export type BoxImplementation = (input: string) => string | Promise<string>;
+export type BoxImplementations = Readonly<Record<string, BoxImplementation>>;
+
 /** Runtime for the first instruction format. `print` is a temporary built-in operation. */
 export class BoundScriptRuntime implements ExecutionRuntime {
-  constructor(private readonly output: PrintSink) {}
+  constructor(
+    private readonly output: PrintSink,
+    private readonly implementations: BoxImplementations = {}
+  ) {}
 
   async execute(
     artifact: ExecutableArtifact,
@@ -65,9 +72,43 @@ export class BoundScriptRuntime implements ExecutionRuntime {
     }
 
     const program = decodeDirectorProgram(asset.bytes);
+    // Resolve every dependency before executing any instructions or producing output.
+    const implementations = new Map<string, BoxImplementation>();
+    for (const instruction of program.instructions) {
+      if (instruction.operation !== 'invoke') continue;
+      const implementation = Object.hasOwn(this.implementations, instruction.implementation)
+        ? this.implementations[instruction.implementation]
+        : undefined;
+      if (typeof implementation !== 'function') {
+        throw new RuntimeExecutionError(`Missing implementation "${instruction.implementation}".`);
+      }
+      implementations.set(instruction.implementation, implementation);
+    }
+
+    const variables = new Map<string, string>();
     for (const instruction of program.instructions) {
       if (request.signal?.aborted) throw new RuntimeExecutionError('Execution was aborted.');
-      this.output.writeLine(instruction.value);
+      if (instruction.operation === 'invoke') {
+        let result: unknown;
+        try {
+          result = await implementations.get(instruction.implementation)!(instruction.argument);
+        } catch (error) {
+          const message = error instanceof Error ? error.message : String(error);
+          throw new RuntimeExecutionError(`Implementation "${instruction.implementation}" failed: ${message}`);
+        }
+        if (typeof result !== 'string') {
+          throw new RuntimeExecutionError(`Implementation "${instruction.implementation}" must return a string.`);
+        }
+        variables.set(instruction.result, result);
+      } else if (instruction.operation === 'print-variable') {
+        const value = variables.get(instruction.variable);
+        if (value === undefined) {
+          throw new RuntimeExecutionError(`Unknown variable "${instruction.variable}".`);
+        }
+        this.output.writeLine(value);
+      } else {
+        this.output.writeLine(instruction.value);
+      }
     }
 
     return {};
@@ -102,12 +143,22 @@ function isDirectorProgram(value: unknown): value is DirectorProgram {
     return false;
   }
 
-  return value.instructions.every(
-    (instruction) =>
-      isRecord(instruction) &&
-      instruction.operation === 'print' &&
-      typeof instruction.value === 'string'
-  );
+  return value.instructions.every((instruction) => {
+    if (!isRecord(instruction)) return false;
+    switch (instruction.operation) {
+      case 'print':
+        return typeof instruction.value === 'string';
+      case 'print-variable':
+        return typeof instruction.variable === 'string';
+      case 'invoke':
+        return typeof instruction.implementation === 'string' &&
+          instruction.implementation.length > 0 &&
+          typeof instruction.argument === 'string' &&
+          typeof instruction.result === 'string';
+      default:
+        return false;
+    }
+  });
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
