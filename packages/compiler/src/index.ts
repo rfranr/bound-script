@@ -6,7 +6,7 @@ import {
   type DirectorProgram,
   type ExecutableArtifact
 } from '@boundscript/artifact';
-import { validateBoundScript, type SystemNode } from '@boundscript/language';
+import { validateBoundScript, type SourceRange, type SystemNode } from '@boundscript/language';
 
 /** Explicit box name to host implementation ID bindings, resolved before compilation. */
 export type BoxBindings = Readonly<Record<string, string>>;
@@ -18,6 +18,7 @@ export interface CompilationDiagnostic {
   readonly code: string;
   readonly message: string;
   readonly severity: 'error' | 'warning' | 'info';
+  readonly range?: SourceRange;
 }
 
 export type CompilationResult =

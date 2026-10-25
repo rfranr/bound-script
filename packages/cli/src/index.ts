@@ -48,7 +48,7 @@ export async function runBoundCli(arguments_: readonly string[], io: CliIo): Pro
     const compilation = await new BoundScriptCompiler().compile(parsed.program);
     if (!compilation.ok) {
       for (const diagnostic of compilation.diagnostics) {
-        io.stderr.write(`${document.uri}: error ${diagnostic.code}: ${diagnostic.message}\n`);
+        io.stderr.write(`${formatDiagnostic(document, diagnostic)}\n`);
       }
       return 1;
     }

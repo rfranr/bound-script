@@ -1,3 +1,5 @@
+import { GrammarUtils, type AstNode } from 'langium';
+
 import { createBoundScriptServices } from './boundscript-services.js';
 import type { SystemNode } from './generated/ast.js';
 
@@ -88,28 +90,39 @@ export class BoundScriptLanguageFrontend implements LanguageFrontend<SystemNode>
 /** Semantic checks shared by the frontend and compiler; no implementation loading. */
 export function validateBoundScript(program: SystemNode): readonly LanguageDiagnostic[] {
   const diagnostics: LanguageDiagnostic[] = [];
-  const report = (code: string, message: string) => {
-    diagnostics.push({ code: `language.${code}`, message, severity: 'error' });
+  const report = (code: string, message: string, node: AstNode, property: string) => {
+    const cst = GrammarUtils.findNodeForProperty(node.$cstNode, property);
+    diagnostics.push({
+      code: `language.${code}`,
+      message,
+      severity: 'error',
+      ...(cst ? {
+        range: {
+          start: { line: cst.range.start.line + 1, column: cst.range.start.character + 1, offset: cst.offset },
+          end: { line: cst.range.end.line + 1, column: cst.range.end.character + 1, offset: cst.end }
+        }
+      } : {})
+    });
   };
   const boxes = new Map<string, SystemNode['boxes'][number]>();
   for (const box of program.boxes) {
-    if (boxes.has(box.name)) report('duplicate-box', `Duplicate box "${box.name}".`);
+    if (boxes.has(box.name)) report('duplicate-box', `Duplicate box "${box.name}".`, box, 'name');
     boxes.set(box.name, box);
   }
   const variables = new Set<string>();
   for (const statement of program.director.start.statements) {
     if (statement.$type === 'InvocationStatementNode') {
       const box = boxes.get(statement.box);
-      if (!box) report('unknown-box', `Unknown box "${statement.box}".`);
+      if (!box) report('unknown-box', `Unknown box "${statement.box}".`, statement, 'box');
       else if (box.operation !== statement.operation) {
-        report('unknown-operation', `Unknown operation "${statement.operation}" on box "${box.name}".`);
+        report('unknown-operation', `Unknown operation "${statement.operation}" on box "${box.name}".`, statement, 'operation');
       }
       if (variables.has(statement.name)) {
-        report('duplicate-variable', `Duplicate variable "${statement.name}".`);
+        report('duplicate-variable', `Duplicate variable "${statement.name}".`, statement, 'name');
       }
       variables.add(statement.name);
     } else if (statement.variable && !variables.has(statement.variable)) {
-      report('unknown-variable', `Unknown variable "${statement.variable}".`);
+      report('unknown-variable', `Unknown variable "${statement.variable}".`, statement, 'variable');
     }
   }
   return diagnostics;
