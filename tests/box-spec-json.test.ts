@@ -1,12 +1,13 @@
 import { readFile } from 'node:fs/promises';
 
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import {
   BoxSpecValidationError, extractBoxDevelopmentSpec, parseBoxDevelopmentSpec, serializeBoxDevelopmentSpec,
   type BoxDevelopmentSpec
 } from '@boundscript/compiler';
 import { parseBoundScript } from '@boundscript/language';
+import { verifyBoxImplementation } from '@boundscript/runtime';
 
 const base = {
   format: 'boundscript/box-development-spec', version: 1, system: 'Demo', box: 'Box',
@@ -78,8 +79,11 @@ describe('portable box specification JSON', () => {
     expect(decode(serialize(spec)).operation).toEqual(spec.operation);
   });
 
-  it.each(['{', 'null trailing', '', 'undefined', '{"version": NaN}'])('reports malformed JSON: %s', (json) => {
+  it.each(['{', 'null trailing', '', 'undefined', '{"version": NaN}'])('reports malformed JSON: %s', async (json) => {
     const result = parseBoxDevelopmentSpec(json);
+    const candidate = vi.fn();
+    if (result.ok) await verifyBoxImplementation(result.spec, candidate, 'fixed');
+    expect(candidate).not.toHaveBeenCalled();
     expect(result).toEqual({ ok: false, diagnostics: [{
       code: 'compiler.box-spec.invalid-json', message: 'Box specification is not valid JSON.', severity: 'error'
     }] });
@@ -135,8 +139,11 @@ describe('portable box specification JSON', () => {
     ['result target on number', operation({ resultType: 'number' }), '.postcondition.target'],
     ['extra result-target key', operation({ postcondition: { ...base.operation.postcondition, target: { kind: 'result', name: 'text' } } }), '.target.name'],
     ['extra field-target key', operation({ resultType: record, postcondition: { ...fieldPredicate, target: { kind: 'field', name: 'text', path: [] } } }), '.target']
-  ])('rejects %s on parse and serialization', (_label, value, path) => {
+  ])('rejects %s on parse and serialization', async (_label, value, path) => {
     const parsed = parseBoxDevelopmentSpec(JSON.stringify(value));
+    const candidate = vi.fn();
+    if (parsed.ok) await verifyBoxImplementation(parsed.spec, candidate, 'fixed');
+    expect(candidate).not.toHaveBeenCalled();
     expect(parsed.ok).toBe(false);
     expect(parsed).not.toHaveProperty('spec');
     expect(parsed.diagnostics[0]).toMatchObject({ code: 'compiler.box-spec.invalid-spec', severity: 'error' });

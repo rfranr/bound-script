@@ -18,9 +18,9 @@ A **Box** is a unit of delegated responsibility with an explicit architectural b
 
 See the [roadmap](docs/roadmap.md) for the current milestone, completion criteria, related assignments, and execution status.
 
-Today the repository implements a Langium parser and diagnostics, deterministic compiler, versioned executable artifacts, artifact-driven runtime, and CLI. It supports sequential director-to-box invocation, primitive and flat-record data contracts, minimal string postconditions, and portable canonical Box contract extraction through `bound spec`.
+Today the repository implements a Langium parser and diagnostics, deterministic compiler, versioned executable artifacts, artifact-driven runtime, and CLI. It supports sequential director-to-box invocation, primitive and flat-record data contracts, minimal string postconditions, portable canonical Box contract extraction through `bound spec`, and standalone single-invocation verification of trusted functions.
 
-It does **not** implement agent-driven construction, standalone candidate verification, task derivation, evidence reports, candidate promotion, dependency/capability declarations, or sandbox enforcement. Imports and general control flow are also unsupported. Current host implementations are trusted functions running in the host process.
+It does **not** implement agent-driven construction, candidate loading, task derivation, behavioral acceptance runners, evidence reports, candidate promotion, dependency/capability declarations, or sandbox enforcement. Imports and general control flow are also unsupported. Current host implementations are trusted functions running in the host process.
 
 The planned workflow is: human requirements → Architect proposal → approval → deterministic contract extraction and task derivation → independent implementation → independent and integration verification → evidence-backed acceptance and promotion. A contract is not a complete implementation brief: intended behavior still needs human-owned tasks, examples, and trusted tests. A passing type check or finite test cannot prove arbitrary semantic correctness.
 
@@ -208,7 +208,32 @@ Extraction validates the **whole system**, including unused declarations and dir
 
 `serializeBoxDevelopmentSpec(spec)` validates and returns canonical JSON: fixed key order, code-point-sorted record fields, two-space indentation, and one final LF. `parseBoxDevelopmentSpec(json)` strictly validates and returns the same discriminated result shape. Unknown properties/versions/types, conflicting record schemas, and incompatible postconditions fail explicitly. Parsing returns diagnostics; invalid serialization throws `BoxSpecValidationError` with diagnostics. Neither codec performs I/O or loads host implementations.
 
-The document describes **declared contracts**, not unstated functional intent or a complete implementation brief. A human-authored task and independent examples/tests are still required; business behavior is not inferred from box names or director calls. Agent orchestration and verifier execution remain outside this slice.
+The document describes **declared contracts**, not unstated functional intent or a complete implementation brief. A human-authored task and independent examples/tests are still required; business behavior is not inferred from box names or director calls. Agent orchestration remains outside this slice.
+
+## Standalone Box verification
+
+After `npm run build`, a host can decode portable JSON and check one fixed-input invocation of a **trusted, already-loaded** function without source, AST, bindings, artifacts, or director execution. From a module in the repository root:
+
+```typescript
+import { readFile } from 'node:fs/promises';
+import { parseBoxDevelopmentSpec } from '@boundscript/compiler/box-spec';
+import { verifyBoxImplementation } from '@boundscript/runtime';
+import { greet } from './examples/structured-types/dist/greeter.js';
+
+const decoded = parseBoxDevelopmentSpec(await readFile('examples/specs/greeter.box-spec.json', 'utf8'));
+if (!decoded.ok) throw new Error(JSON.stringify(decoded.diagnostics));
+const checked = await verifyBoxImplementation(decoded.spec, greet, {
+  id: '123', name: 'World', active: true, score: 7
+});
+if (!checked.ok) throw new Error(JSON.stringify(checked.failure));
+console.log(checked.output); // { message: 'Hello, World!', recipientId: '123' }
+```
+
+The codec subpath does not load the language frontend. The verifier shares the director runtime's descriptor, input/output, void, and predicate checks. It calls the function once, awaits it, validates the entire output, then evaluates any postcondition. `BoxVerificationContract` is only a structural consumer view of a decoded spec, not another serialized schema; always decode first and keep the contract stable during verification.
+
+Results are discriminated by `ok` and, on failure, `failure.kind`: `invalid-contract`, `invalid-implementation`, `invalid-input`, `execution-failure`, `invalid-output`, `postcondition-failure`, or `inspection-failure`. Inspection failures are errors encountered while checking values, **not proven contract violations**. Success includes `output: unknown` (including `undefined` for void); failure exposes no partial output. See the [API and failure reference](docs/box-development-spec.md#standalone-verification) for fields and examples.
+
+Records retain their original references: no cloning, freezing, branding, or stricter plain-object rules are added. Getters and mutable objects do not provide deterministic verification guarantees. Functions execute with host privileges and may cause side effects before failure, without rollback, timeouts, cancellation/resource enforcement, or isolation; a hanging function can hang the host. Do not run untrusted generated code in the trusted development process. A conformance pass does not prove business behavior, algorithms, dependencies/capabilities, nominal record origins, integration, or correctness for all inputs. Use separate trusted functional tests. There is no CLI verify command or candidate loader.
 
 ## Target use cases
 
@@ -255,7 +280,7 @@ tests/
   fixtures/
 ```
 
-No Architect, agent runner, standalone verifier, or promotion module is implemented in this layout. Build-time agents are development tooling, not runtime components; generalized orchestration remains deferred. Runtime agents, if supported later, will be explicit language-level application behavior and will remain provider-neutral.
+Standalone verification is an API in the existing runtime package, not a new package. No Architect, agent runner, or promotion module is implemented in this layout. Build-time agents are development tooling, not runtime components; generalized orchestration remains deferred. Runtime agents, if supported later, will be explicit language-level application behavior and will remain provider-neutral.
 
 ## Development
 

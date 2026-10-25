@@ -4,7 +4,7 @@ import { expect, it, vi } from 'vitest';
 
 // The pure codec module has type-only dependencies, so consuming JSON needs no language services.
 vi.mock('@boundscript/language', () => { throw new Error('JSON consumption must not load the language frontend.'); });
-import { parseBoxDevelopmentSpec, serializeBoxDevelopmentSpec } from '../packages/compiler/src/box-spec-json.js';
+import { parseBoxDevelopmentSpec, serializeBoxDevelopmentSpec } from '@boundscript/compiler/box-spec';
 
 it('consumes the published JSON without BoundScript source, Langium or compiler execution', async () => {
   const json = await readFile('examples/specs/greeter.box-spec.json', 'utf8');

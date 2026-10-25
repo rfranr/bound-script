@@ -9,6 +9,10 @@
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
+    },
+    "./box-spec": {
+      "types": "./dist/box-spec-json.d.ts",
+      "import": "./dist/box-spec-json.js"
     }
   },
   "files": ["dist"],

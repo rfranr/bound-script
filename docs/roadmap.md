@@ -6,12 +6,12 @@ This is the authoritative **current execution plan and milestone tracker**. [Acc
 
 **M0 — Completed:** Proposal 0013 establishes the approved product direction; the supporting documentation and governance deliverables are present (see M0 evidence below).
 
-**Current execution priority: M1 — Planned**, standalone verification of existing contracts, ready to start. Detailed pilot design belongs to M3 and comparative baseline/evaluation design to M6; neither is an outstanding M0 deliverable or a prerequisite to starting M1. The evaluation protocol and baseline must, however, be defined before M3 implementation begins. As Proposal 0013 recommends, preparation can proceed alongside M1, before additional infrastructure; milestone order does not prohibit that overlap.
+**Current execution priority: M1 — In Progress**. Assignment 0016's design is approved with Product Owner clarifications; Assignment 0017 delivers standalone trusted-function verification and remains pending Product Owner review and acceptance. M1 is not marked Completed. Detailed pilot design belongs to M3 and comparative baseline/evaluation design to M6; neither is an outstanding M0 deliverable or a prerequisite to starting M1. The evaluation protocol and baseline must, however, be defined before M3 implementation begins. As Proposal 0013 recommends, preparation can proceed alongside M1, before additional infrastructure; milestone order does not prohibit that overlap.
 
 | Milestone | Status | Execution assignments | Existing foundations |
 | --- | --- | --- | --- |
 | M0 — Approve the product thesis | Completed | 0014, 0015 | Proposal 0013 |
-| M1 — Standalone contract verification | Planned | Not yet defined | 0012, 0013 |
+| M1 — Standalone contract verification | In Progress | [0016 — Verifier design](assignments/0016-design-standalone-box-verifier.md), [0017 — Implementation (pending acceptance)](assignments/0017-implement-standalone-box-verifier.md) | 0012, 0013 |
 | M2 — Deterministic task derivation | Planned | Not yet defined | 0013 |
 | M3 — Independent implementation pilot | Planned | Not yet defined | M1 verification, M2 handoffs |
 | M4 — Integration and evidence | Planned | Not yet defined | M1–M3 outputs |
@@ -33,13 +33,14 @@ M0 is the only Completed milestone. Its product-direction approval is distinct f
 
 ### M1 — Standalone contract verification
 
-- **Status:** Planned.
+- **Status:** In Progress.
 - **Objective:** Check Box implementations independently of executable director programs.
 - **Scope/deliverables:** Minimal verifier consuming existing portable Box specifications and trusted fixture implementations, without an executable director or source AST; reuse existing runtime validation semantics.
 - **Completion criteria:** Valid cases pass; invalid inputs, candidate execution failures, invalid outputs, and postcondition failures are distinguishable. Existing examples remain compatible.
-- **Execution assignments:** Not yet defined. A standalone-verifier assignment is required.
+- **Execution assignments:** [0016 — Design Standalone Box Verifier](assignments/0016-design-standalone-box-verifier.md) records the approved design and Product Owner clarifications. [0017 — Implement Standalone Box Verifier](assignments/0017-implement-standalone-box-verifier.md) delivers the codec subpath, shared runtime checks, single-invocation verifier, consumer/type/parity tests, and [usage documentation](box-development-spec.md#standalone-verification). Delivery remains pending Product Owner review and acceptance; neither assignment delivery nor passing checks automatically completes M1.
 - **Existing foundations:** [0012 — Specification extraction](assignments/0012-box-specification-extraction.md) and [0013 — Specification portability](assignments/0013-box-specification-portability.md) provide existing foundations, not verifier execution.
 - **Dependencies/evidence:** Builds on M0's direction and existing contracts. Extraction was delivered in `4a63eff`; portability/CLI export in `9beec9b`, documented in the [Box spec reference](box-development-spec.md). Assignment 0013 explicitly records Assignment 0012 as implemented, reviewed, and accepted. No equivalent formal acceptance record was found for Assignment 0013. Neither delivery completes M1.
+- **0017 delivery checks:** Type checking and all 370 tests (15 files) pass, including public-import, structured-result, inspection, type-narrowing, and legacy-parity coverage. Build, the three existing Box demos, Hello World CLI, and byte-identical canonical spec export pass. This is implementation verification evidence, not Product Owner acceptance or milestone closure.
 
 ### M2 — Deterministic task derivation
 

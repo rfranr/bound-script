@@ -8,14 +8,15 @@ function packageSource(name: string): string {
 
 export default defineConfig({
   resolve: {
-    alias: {
-      '@boundscript/artifact': packageSource('artifact'),
-      '@boundscript/cli': packageSource('cli'),
-      '@boundscript/compiler': packageSource('compiler'),
-      '@boundscript/language': packageSource('language'),
-      '@boundscript/runtime': packageSource('runtime'),
-      '@boundscript/sandbox': packageSource('sandbox')
-    }
+    alias: [
+      { find: /^@boundscript\/compiler\/box-spec$/, replacement: fileURLToPath(new URL('./packages/compiler/src/box-spec-json.ts', import.meta.url)) },
+      { find: '@boundscript/artifact', replacement: packageSource('artifact') },
+      { find: '@boundscript/cli', replacement: packageSource('cli') },
+      { find: '@boundscript/compiler', replacement: packageSource('compiler') },
+      { find: '@boundscript/language', replacement: packageSource('language') },
+      { find: '@boundscript/runtime', replacement: packageSource('runtime') },
+      { find: '@boundscript/sandbox', replacement: packageSource('sandbox') }
+    ]
   },
   test: {
     include: ['tests/**/*.test.ts'],

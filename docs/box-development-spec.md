@@ -22,7 +22,7 @@ serializeBoxDevelopmentSpec(spec: BoxDevelopmentSpec): string;
 parseBoxDevelopmentSpec(json: string): BoxSpecResult;
 ```
 
-The codec does no I/O and does not parse BoundScript, compile an artifact, or load implementations. A consumer needs only the JSON document and this format, not the original system/source. The codec implementation has only type-level dependencies on the existing compiler/artifact contracts.
+`@boundscript/compiler/box-spec` exposes `parseBoxDevelopmentSpec`, `serializeBoxDevelopmentSpec`, and `BoxSpecValidationError` without loading the compiler root, language frontend, or Langium at execution time. Existing compiler-root exports remain compatible. The codec does no I/O and does not parse BoundScript, compile an artifact, or load implementations. A consumer needs only the JSON document and this format, not the original system/source. The codec implementation has only type-level dependencies on the existing compiler/artifact contracts.
 
 **Error contract:** Parsing returns `{ ok: true, spec, diagnostics: [] }` or `{ ok: false, diagnostics }`, never a partial spec. Malformed JSON uses `compiler.box-spec.invalid-json`; invalid/unsupported specification data uses `compiler.box-spec.invalid-spec` with a JSON-style property path in the message. These are document diagnostics, not source ranges. Serialization also validates first and throws exported `BoxSpecValidationError`, whose readonly `diagnostics` carry the latter code; it never silently removes unsupported data or mutates the input. Both boundaries report the first validation error.
 
@@ -56,4 +56,66 @@ Serialization reconstructs the shape above with fixed key order: root `format/ve
 
 Text uses `JSON.stringify` string escaping, two-space indentation, LF line endings, and **exactly one final LF**. The CLI writes that text as UTF-8. No timestamps, source paths, ASTs, bindings, implementation code, or provider metadata are included. Key/field order and input whitespace do not affect canonical bytes. Parsing normalizes key/field order; canonical documents round-trip byte-for-byte, while noncanonical valid JSON is normalized on serialization.
 
-Spec version 1 is independent of director instruction version 4 and executable-artifact envelope version 1. Unsupported spec versions and variants fail explicitly; evolving this format or its normative semantics requires an explicit version decision, not silently accepting new keys. There is no agent/verifier runner, general schema framework, code generator, or implementation discovery in this feature.
+Spec version 1 is independent of director instruction version 4 and executable-artifact envelope version 1. Unsupported spec versions and variants fail explicitly; evolving this format or its normative semantics requires an explicit version decision, not silently accepting new keys. There is no agent runner, general schema framework, code generator, or implementation discovery in this feature. Standalone verification is a separate runtime API described below.
+
+## Standalone verification
+
+Use the existing strict decoder first, then `verifyBoxImplementation` from `@boundscript/runtime` with a trusted, already-loaded function and one fixed input. The [README example](../README.md#standalone-box-verification) demonstrates the published Greeter contract and implementation. No source AST, compiler call, binding, artifact, or director execution is required. Invalid JSON/spec setup returns the codec's existing structured diagnostics; the host must not invoke a candidate after decoding failure.
+
+```typescript
+import { parseBoxDevelopmentSpec } from '@boundscript/compiler/box-spec';
+import { verifyBoxImplementation } from '@boundscript/runtime';
+import { greet } from './trusted-greeter.js'; // Already built and loaded by the host.
+
+const decoded = parseBoxDevelopmentSpec(json); // Host-supplied portable JSON text.
+if (!decoded.ok) {
+  // Report decoded.diagnostics; do not execute the function.
+} else {
+  const result = await verifyBoxImplementation(decoded.spec, greet, {
+    id: '123', name: 'World', active: true, score: 7
+  });
+  if (result.ok) {
+    // result.output is unknown, or undefined for a successful void operation.
+    // Apply human-owned functional assertions separately.
+  } else {
+    // Classify with result.failure.kind, not by parsing its descriptive message.
+  }
+}
+```
+
+The public signature is:
+
+```typescript
+verifyBoxImplementation(
+  contract: BoxVerificationContract,
+  implementation: BoxImplementation<any>,
+  input: unknown
+): Promise<BoxVerificationResult>;
+```
+
+`BoxVerificationContract` is a readonly structural consumer view containing `box` and `operation` (`name`, `input.type`, `resultType`, optional `postcondition`), with the existing artifact `ValueType` and `Postcondition` descriptors. A decoded `BoxDevelopmentSpec` is directly assignable. The view is **not another authoritative contract model, serialized format, or versioned schema**. Its defensive descriptor/identity guard does not validate the portable envelope, format/version, system/parameter names, or conflicting schemas. Do not pass raw `JSON.parse` output instead of strict decoding. The trusted host must keep the decoded contract stable during verification.
+
+The verifier checks the consumer view, callability, then input; invokes/awaits the function once; checks the entire resolved output (including void); then checks the optional predicate. Director execution and standalone verification share the same internal descriptor, value, void-result, and postcondition semantics. Existing director errors and behavior remain unchanged.
+
+### Structured results
+
+Success is `{ ok: true, output: unknown }`, always including `output` even when it is `undefined`. Failure is `{ ok: false, failure }`, with no partial output. The first failed stage wins:
+
+| `failure.kind` | Fields and meaning |
+| --- | --- |
+| `invalid-contract` | `message`: malformed runtime consumer view/descriptors; not full portable-spec validation. |
+| `invalid-implementation` | `message`: candidate is not callable. |
+| `invalid-input` | `expected: ValueType`, `problem: string`: input value mismatch; candidate did not run. |
+| `execution-failure` | `message`: candidate threw/rejected or failed during awaiting. Even a candidate-thrown `PostconditionViolationError` stays an execution failure. |
+| `invalid-output` | `expected: ValueType` or `'void'`, `problem: string`: resolved output mismatch; predicate was not evaluated. |
+| `postcondition-failure` | `predicate: Postcondition`, `observed: string`: a structurally valid output's result/field equaled the forbidden string. |
+| `inspection-failure` | `phase: 'input'`, `'output'`, or `'postcondition'`, and `message`: error encountered while checking a value, such as a throwing getter. **Not a proven contract violation or type mismatch.** |
+
+Failure results do not embed arbitrary thrown objects, stack traces, full inputs, or invalid outputs. Successful output retains its original reference and is not a durable evidence record. Descriptive messages/problem strings are not the machine-classification protocol. Hostile descriptor proxies, fatal process failures, and verifier defects are not promised structured outcomes.
+
+### Guarantees and limits
+
+- One successful invocation establishes only the supported checks on the supplied values. External tests remain responsible for intended behavior. The verifier cannot prove arbitrary business behavior, algorithms, dependency/capability compliance, integration correctness, or correctness for all inputs.
+- No copying/freezing, nominal branding, or new plain-object restrictions: existing own-field/no-extra checks still apply to class instances, prototypes, accessors, and null-prototype objects. Arbitrary getters and mutable objects do not provide deterministic verification guarantees; property reads can execute code or observe changing values. Runtime objects cannot prove their originating nominal record type merely from their shape.
+- Trusted code executes in-process with host privileges. Side effects can precede output/postcondition failure, with no rollback. No timeout, cancellation, resource-limit enforcement, sandbox, or isolation is provided. A hanging function can hang the host. Do not execute untrusted generated code in the trusted development process.
+- The host supplies already-loaded code and handles file I/O/functional assertions. No candidate loader, TypeScript transpilation service, CLI verify command, agent integration, behavioral acceptance runner, task derivation, promotion, or provenance/evidence framework is included.

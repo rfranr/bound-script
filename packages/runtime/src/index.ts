@@ -10,6 +10,13 @@ import {
   type ValueType
 } from '@boundscript/artifact';
 
+import {
+  isPostcondition, isRecord, isValueType, postconditionViolation, resultTypeProblem
+} from './contract-checks.js';
+
+export { verifyBoxImplementation } from './box-verifier.js';
+export type { BoxVerificationContract, BoxVerificationFailure, BoxVerificationResult } from './box-verifier.js';
+
 /** Public API version for the execution-runtime boundary. */
 export const RUNTIME_API_VERSION = '0.1' as const;
 
@@ -125,8 +132,11 @@ export class BoundScriptRuntime implements ExecutionRuntime {
             assertPostcondition(result, instruction.postcondition, instruction.box, instruction.boxOperation);
           }
           variables.set(instruction.result, result);
-        } else if (result !== undefined) {
-          throw new RuntimeExecutionError(`Implementation "${instruction.implementation}" must return undefined for a void operation. ${boundary} output expected "void", got ${valueCategory(result)}.`);
+        } else {
+          const problem = resultTypeProblem(result, instruction.resultType);
+          if (problem) {
+            throw new RuntimeExecutionError(`Implementation "${instruction.implementation}" must return undefined for a void operation. ${boundary} output expected "void", ${problem}.`);
+          }
         }
       } else if (instruction.operation === 'print-variable') {
         const value = variables.get(instruction.variable);
@@ -194,22 +204,10 @@ function isDirectorProgram(value: unknown): value is DirectorProgram {
   });
 }
 
-function isPostcondition(value: unknown, resultType: ValueType): value is Postcondition {
-  if (!isRecord(value) || value.kind !== 'string-not-equal' || typeof value.value !== 'string' ||
-      !isRecord(value.target)) return false;
-  const target = value.target;
-  return (target.kind === 'result' && resultType === 'string') ||
-    (target.kind === 'field' && typeof target.name === 'string' &&
-      typeof resultType !== 'string' && resultType.fields.some(
-        (field) => field.name === target.name && field.type === 'string'
-      ));
-}
-
 /** Called only after output type validation and descriptor compatibility checks. */
 function assertPostcondition(result: unknown, predicate: Postcondition, box: string, operation: string): void {
-  const observed = predicate.target.kind === 'result'
-    ? result : (result as Record<string, unknown>)[predicate.target.name];
-  if (observed === predicate.value) {
+  const observed = postconditionViolation(result, predicate);
+  if (observed !== undefined) {
     throw new PostconditionViolationError(box, operation, predicate, observed);
   }
 }
@@ -220,34 +218,10 @@ function resolveArgument(argument: InvocationArgument, variables: ReadonlyMap<st
   return variables.get(argument.name);
 }
 
-function isPrimitiveType(value: unknown): value is 'string' | 'number' | 'boolean' {
-  return value === 'string' || value === 'number' || value === 'boolean';
-}
-
-function isValueType(value: unknown): value is ValueType {
-  if (isPrimitiveType(value)) return true;
-  if (!isRecord(value) || value.kind !== 'record' || typeof value.name !== 'string' ||
-      !value.name || !Array.isArray(value.fields)) return false;
-  const names = new Set<string>();
-  return value.fields.every((field) => {
-    if (!isRecord(field) || typeof field.name !== 'string' || !field.name ||
-        !isPrimitiveType(field.type) || names.has(field.name)) return false;
-    names.add(field.name);
-    return true;
-  });
-}
-
-function valueCategory(value: unknown): string {
-  if (value === null) return 'null';
-  if (Array.isArray(value)) return 'array';
-  if (typeof value === 'number' && !Number.isFinite(value)) return 'non-finite number';
-  return typeof value;
-}
-
 function assertBoundaryValue(
   value: unknown, type: ValueType, implementation: string, boundary: string, direction: 'input' | 'output'
 ): void {
-  const problem = valueTypeProblem(value, type);
+  const problem = resultTypeProblem(value, type);
   if (!problem) return;
   const prefix = direction === 'output' && type === 'string'
     ? `Implementation "${implementation}" must return a string.`
@@ -256,30 +230,8 @@ function assertBoundaryValue(
   throw new RuntimeExecutionError(`${prefix} ${boundary} ${direction} expected "${name}": ${problem}.`);
 }
 
-function valueTypeProblem(value: unknown, type: ValueType): string | undefined {
-  if (typeof type === 'string') {
-    return typeof value === type && (type !== 'number' || Number.isFinite(value))
-      ? undefined : `got ${valueCategory(value)}`;
-  }
-  if (!isRecord(value) || Array.isArray(value)) return `expected record, got ${valueCategory(value)}`;
-  const fields = new Set(type.fields.map((field) => field.name));
-  for (const field of type.fields) {
-    if (!Object.hasOwn(value, field.name)) return `missing required field "${field.name}"`;
-    const problem = valueTypeProblem(value[field.name], field.type);
-    if (problem) return `field "${field.name}" expected ${field.type}, ${problem}`;
-  }
-  for (const key of Reflect.ownKeys(value)) {
-    if (typeof key !== 'string' || !fields.has(key)) return `unexpected field "${String(key)}"`;
-  }
-  return undefined;
-}
-
 function isInvocationArgument(value: unknown): boolean {
   return isRecord(value) &&
     ((value.kind === 'literal' && typeof value.value === 'string') ||
       (value.kind === 'variable' && typeof value.name === 'string'));
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null;
 }
