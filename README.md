@@ -175,6 +175,27 @@ Only `ensure result != "literal"` on a string result, or `ensure result.field !=
 
 The runtime awaits the host, validates the **entire output data type first**, checks the postcondition, and only then binds the result and continues. Host exceptions remain execution errors and malformed outputs remain data-contract errors, not postcondition violations. Predicates are serialized as explicit descriptors and interpreted without `eval` or generated code. These checks are **not security boundaries**: trusted host code may already have caused side effects, and failure provides no rollback or side-effect isolation.
 
+## Box development specification (in memory)
+
+`@boundscript/compiler` exports the synchronous, pure `extractBoxDevelopmentSpec(system, boxName)` API, plus `BoxDevelopmentSpec` and the discriminated `BoxSpecResult` types. Given a successfully parsed `SystemNode`:
+
+```typescript
+import { extractBoxDevelopmentSpec } from '@boundscript/compiler';
+
+const extracted = extractBoxDevelopmentSpec(program, 'Greeter');
+if (!extracted.ok) throw new Error(JSON.stringify(extracted.diagnostics));
+const spec = extracted.spec;
+// spec.operation.input: { name: 'user', type: complete User descriptor }
+// spec.operation.resultType: complete Greeting descriptor
+// spec.operation.postcondition: string-not-equal on result.message
+```
+
+For `examples/structured-types.bound`, the result has format `boundscript/box-development-spec`, version `1`, system/box identity, operation/parameter names, fully resolved primitive or named flat-record input/output types (or a `void` result), and the optional existing postcondition descriptor. Only the selected box's contract is included—no AST/CST, source paths, director statements, implementation IDs, or functions. Record fields retain declaration order, exactly as in ordinary compilation.
+
+Extraction validates the **whole system**, including unused declarations and director statements. Invalid source returns diagnostics with available source ranges and no partial spec. Selecting a nonexistent box returns `compiler.unknown-box`; there is no source range for a selection supplied outside the source. Declared but unused boxes can be extracted, without bindings, host implementations, file I/O, or artifact compilation.
+
+This API extracts declared contracts, not unstated functional intent or an implementation. JSON serialization/decoding and CLI export are deferred to Assignment 0013; agent orchestration and verifier execution remain outside this slice.
+
 ## Target use cases
 
 The following are minimum **behavioral targets** for the language, not implemented features or finalized syntax:

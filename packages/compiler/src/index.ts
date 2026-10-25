@@ -5,12 +5,14 @@ import {
   EXECUTABLE_ARTIFACT_VERSION,
   type DirectorProgram,
   type InvocationArgument,
-  type ExecutableArtifact,
-  type PrimitiveType,
-  type Postcondition,
-  type ValueType
+  type ExecutableArtifact
 } from '@boundscript/artifact';
 import { validateBoundScript, type SourceRange, type SystemNode } from '@boundscript/language';
+
+import { resolveBoxOperation } from './box-development-spec.js';
+
+export { extractBoxDevelopmentSpec } from './box-development-spec.js';
+export type { BoxDevelopmentSpec, BoxSpecResult } from './box-development-spec.js';
 
 /** Explicit box name to host implementation ID bindings, resolved before compilation. */
 export type BoxBindings = Readonly<Record<string, string>>;
@@ -59,20 +61,13 @@ export class BoundScriptCompiler implements Compiler<SystemNode> {
     }
     if (diagnostics.length > 0) return { ok: false, diagnostics };
 
-    const resolveType = (name: string): ValueType => {
-      const record = system.types.find((type) => type.name === name);
-      return record ? {
-        kind: 'record',
-        name: record.name,
-        fields: record.fields.map((field) => ({ name: field.name, type: field.type as PrimitiveType }))
-      } : name as PrimitiveType;
-    };
     const target = `directors/${system.director.name}.json`;
     const program: DirectorProgram = {
       version: DIRECTOR_PROGRAM_VERSION,
       instructions: system.director.start.statements.map((statement) => {
         if (statement.$type === 'InvocationStatementNode') {
           const box = system.boxes.find((box) => box.name === statement.box)!;
+          const contract = resolveBoxOperation(system, box);
           const argument: InvocationArgument = statement.variable
             ? { kind: 'variable', name: statement.variable }
             : { kind: 'literal', value: statement.argument! };
@@ -80,21 +75,16 @@ export class BoundScriptCompiler implements Compiler<SystemNode> {
             operation: 'invoke' as const,
             implementation: bindings[statement.box]!,
             box: box.name,
-            boxOperation: box.operation,
-            inputType: resolveType(box.inputType),
+            boxOperation: contract.name,
+            inputType: contract.input.type,
             argument
           };
-          const postcondition: Postcondition | undefined = box.ensure ? {
-            kind: 'string-not-equal',
-            target: box.ensure.field ? { kind: 'field', name: box.ensure.field } : { kind: 'result' },
-            value: box.ensure.value
-          } : undefined;
-          return statement.name
-            ? {
-                ...invocation, resultType: resolveType(box.resultType), result: statement.name,
-                ...(postcondition ? { postcondition } : {})
-              }
-            : { ...invocation, resultType: 'void' };
+          return contract.resultType === 'void'
+            ? { ...invocation, resultType: 'void' }
+            : {
+                ...invocation, resultType: contract.resultType, result: statement.name!,
+                ...(contract.postcondition ? { postcondition: contract.postcondition } : {})
+              };
         }
         return statement.variable
           ? { operation: 'print-variable', variable: statement.variable }
