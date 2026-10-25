@@ -174,6 +174,20 @@ Review corrections remain associated with the original assignment when they do n
 
 Rejected implementations must not be considered accepted. The Product Owner decides whether to request corrections, revert the changes or abandon the assignment.
 
+### Recording Acceptance
+
+Acceptance is an explicit Product Owner decision. A successful implementation, passing tests, or a positive review does not constitute automatic acceptance.
+
+Once the Product Owner communicates a decision:
+
+1. The Developer may record the decision in the assignment document, provided the Product Owner has authorized the update.
+2. The acceptance record must identify the decision, the approving role, the reviewed implementation commit, and the supporting verification evidence.
+3. An assignment may be marked `Completed` only after explicit Product Owner acceptance.
+4. A roadmap milestone may be marked `Completed` only when its own completion criteria have been verified and the Product Owner has authorized its closure.
+5. The Developer may commit and push these documentation updates when authorized, but must not independently approve assignments or milestones.
+
+Recording an approval is an administrative action, not an approval decision.
+
 ## 6. Governance
 
 - The Product Owner retains authority over requirements, scope and acceptance decisions.
@@ -182,5 +196,6 @@ Rejected implementations must not be considered accepted. The Product Owner deci
 - Changes must not be pushed to remote repositories without explicit authorization.
 - Historical conversations are reference material, not authoritative requirements.
 - Technical decisions within the approved scope may be delegated to the Developer.
-
+ - Product Owner decisions may be recorded by an authorized Developer, but approval authority cannot be delegated implicitly.
+  
 The purpose of this workflow is to preserve traceability between requirements, implementation, review feedback and the resulting software history.
