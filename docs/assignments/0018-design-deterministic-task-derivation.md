@@ -3,59 +3,73 @@
 **Status:** Proposed
 **Milestone:** [M2 — Deterministic task derivation](../roadmap.md#m2--deterministic-task-derivation)
 **Direction:** [Accepted Proposal 0013](../proposals/0013-deterministic-architecture-for-probabilistic-construction.md), especially Sections 3, 5, 6, 8–11.
-**Scope:** Design only; pending Product Owner review and approval. This document does not authorize production implementation or start or complete M2.
+**Scope:** Design only, including a disposable technical spike; pending Product Owner review and approval. This document does not authorize production implementation or start or complete M2.
 
 ## Objective and authority
 
-Design the smallest reproducible mechanism that combines approved BoundScript architecture, existing portable Box contracts, and human-owned functional requirements into bounded, independently consumable implementation packages.
+Design the smallest reproducible mechanism combining approved BoundScript architecture, existing portable Box contracts, and human-owned functional requirements into bounded, independently consumable implementation packages.
 
-M2's exit gate is: **identical approved inputs repeatedly produce equivalent per-Box tasks without manually duplicated public interfaces.** This design proposes the stronger byte-for-byte file-content guarantee under pinned derivation rules. It does not make agent implementations deterministic or establish their correctness.
+M2's exit gate is: **identical approved inputs repeatedly produce equivalent per-Box tasks without manually duplicated public interfaces.** The proposed mechanism guarantees identical relative file sets and bytes for identical explicit inputs under the same supported derivation rules. It does not make agent implementations deterministic or establish correctness.
 
-The Product Owner owns requirements, examples, acceptance criteria, scope, policy, architectural approval, and final acceptance. Derivation assembles approved material; it neither invents missing intent nor grants approval. Approval of this design must be followed by a separately authorized implementation assignment. M3 pilot selection and execution, M4 evidence/promotion, and M6 comparative evaluation remain separate work. The evaluation protocol and conventional baseline must still be defined before M3 implementation.
+The Product Owner owns intent, examples, acceptance criteria, scope, policy, architectural approval, and final acceptance. Derivation assembles supplied material; it neither invents missing intent nor establishes that the inputs were approved. Approval of this design must be followed by a separately authorized implementation assignment. M3 pilot selection/execution and isolation, M4 evidence/promotion, and M6 comparative evaluation remain separate work. The evaluation protocol and conventional baseline must still be defined before M3 implementation.
 
 ## Repository findings and reuse
 
 - [Architecture](../architecture.md) and [decisions](../decisions.md#accepted-direction--proposal-0013) separate deterministic extraction from probabilistic construction and keep tasks, workspace configuration, and evidence outside formal contracts and executable artifacts.
-- [`extractBoxDevelopmentSpec`](../../packages/compiler/src/box-development-spec.ts) validates the whole source system and exports one Box, including unused Boxes, without host bindings. Source extraction still requires a syntactically valid director; the handoff does not execute or distribute it.
-- [Portable specification version 1](../box-development-spec.md) already identifies system, Box, operation, parameter, resolved primitive/flat-record types, and optional supported postcondition. Shared records are fully resolved inline. No second shared-interface registry is needed.
-- The strict `@boundscript/compiler/box-spec` decoder and canonical serializer already reject unsupported shapes/versions and produce stable JSON. Keep their ownership, semantics, public exports, and canonical bytes unchanged. `bound spec` remains available unchanged.
-- [Assignment 0016](0016-design-standalone-box-verifier.md) records the approved verifier design and clarifications; [0017](0017-implement-standalone-box-verifier.md) is accepted and Completed. `verifyBoxImplementation` checks a trusted, already-loaded function for one fixed input after strict decoding. It is not a loader, acceptance runner, sandbox, or complete implementation brief.
-- Existing npm workspaces, TypeScript, Vitest, repository scripts, and Markdown are sufficient. No new package, language syntax, task engine, or runtime dependency on compiler/language is justified.
+- [`extractBoxDevelopmentSpec`](../../packages/compiler/src/box-development-spec.ts) validates the whole source system and exports one Box, including unused Boxes, without host bindings. Source extraction still requires a valid director; the handoff does not execute or distribute it.
+- [Portable specification version 1](../box-development-spec.md) already identifies system, Box, operation, parameter, resolved primitive/flat-record types, and optional supported postcondition. Shared records are fully resolved inline; no additional shared-interface registry is needed.
+- The strict `@boundscript/compiler/box-spec` decoder and canonical serializer already reject unsupported shapes/versions and produce stable JSON. Keep ownership, semantics, public exports, and canonical bytes unchanged. `bound spec` remains unchanged.
+- [Assignment 0016](0016-design-standalone-box-verifier.md) records the approved verifier design; [0017](0017-implement-standalone-box-verifier.md) is accepted and Completed. `verifyBoxImplementation` checks a trusted, already-loaded function for one fixed input after strict decoding. It is not a loader, acceptance runner, sandbox, or implementation brief.
+- Existing repository scripts, TypeScript, Vitest, npm lockfile, and Markdown suffice. No new package, runtime dependency direction, language syntax, or task engine is justified.
+
+## Revision rationale: minimum M2 versus M4
+
+The initial proposal coupled derivation to hash-pinned references, approval coverage, toolchain manifests, output hashes, and a self-excluding package digest. These can support later evidence, but are not necessary to derive reproducible tasks. This revision removes them from M2.
+
+| M2 needs now | Deferred or external responsibility |
+| --- | --- |
+| Explicit source/Box/task associations and human-supplied scope/policy | Human approval before invocation; no automated authorization claim. |
+| Existing canonical contract plus verbatim Markdown snapshots | M4 candidate/contract/task/test identities, integrity manifests, durable provenance, and acceptance-evidence linkage. |
+| Fixed generated declarations, seed, instructions, and derivation rules version | M4 package digest/content-addressed storage if evidence requires it; no M2 package ID or file hashes. |
+| Same supported implementation/environment for repeatability tests | Reuse repository lockfile/configuration; no per-package toolchain pinning or toolchain reference schema. Record actual tool versions in ordinary test reports. |
+| Fresh derivation and byte comparison of directories | M4 stale-evidence enforcement, promotion controls, and any authenticated approval mechanism. |
+
+A Git revision plus ordinary human review can select inputs operationally; it is not an additional package schema or proof of approval. M2 does not reject dirty trees as an authorization proxy. Cross-version/compiler/platform reproducibility beyond the supported, tested environment is not promised. Changed derivation behavior requires updating the explicit rules version and tests.
 
 ## Proposed design — not implemented or approved
 
-### 1. Small derivation adapter outside the compiler
+### 1. External repository adapter
 
-Use a repository-level TypeScript script plus a pure derivation helper, not a compiler feature or new service. The script performs I/O, validates approved input references, parses/validates source through existing APIs, extracts selected contracts, and writes results to a fresh output directory. The pure helper assembles deterministic file bytes from validated data and explicit versioned templates. Neither executes candidate code, invokes an LLM, fetches network content, discovers tasks, nor resolves architecture changes.
+Use a repository-level TypeScript script with a pure rendering helper, outside compiler/runtime. The script reads explicit inputs, uses existing whole-system parsing/validation and extraction, and writes packages into a fresh output directory. It executes no candidate code, invokes no LLM, fetches no network content, and discovers no tasks automatically.
 
-A single invocation may select one Box or derive all explicitly listed Boxes. Selection is by exact system/Box identity, never inferred from a task filename or director calls. One package represents the Box's one supported operation. Unsupported future multi-operation shapes fail rather than being guessed.
+Select one Box or all explicitly listed Boxes. Select by exact system/Box identity, never filenames or director invocations. A package represents the Box's one supported operation. Unsupported future operation/type shapes fail rather than being guessed.
 
-### 2. Approved inputs and minimal binding metadata
+### 2. Input bindings and exact approval boundary
 
-Keep functional requirements in ordinary human-owned Markdown, not new DSL syntax or a general task language. Use one strict JSON binding document, provisionally `handoff-input.json`, with only these required fields:
+Use a small JSON association document, provisionally `handoff-input.json`, with exactly these required fields:
 
-| Field | Exact purpose |
+| Field | Shape and purpose |
 | --- | --- |
 | `format`, `version` | `"boundscript/handoff-input"`, `1`; metadata version independent of spec version 1. |
-| `approval` | `{ "path": string, "sha256": string }` reference to a human approval record identifying the approved input set/revision. |
-| `architecture` | Same file reference, to the approved `.bound` source. |
-| `policy` | Same file reference, to human-owned Markdown defining allowed dependencies/tools and trust restrictions. |
-| `toolchain` | Nonempty array of file references pinning repository package manifest, lockfile, and applicable TypeScript configuration. |
-| `boxes` | Nonempty array of `{ "system": string, "box": string, "task": FileRef, "scope": FileRef, "acceptance": FileRef[] }`; `acceptance` is nonempty. |
+| `architecture` | Repository-relative POSIX path to the supplied `.bound` source. |
+| `policy` | Repository-relative path to human-owned Markdown describing allowed dependencies/tools and trust restrictions. |
+| `boxes` | Nonempty array of `{ "system": string, "box": string, "task": string, "scope": string }`; task/scope strings are repository-relative Markdown paths. |
 
-`FileRef` means exactly `{ "path": string, "sha256": string }`. Paths are repository-relative POSIX paths; hashes are lowercase SHA-256 hex of exact bytes. Reject missing/extra fields, unknown versions, duplicate identities, conflicting path/hash pairs, absolute paths, traversal, symlinks, missing/nonregular files, invalid UTF-8 text, and hash mismatches. Sort references by code-point path and Box selections by system then Box; input array ordering has no semantic meaning. Require the source-extracted system and Box identities to match each selection. No glob expansion, remote URLs, environment interpolation, executable instructions, priority, scheduling, or agent/provider fields.
+Paths are resolved against an explicit repository root, not the output directory. Reject missing/unknown keys, unknown versions, duplicate system/Box selections, absolute paths, traversal, symlinks, nonregular/missing files, invalid UTF-8, and empty Markdown. Validate identifiers and source identity through existing extraction/codec semantics. Sort Box selections by system then Box in code-point order; input array/key order is irrelevant. No globs, URLs, environment interpolation, priorities, executable instructions, agents, or scheduler fields.
 
-This is a narrow association/integrity manifest, not a behavior schema. The `task` Markdown must contain responsibility, functional requirements with stable human-owned IDs, representative input/output examples, and acceptance criteria. `scope` Markdown must state permitted private implementation work and owned paths; `policy` must explicitly list allowed libraries/tools, or say none. Empty files are rejected, but a human reviewer—not an NLP validator—decides completeness and resolves contradictions. Do not repeat public signatures or record definitions in these documents; refer to the contract identity and requirement IDs. Examples are behavioral data, not authoritative type declarations.
+`task` contains responsibility, human-owned requirement IDs, representative input/output examples, and acceptance criteria. `scope` defines private implementation freedom and writable boundaries. `policy` lists permitted libraries/tools, or explicitly says none. Refer to the contract identity and requirement IDs rather than restating public signatures or record declarations. Examples are behavioral data, not authoritative type definitions. Keep trusted acceptance tests outside packages; M2 does not inventory or hash them. Public examples belong in the task.
 
-`acceptance` references identify trusted test files or a human-owned acceptance-plan document when tests are not yet written. A plan is not evidence that tests exist or behavior passed. Acceptance assets stay on the controller side. Their exact bytes are hashed but are not copied into the agent package. Public representative examples belong in `task`, not in hidden tests.
+**Mechanically verifiable in M2:** binding shape, path/file validity, nonempty text, successful whole-system validation, existence of selected Boxes, identity agreement, supported contract shape, deterministic rendering, and equality of fresh outputs. These are structural/input checks, not approval checks. If a committed portable export is supplied for comparison by a repository check, canonical equality with fresh extraction is mechanically checkable; it still establishes no approval.
 
-The approval record must explicitly cover architecture, tasks, scope, policy, toolchain, and acceptance references, either by hashes or by a fixed repository revision and paths. It need not hash itself or the binding document (avoiding circular identities). The trusted controller checks that coverage before derivation. M2 does not implement signatures, credentials, an approval database, or automated interpretation of human approval prose. Hash consistency establishes identity, not human authorization. Missing or ambiguous approval stops the workflow; it is not repaired by generation.
+**Human prerequisite, not mechanically verified:** the Product Owner or authorized human confirms the exact source and selected task/scope/policy versions are approved, complete, mutually consistent, and applicable to the selected Boxes. The human checks examples against intent, reviews permitted dependencies/tools, and keeps authoritative inputs/tests outside candidate control. Missing or ambiguous approval must stop the human-controlled workflow before invocation. The adapter has no approval field, approval-record parser, authenticated identity, or approval-policy engine; it can technically render unapproved inputs, whose output must not be described as approved. A successful exit status means derivation succeeded, never that approval was verified.
 
-For this first mechanism, derive contracts afresh from the pinned approved source using existing extraction and serialization. Do not accept a separately edited contract as an additional authority. Where a committed portable export is part of the approval, compare its canonical bytes with fresh extraction and fail on disagreement. Supporting standalone contract-only input is deferred: it would require a separately defined architecture provenance/approval boundary.
+Human review also checks that requirements do not duplicate/redefine interfaces. Nonempty Markdown cannot mechanically establish semantic completeness or consistency. Missing intent or a task/contract conflict returns to the Product Owner/Architect; the adapter does not infer or repair it.
 
-### 3. Exact per-Box package layout
+Derive contracts afresh from the supplied source via existing extraction and serialization. Do not accept a separately edited portable contract as a second authority. Standalone contract-only input is deferred until its architecture provenance/approval boundary is defined.
 
-Output directory: `<output>/<system>/<box>/`, using validated existing identifiers. The package contains exactly these files, with no archives, timestamps, logs, hidden acceptance assets, or machine-specific workspace paths:
+### 3. Exact per-Box package
+
+Output: `<output>/<system>/<box>/`, using existing validated identifiers. Exactly these files:
 
 ```text
 <System>/<Box>/
@@ -73,37 +87,37 @@ Output directory: `<output>/<system>/<box>/`, using validated existing identifie
 
 | File | Contents and authority |
 | --- | --- |
-| `handoff.json` | Canonical identity, input references, derivation version, output hashes, fixed entrypoint, and package ID as specified below. No copied type/predicate descriptors. |
-| `contract.box-spec.json` | Existing canonical version-1 Box spec from extraction; sole packaged public contract. Its inline records provide all relevant shared types. |
-| `task.md` | Exact bytes of approved functional requirements, examples, and criteria. Snapshot of the referenced authority, not agent-editable replacement authority. |
-| `scope.md`, `policy.md` | Exact approved bytes defining responsibility/private implementation limits and allowed dependencies/tools. Restrictions remain declared unless separately enforced. |
-| `generated/contract.d.ts` | Deterministically generated TypeScript projection of the spec, explicitly marked generated/read-only. No manually maintained interfaces. |
-| `seed/implementation.ts` | Fixed unimplemented seed importing the generated function type and exporting `implement`; throws `new Error('Not implemented')`. Never a suggested algorithm or working candidate. |
-| `README.md` | Versioned fixed instructions: identities, relative links to the above files, entrypoint and writable paths, precedence/conflict handling, submission/check instructions, and trusted-verification/isolation limits. No LLM-authored summary. |
+| `handoff.json` | Small informational association/entrypoint metadata defined below, not an integrity or approval manifest. No type/predicate descriptors. |
+| `contract.box-spec.json` | Existing canonical version-1 extracted Box spec; sole packaged public contract, including all relevant inline shared record definitions. |
+| `task.md`, `scope.md`, `policy.md` | Exact input bytes, including line endings. Protected snapshots of human-owned material, not new agent-editable authorities. |
+| `generated/contract.d.ts` | Deterministic read-only TypeScript projection of the spec; never a manually maintained interface. |
+| `seed/implementation.ts` | Fixed unimplemented seed exporting `implement`; throws `new Error('Not implemented')`. No generated algorithm. |
+| `README.md` | Fixed versioned instructions: identities, relative links, candidate path/export, writable boundaries, conflict escalation, submission/check instructions, and limits. No model-generated summary. |
 
-Do not bundle the full architecture, unrelated tasks, other Boxes' implementations, test secrets, approval prose, lockfile contents, credentials, or conversations. Source/approval/toolchain references remain traceable in the manifest; an agent does not need repository-wide access to implement its contract. If the task requires absent context, stop for human clarification rather than broadening context automatically.
+`handoff.json` contains exactly these keys in this order:
 
-### 4. Manifest, identity, and reproducibility rules
+1. `format: "boundscript/box-handoff"`, `version: 1`, `derivationVersion: 1`.
+2. `system`, `box`, `operation`: identity strings from the extracted contract.
+3. `inputs: { "architecture": string, "task": string, "scope": string, "policy": string }`: the selected repository-relative paths from the binding document.
+4. `entrypoint: { "source": "candidate/implementation.ts", "export": "implement" }`.
 
-`handoff.json` has exactly these required keys in this order:
+There are **no approval references, hashes, tool revision, toolchain references, acceptance-test references, output file inventory, or package ID**. Input paths aid navigation but do not pin file versions; the snapshots give the agent its bounded context. A path's current contents must not be assumed equal to an old snapshot. M4 can later define evidence identity separately without changing the formal Box spec.
 
-1. `format: "boundscript/box-handoff"`, `version: 1`.
-2. `derivation: { "version": 1, "toolRevision": string }`. `toolRevision` is the immutable repository commit containing the derivation code/templates; refuse dirty derivation inputs. An intentional template/projection-rule change requires a derivation-version decision.
-3. `system`, `box`, `operation`: copied identity strings from the decoded extracted contract.
-4. `inputs`: `{ "approval": FileRef, "architecture": FileRef, "task": FileRef, "scope": FileRef, "policy": FileRef, "toolchain": FileRef[], "acceptance": FileRef[] }`, with the sorted references defined above.
-5. `entrypoint: { "source": "candidate/implementation.ts", "export": "implement" }`.
-6. `files`: sorted array of `{ "path": string, "sha256": string }` for every other package file (never `handoff.json`).
-7. `id`: package SHA-256 identity as defined below.
+Do not bundle whole architecture, unrelated tasks, other Boxes' implementations, hidden tests, credentials, conversations, or dependency trees. Agents need only their package and an externally prepared permitted tool environment. Missing task context requires human clarification, not automatic context expansion.
 
-Serialize metadata with fixed key order, JSON string escaping, two-space indentation, LF, exactly one final LF, and UTF-8 without BOM. Hash all other files as exact bytes. Compute `id` as SHA-256 of canonical manifest bytes **with the `id` key omitted**, then serialize the full manifest. This avoids self-hashing. Contract bytes use the existing serializer. Markdown snapshots preserve bytes (including line endings); changing those bytes intentionally changes identity. Generated text uses LF and one final LF. No locale-dependent sorting, random IDs, clock, absolute paths, network state, Git branch name, agent identity, or filesystem enumeration order enters the output.
+### 4. Deterministic output guarantee
 
-Approved referenced file bytes, selected identity, binding associations, derivation version/revision, and pinned toolchain jointly define the derivation input. The binding file's unrelated Box entries do not enter a selected Box's identity. Use the pinned Node/npm/TypeScript environment recorded by the repository toolchain; document the supported environment in the later implementation assignment. Repeated runs must produce identical relative file sets and bytes, even under different output roots and input array ordering. Directory permissions, mtimes, archives, candidate edits, and logs are outside this guarantee.
+Define derivation as a function of the selected identity, architecture bytes, selected task/scope/policy bytes and repository-relative paths, and versioned derivation rules/templates. Hold the supported implementation/tool environment fixed. The same explicit inputs produce identical relative file sets and bytes across runs and output roots. Unrelated Box bindings and input JSON key/array ordering do not affect a selected package. Changing an input path may change metadata even if its contents are equal.
 
-Validate every selected input and render every selected package before publishing any result. On failure return nonzero diagnostics with stage and Box/path where applicable; publish no partial handoff. Do not overwrite an existing output or candidate workspace. A temporary staging directory and final directory rename are sufficient; no persistent job state or scheduler is needed.
+Use the existing contract serializer. Serialize handoff metadata using the fixed key order above, JSON string escaping, two-space indentation, LF, one final LF, and UTF-8 without BOM. Generated text uses LF and one final LF; Markdown snapshots preserve exact input bytes. Use code-point sorting, not locale sorting. Exclude clocks, random values, absolute root/output paths, environment interpolation, branch/model identity, and filesystem enumeration order.
 
-### 5. Fixed TypeScript entrypoint and implementation boundaries
+Validate all selected inputs and render all selected packages before publishing results. Return nonzero diagnostics with stage and Box/path on structural failure; publish no partial output. Do not overwrite existing outputs or candidate workspaces. A temporary staging directory and final rename suffice; no persistent job state is needed.
 
-The controller mounts the package read-only as `handoff/` and creates a separate writable `candidate/` directory. Copy only the seed to `candidate/implementation.ts`. Relative imports in the seed target `../handoff/generated/contract.js` using the repository's TypeScript declaration-resolution convention. The fixed export is:
+Directory permissions, mtimes, archives, candidate code, approval decisions, and verification outcomes are outside the deterministic-output guarantee. Equal outputs do not prove equal approvals, input provenance, candidate behavior, or acceptance evidence. Compare fresh directories directly in M2 tests; hashes are not required to demonstrate equality.
+
+### 5. Fixed TypeScript entrypoint and boundaries
+
+An external controller supplies the package read-only as `handoff/` beside writable `candidate/`. Copy only the seed to `candidate/implementation.ts`:
 
 ```typescript
 import type { Implementation } from '../handoff/generated/contract.js';
@@ -113,114 +127,121 @@ export const implement: Implementation = (input) => {
 };
 ```
 
-The projection exports `Input`, `Result`, and `Implementation = (input: Input) => Result | Promise<Result>`. Primitive mappings are direct; result `void` maps to TypeScript `undefined` (not permissive `void`). Flat records use object types with quoted, code-point-sorted property names. Generate record aliases with a fixed prefix such as `Record_<name>`; emit one per record identity in sorted order and reference the same alias on input/output. Fixed `Input`/`Result`/`Implementation` names cannot collide with prefixed aliases. Handle empty records with `Record<string, never>` to avoid TypeScript's broad `{}` type. Do not introduce runtime brands, clone/freeze behavior, or dependency declarations into the spec.
+Use ESM (`package.json` with `"type": "module"`) and the repository's NodeNext TypeScript configuration. The type-only `.js` import resolves to `contract.d.ts` during compilation and disappears from emitted JavaScript; no runtime `contract.js` is needed. The externally prepared tool environment supplies package/config files, not agent-editable copies in the protected handoff. A trusted consumer importing named `implement` checks the export convention; type annotation alone cannot check the export name.
 
-This projection is compile-time assistance only: TypeScript structural types do not prove nominal origin, finite numbers, exact own fields/no extras, or postconditions. The original spec and existing runtime checks remain authoritative. Generated declarations and the manifest must never evolve into a second editable contract model.
+Generate `Input`, `Result`, and `Implementation = (input: Input) => Result | Promise<Result>`. Map primitives directly and result `void` to TypeScript `undefined`, not permissive `void`. Under the tested compiler, implementations of such operations must explicitly return `undefined` (or an awaited equivalent); the empty implicit-return body is rejected. This is a stricter authoring convention than the runtime's acceptance of implicit `undefined`, not a change to contract/runtime semantics.
 
-Within `candidate/`, agents may add private helpers and tests allowed by `scope` and `policy`. They may not edit the protected handoff, authoritative repository inputs, trusted tests, wiring, dependency manifests/lockfiles, generated declarations, public interfaces, responsibilities, or policy. Default writable scope is only `candidate/**`; no additional repository write paths are granted by this design. Human-approved scope may narrow it. New dependencies or additional public entrypoints require approval, not agent negotiation.
+Generate one alias `Record_<name>` per record identity, sorted by name, with quoted code-point-sorted primitive fields; reuse the alias on input/output. The prefix avoids collisions with fixed projection names. For empty records, use `Record<string, never>` rather than broad `{}`. The spike below validates common cases but also demonstrates a symbol-key limitation. This remains a best-effort structural projection, not proof of exact own keys, nominal origin, finite numbers, or postconditions. No brands, cloning, freezing, or new runtime restrictions. The original spec and runtime checks remain authoritative.
 
-No automatic build/load convention is added to M1. A trusted external controller later compiles the candidate with pinned settings and supplies its already-loaded `implement` function to the existing verifier. M2 supplies source identity and type projection, not a module loader or runtime adapter. M3 must establish isolated execution and approved wiring before running untrusted candidates.
+Agents may add permitted private helpers/tests only within `candidate/**`; scope may narrow that boundary. They may not edit handoffs, source contracts, shared types, requirements, trusted tests, wiring, dependency manifests/lockfiles, or protected policies. New dependencies, responsibilities, or public entrypoints require human approval, not agent negotiation. A better decomposition is a separate architectural proposal.
 
-Conflicts between task examples and the contract, missing requirements, or a need for a new dependency halt implementation for Product Owner/Architect review. Neither side silently wins through regeneration. Agents can propose architecture changes separately; they cannot approve or apply them. Separate packages can be consumed sequentially or independently without shared agent context or interface negotiation.
+M2 adds no candidate loader or compilation service to M1. An external trusted controller later compiles candidates using the prepared environment and supplies an already-loaded function to the verifier. M3 must provide actual isolation before executing untrusted code; directories/worktrees and Node subprocesses are not security boundaries. Declared restrictions/read-only instructions are not enforcement.
 
-### 6. Invalidation and regeneration
+### 6. Conservative invalidation policy — separate from determinism
 
-Use explicit hashes and recomputation, not a watcher or dependency graph. A trusted controller compares the current approved input set and tool revision to the manifest and rederives into a fresh directory before use. Comparing internal package hashes alone cannot establish that approvals are still current. Never promote a candidate on its own assertion that a handoff is current.
+Determinism says **same inputs yield same output**; it does not require different inputs to yield different outputs. Invalidation is a workflow decision to stop using an old handoff pending fresh derivation/review. M2 has no watcher, fingerprint database, automated currentness service, or promotion gate. A human-controlled script invocation regenerates into a fresh directory from the currently selected, human-approved inputs.
 
-| Change | Required effect |
+| Change | First-implementation policy |
 | --- | --- |
-| Architecture bytes, system/Box identity, operation, type, shared record, or postcondition | Regenerate **all selected handoffs from that source**, even if some extracted contracts are unchanged. Whole-system extraction validates unrelated declarations; conservative invalidation avoids inventing incomplete dependency semantics. Invalid source blocks derivation. |
-| One Box's task, examples, scope, or acceptance references | Regenerate that Box's handoff; other Box entries are unaffected unless they share the changed referenced file. |
-| Shared policy, approval record, or toolchain file | Regenerate every handoff referencing it. A source-wide approval update may therefore invalidate all its packages. |
-| Derivation code/template/version | Regenerate all packages made with the old revision/rules; compare outputs and review intentional changes. |
-| Packaged file modified, deleted, or added | Integrity check fails; discard/rederive rather than accepting an edited handoff. |
-| Candidate implementation/private tests | Handoff identity stays unchanged; previous verification of the changed candidate is stale. |
-| Trusted acceptance tests | Changed acceptance hashes invalidate referencing handoffs and prior acceptance evidence, even though hidden tests are not bundled. |
-| Box removed/renamed | Old identity is no longer authorized; no automatic alias/migration or reuse of its candidate evidence. |
+| Any architecture/source bytes, including comments/director or unused declarations | Treat every existing handoff from that source as needing regeneration. Revalidate the whole system, then regenerate all still-selected Boxes. Invalid source blocks derivation. |
+| One Box's task or scope | Regenerate that Box and any other Box sharing the changed file. |
+| Shared policy | Regenerate all packages referencing it. |
+| Derivation code/templates/rules or supported tool environment | Rerun full derivation and comparison/regression checks; update rules version for intentional behavior changes. Output need not differ for a tool-only change. |
+| Packaged file edited/deleted/added | Discard/rederive into a fresh directory. Direct comparison with fresh output detects differences; no authenticated integrity claim. |
+| Box removed/renamed | Retire old selection; do not alias or migrate candidates silently. |
+| Candidate code/private tests or trusted acceptance tests only | No handoff regeneration unless packaged task/scope/policy also changes. Prior affected verification must be rerun; tracking/enforcing stale evidence belongs to M4. |
+| Approval decision only, with unchanged supplied files | Human authorization to use the package may change while output remains byte-identical; the adapter cannot detect or enforce this. |
 
-Every input change requires approval under the project's policy before regeneration becomes an approved handoff. Hashes detect drift, not whether a change deserves approval. New packages do not update existing candidates in place. Return the new package for revision/reverification, even if a candidate might still work unchanged.
+Source-wide invalidation is deliberately conservative because extraction validates the whole system, shared records can affect multiple Boxes, and current contracts do not describe every dependency/responsibility relationship. It avoids building a semantic impact graph prematurely. **Limitations:** comments/director/unrelated valid declaration edits can trigger unnecessary regeneration; unchanged Boxes may regenerate byte-identically. It is not proof of integration impact, cannot detect unrecorded human requirement changes, and does not determine which candidates/tests need reverification. Humans must identify affected source inputs under the repository workflow. A future M4/M5 impact/evidence mechanism may refine this policy with explicit approval.
 
-M2 defines the handoff fingerprint and currentness check only. A changed handoff invalidates acceptance evidence referring to its old ID; candidate and test revisions must also be checked independently. Durable evidence storage, integration impact analysis, and promotion enforcement are M4 work, not implemented by this document or by a handoff hash.
+Never patch candidates in place to fit regenerated interfaces or claim unchanged package bytes preserve acceptance evidence. Human review determines reuse/revision and required reverification; M2 does not automate that decision.
+
+## Disposable TypeScript feasibility spike — performed for review
+
+Executed outside the repository in a temporary directory, using Node **v24.16.0** and repository TypeScript **5.9.3**. Each case had its own ESM package, `handoff/generated/contract.d.ts`, `candidate/implementation.ts`, and trusted consumer importing `implement`. Invoked the repository compiler by absolute path with NodeNext/ES2022, strict, exact optional properties, unchecked-index checking, isolated modules, verbatim module syntax, `types: []`, and `skipLibCheck: false`. No repository source imports, config inheritance, node-module dependencies, agent execution, or production changes were involved.
+
+| Cases | Observed result |
+| --- | --- |
+| Flat-record sync and async functions; throwing seed | Compile successfully. |
+| Sync/async explicit `undefined` result | Compile successfully. |
+| Implicit empty-body return for `undefined`; wrong result; wrong parameter | Rejected with TS2322. |
+| Empty record `{}` with `Record<string, never>` | Compiles successfully. |
+| Empty-record result containing string-keyed extra field, number, array, null, or callable | All rejected with TS2322. |
+| Empty-record result containing symbol-keyed extra property | **Compiles:** demonstrates the projection's limit, not a supported runtime value. Existing own-key runtime checks remain required. |
+| Candidate exports `other`, consumer imports `implement` | Rejected with TS2305; export convention needs a consumer check. |
+
+**Result: 16 independent compilation cases, zero unexpected outcomes.** Every successful case also passed a built ESM import check confirming a callable named `implement` without a runtime declaration-module import. The checks imported trusted functions but did not invoke the seed. Temporary spike files/output were removed and are not committed. This validates feasibility of the convention, not a generator implementation, verifier regression run, or universal static representation of empty-record semantics.
 
 ## Architectural alternatives and trade-offs
 
-| Alternative | Decision / trade-off |
+| Alternative | Proposed decision / trade-off |
 | --- | --- |
-| Handwritten Markdown containing copied TypeScript interfaces | Reject: initially simpler, but duplicates authority and invites drift. Keep human prose; derive the interface projection. |
-| Reference-only package | Reject for task/spec contents: smaller but fragile offline and dependent on moving external files. Hash-pinned snapshots are bounded and independently readable. Keep protected tests and whole-source provenance reference-only. |
-| Extend `BoxDevelopmentSpec` or `ExecutableArtifact` with tasks and workspace metadata | Reject: conflates contract/runtime boundaries with development context and forces unnecessary format changes. Use a narrow separate JSON metadata envelope. |
-| JSON schema for all functional behavior or new task DSL | Reject: arbitrary semantics still need human judgment; Markdown plus explicit associations is sufficient. |
-| Compiler generates workspaces or runtime orchestrates agents | Reject: violates ownership boundaries and adds execution state. Use an external deterministic repository adapter. |
-| Generic descriptor-to-TypeScript type-level library, or untyped `unknown` entrypoint | Prefer a small deterministic declaration projection for the currently supported types: readable bounded interfaces without new library machinery. Cost: explicit parity/type tests and versioned projection rules. |
-| Incremental semantic impact graph | Defer: conservative source-level invalidation is less efficient but safer and much smaller. It can overinvalidate on comments/director changes. Task-local changes remain scoped. |
-| Full repository snapshot or container in every package | Reject: unnecessary context/storage and false isolation implications. Package is a directory of text files; M3 supplies actual controlled workspaces. |
-| Signed approvals and content-addressed artifact store | Defer: hashes plus human review/repository revisions suffice for identity, not authenticity. No new trust service is warranted for M2. |
+| Handwritten task interfaces | Reject: duplicated authority and drift. Keep human prose; derive declarations from portable contracts. |
+| Reference-only package | Reject for task/spec contents: moving paths break independent/offline consumption. Verbatim snapshots are sufficient without hash manifests. |
+| Hash-pinned approval/toolchain/input/output manifests and package digest | Defer to M4 if needed for evidence. More identity metadata does not make rendering more deterministic or establish human authorization. M2 loses automated integrity/currentness checks deliberately. |
+| Extend formal Box spec or executable artifact with task metadata | Reject: conflates boundaries. Use a narrow association document and informational handoff metadata. |
+| Task DSL or JSON behavioral schema | Reject: arbitrary intent still requires human judgment. Markdown and explicit associations suffice. |
+| Compiler/runtime drives agents | Reject: keep external deterministic adapter; no execution state or orchestration. |
+| Generic type-level descriptor library or `unknown` entrypoint | Prefer a small declaration projection for current supported types: readable bounded interface, with explicit static/runtime limitations and parity tests. |
+| Semantic incremental invalidation | Defer: source-wide policy is smaller/safer but overinvalidates and can regenerate identical outputs. |
+| Bundled repository/container | Reject: excessive context and false isolation implications. M3 supplies controlled environment independently. |
 
-## Explicit exclusions and guarantees
+## Explicit exclusions
 
-- No production implementation in Assignment 0018; no milestone status change or implication of acceptance.
-- No grammar changes, new types/predicates, general task language, new DSL, generalized schema framework, or second authoritative interface representation.
-- No LLM during derivation, agent runner, provider integration, scheduler, retries, allocation, inter-agent messaging, runtime director changes, or autonomous architectural approval.
-- No candidate generation beyond an unimplemented seed, candidate loader/transpiler service, behavioral acceptance runner, integration repair, evidence database, or promotion system.
-- No new dependency/capability declarations in BoundScript. Markdown scope/policy is declared and human-reviewed; it is not static compliance analysis or runtime enforcement.
-- No sandbox, timeout/resource enforcement, credentials management, or production isolation. Read-only mounts require an external controller; ordinary directories/worktrees and Node subprocesses are not security boundaries. Never execute untrusted candidate code inside the trusted development process.
-- Deterministic packages do not imply deterministic agents/candidates, complete behavior specification, universal correctness, or reproducible execution of arbitrary JavaScript. Verifier observations remain limited to supported checks on supplied values; human-owned tests establish only observed functional behavior.
+No production implementation, milestone status change, grammar/type/predicate expansion, general task language, new DSL, second authoritative interface model, LLM invocation, scheduler, agent framework/provider integration, automatic architectural approval, candidate loader/transpiler service, acceptance runner, integration repair, or promotion system. No integrity manifests, package digest, authenticated approval, evidence database, or stale-evidence enforcement in M2. No sandbox/time/resource enforcement, credentials management, or production isolation.
+
+Functional correctness, dependency compliance, security, and universal semantic equivalence are not established by declared policy, TypeScript, or deterministic packages. Existing verifier results remain per-invocation observations; external human-owned tests establish only observed behavior. Never execute untrusted candidates inside the trusted development process.
 
 ## Acceptance criteria
 
 ### Assignment 0018 design delivery
 
-| ID | Criterion |
-| --- | --- |
-| D-01 | This Proposed document identifies existing foundations, authority boundaries, exact package files/metadata, approved input associations, entrypoint, and implementation scope without changing production code or accepted formats. |
-| D-02 | Determinism, fingerprint construction, failure behavior, input approval, invalidation, and independent consumption are specified sufficiently to write a separate implementation assignment. |
-| D-03 | Alternatives, trade-offs, exclusions, concrete future tests, and Product Owner decisions are explicit. M2 remains Planned; no implementation, pilot, or acceptance is implied by delivery. |
+- **D-01:** Proposed, design-only document specifies existing reuse, exact inputs/package/entrypoint, minimality, authority boundaries, alternatives, exclusions, and future tests without changing production code or roadmap status.
+- **D-02:** Mechanical validation is explicitly separated from human approval. Output determinism is separated from conservative invalidation and M4 evidence/promotion.
+- **D-03:** Disposable independent TypeScript/empty-record spike results and limitations are reported; no spike artifacts or production implementation are committed.
 
-### Required gate for a later M2 implementation assignment
+### Gate for a later M2 implementation assignment
 
 | ID | Criterion |
 | --- | --- |
-| AC-01 | Derive one package per approved selected Box using existing whole-system validation/extraction and strict canonical codec; public contract bytes remain unchanged. |
-| AC-02 | Repeated derivation under pinned rules produces byte-identical relative file sets/manifests/IDs across output roots and input ordering. No manual public interface duplication. |
-| AC-03 | Every package binds exact system/Box/operation, approved requirement/example/scope/policy/test references, generated TypeScript projection, and fixed candidate path/export. |
-| AC-04 | Missing, invalid, ambiguous, stale, mismatched, unsupported, or tampered inputs/packages fail closed without partial output, candidate execution, or overwrites. Human approval remains a separate trusted prerequisite. |
-| AC-05 | Changes invalidate/regenerate the affected packages according to the table; candidate changes do not change handoffs but invalidate candidate evidence. No silent acceptance reuse. |
-| AC-06 | A consumer can type-check a trusted fixture against only its package and the pinned TypeScript toolchain, then use strict decoding and the existing verifier without source/director execution or editing generated interfaces. |
-| AC-07 | Independent fixture implementations integrate through prewritten test wiring with no interface edits; this is a trusted design test, not the M3 agent pilot or proof of reduced coordination. |
-| AC-08 | Existing check/build/demo/export regressions pass; compiler/runtime dependency direction and formal spec semantics remain unchanged. Documentation states enforcement and semantic limits accurately. |
+| AC-01 | Derive each selected Box using existing whole-system validation/extraction and canonical codec; portable contract bytes remain unchanged. |
+| AC-02 | Same explicit inputs/rules produce byte-identical file sets/content across roots and input ordering, without copied manual interfaces or hash infrastructure. |
+| AC-03 | Bind exact system/Box/operation, human-owned task/scope/policy snapshots and input paths, projection, and fixed candidate path/export. |
+| AC-04 | Invalid structural inputs fail without partial output, execution, or overwrites. Documentation never labels these checks automated approval verification. |
+| AC-05 | Regeneration tests establish the conservative affected set and allow byte-identical regeneration. No automatic evidence acceptance/currentness claim. |
+| AC-06 | Trusted fixture independently compiles using only package plus prepared TypeScript environment, then strictly decodes and uses the existing verifier without source/director execution or interface edits. |
+| AC-07 | Independent trusted fixture Boxes integrate via prewritten wiring without repairs; this is not the M3 agent pilot or proof of reduced coordination. |
+| AC-08 | Existing checks/build/demos/canonical export pass; dependency direction and formal spec semantics remain unchanged. |
 
 ## Concrete test strategy for later implementation
 
-Use existing Vitest and TypeScript; no new framework. Test only trusted fixtures in-process. Do not launch real agents or untrusted code to test derivation.
+Use existing Vitest/TypeScript and trusted fixtures only; no agents or untrusted execution.
 
-| Area | Fixtures and assertions |
+| Area | Cases and assertions |
 | --- | --- |
-| Golden package | Extract the published structured Greeter and compare `contract.box-spec.json` byte-for-byte to the existing reference. Snapshot the complete file list, canonical manifest, generated declarations, seed, fixed instructions, and independently recomputed hashes/ID. |
-| Reproducibility | Derive twice into different roots; permute JSON keys, Box/reference array order, and portable record field order at the codec boundary; change cwd and enumeration order. Require identical per-Box output bytes. Assert no timestamp, absolute output path, locale order, branch/model identity, or network lookup. |
-| Byte identity | Task Markdown containing CRLF, Unicode, quotes, and final-newline variations is preserved exactly. One-byte task change changes only referencing package IDs (subject to shared approval changes). Verify manifest self-hash exclusion and reject altered/additional/missing output files. |
-| Source/selection validation | Unknown Box/system, duplicate mappings, invalid unused declarations, removed Box, missing director, incompatible schema, unsupported format/version, and a conflicting committed export fail before publication. Include an unused valid Box to prove derivation is not invocation-driven. |
-| Input trust | Wrong hashes, missing/empty task/scope/policy, missing acceptance plan, unpinned approval, incomplete human approval checklist, path traversal, absolute paths, symlinks, conflicting references, invalid UTF-8, unknown keys, and dirty derivation code fail. Human approval coverage is tested as a documented controller review gate, not claimed as automated prose understanding. |
-| Type projection | All primitive inputs/results, finite-number limitation, false/zero/empty string, empty/flat records, repeated record names, identifier collisions with alias names, async/sync returns, and `undefined` results. Positive fixture compiles; wrong parameter/output/export and non-undefined void result fail type checks. Reordered fields do not change declarations. Runtime rejection of NaN/extra fields/postcondition failures demonstrates limits of static typing. |
-| Independent consumption | Copy only package plus pinned test toolchain into a temporary test workspace; no `.bound`/AST/other Box sources available. Type-check trusted fixture, strictly decode packaged spec, and verify fixed input. Guard against frontend/compiler-root execution in the consumption path, reusing 0017's import-boundary approach. |
-| Two-Box wiring | Two small trusted fixture Boxes with compatible existing primitive/record types and separate package contexts. Prewritten test wiring imports their fixed exports and asserts human-owned expected behavior. No implementation/interface repair; malformed output is rejected rather than adapted. This does not select the M3 pilot. |
-| Invalidation matrix | With two Boxes, alter task/scope/test reference for one, shared policy, approval, source comments, shared record, predicate, toolchain, and tool revision in turn. Assert exact conservative affected set and new IDs. Reordering bindings and changing only candidate code leave package bytes unchanged. |
-| Publication failure | Fail one Box in a multi-Box request; assert no published output. Existing destination/candidate directory remains untouched. Errors identify stage and input/Box without leaking hidden test contents or credentials. |
-| Regressions | Run `npm run check`, `npm run build`, existing director-box/composition/structured-types demos, Hello World CLI, and canonical `bound spec` comparison. Reuse existing codec/verifier coverage rather than building a second evaluator. |
+| Golden package | Published structured Greeter: canonical contract matches existing JSON byte-for-byte. Compare exact package file list, metadata, declarations, seed, and instructions. |
+| Reproducibility | Two output roots; permuted binding keys/Box order; changed cwd/enumeration order. Compare file bytes directly. Codec tests cover field-order canonicalization. No timestamps, absolute paths, model/branch identity, or network access. |
+| Snapshot bytes | Preserve CRLF, Unicode, quotes, and final-newline variations. Task-only edit changes only packages referencing it. Source comment edit triggers all-source regeneration but may leave all bytes identical. |
+| Structural failures | Unknown/duplicate Box/system, invalid unused declarations, missing director, unsupported versions/shapes, missing/empty text, unknown keys, traversal, absolute paths, symlinks, invalid UTF-8. Nonempty but unapproved Markdown can render: document this as an intentional limit, not success at authorization. |
+| Type projection | Recreate the 16 spike cases, plus all primitive types, shared aliases, prefix/name collisions, sorted fields, and output-before-predicate runtime checks. Demonstrate finite-number/extra-key/symbol/postcondition limits with existing verifier checks. |
+| Independent consumer | Temporary workspace contains only package, trusted fixture/consumer, and prepared tool config. Compile fixed export with NodeNext, check emitted ESM import, strictly decode contract, then verify fixed input. Guard frontend/compiler-root loading as in 0017. |
+| Two-Box wiring | Separate trusted fixture contexts with compatible existing types and fixed exports. Prewritten wiring checks human-owned expected behavior; reject malformed output rather than adapting it. Does not select the M3 pilot. |
+| Invalidation policy | Two Boxes: change source/shared record/predicate, one task/scope, shared policy, rules/tool environment. Assert regeneration scope separately from output differences. Candidate/test-only changes require no package changes; stale-evidence enforcement is not tested as an M2 feature. |
+| Publication | One invalid Box in a multi-Box request publishes nothing; existing destinations/candidates remain untouched. Diagnostics do not expose hidden tests or credentials. |
+| Regressions | `npm run check`, `npm run build`, director-box/composition/structured-types demos, Hello World CLI, canonical `bound spec` comparison. Reuse existing codec/verifier tests rather than duplicating semantics. |
 
-For this design-only delivery, verify Markdown references, required sections/status, and `git diff --check`. Production tests are not added or claimed as run for future functionality.
+For this design revision, run local Markdown link/section/status checks and `git diff --check`; report the disposable spike separately. Production regression tests are not claimed as run for unimplemented functionality.
 
 ## Decisions requiring Product Owner approval
 
-All choices above are proposed, not recorded as accepted architecture. In particular:
+1. External adapter with minimal path-only bindings/informational metadata; omit hashes, approval references, package ID, and per-package toolchain pinning from M2.
+2. Human-controlled approval prerequisite without automated approval enforcement; verbatim protected task/scope/policy snapshots and existing repository tooling.
+3. Fixed `candidate/implementation.ts` / named `implement`, NodeNext ESM type-only import, generated declaration projection, explicit `undefined` return convention, and documented empty-record static limitation.
+4. Conservative all-source regeneration policy, allowing unchanged output bytes; fresh publication rather than candidate updates or a semantic impact graph.
+5. M2 renders reproducible bounded context; M3 enforces development isolation and M4 defines evidence identity, stale-evidence/promotion controls, and any stronger authorization/integrity mechanism.
 
-1. Approve the external repository adapter and narrow versioned binding/handoff metadata envelopes, leaving portable specs and compiler/runtime semantics unchanged.
-2. Approve hash-pinned Markdown snapshots, reference-only protected acceptance assets, and human-reviewed approval coverage (hashes are not authorization).
-3. Approve `candidate/implementation.ts` / named `implement`, generated declaration projection, synchronous-or-asynchronous result, and `undefined` rather than TypeScript `void` for void results.
-4. Approve conservative whole-source invalidation and fresh output-only publication rather than semantic incremental dependency analysis or in-place candidate updates.
-5. Approve the boundary that M2 defines identity/currentness and declared workspace policy, while M3 supplies real isolation and M4 implements durable evidence/promotion controls.
-
-If review reveals a need for new contract semantics, dependency modeling, automated approval, or broader orchestration, return for an explicit scope/architecture decision rather than expanding this mechanism.
+These are proposals, not accepted architectural decisions. Return any need for new contract semantics, automated approval, or orchestration to the Product Owner rather than expanding scope.
 
 ## Delivery and authorization boundary
 
-Deliver only this design document. Commit and push to the current feature branch are explicitly authorized for this document preparation. Report the commit SHA, documentation checks, deviations, and pending architectural decisions. Do not alter existing assignments/reviews, record Product Owner acceptance, or mark M2 In Progress or Completed. Assignment 0018 remains Proposed pending Product Owner review; a later implementation assignment requires separate authorization.
+Update this document in place under the original assignment. Commit and push of this design revision to the current feature branch are explicitly authorized. Report SHA, documentation checks, spike results, limitations, and pending decisions. Preserve Proposed status; do not alter reviews/other assignments, record acceptance, implement M2, or change milestone status. Separate implementation authorization remains required.
