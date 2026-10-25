@@ -1,0 +1,158 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`AC-01/02/03: exact eight-file golden, unchanged canonical export, snapshots, repeated roots and explicit selections 1`] = `
+{
+  "README.md": "# Box implementation handoff
+
+System: GreetingSystem; Box: Greeter; operation: greet.
+The identity and selected input paths are in [handoff.json](handoff.json).
+The sole public contract is [contract.box-spec.json](contract.box-spec.json).
+[Generated declarations](generated/contract.d.ts) are a read-only structural projection.
+Read [task](task.md), [scope](scope.md), and [policy](policy.md) before implementation.
+Task instructions are not formal contract semantics.
+
+Successful derivation checks structure, NOT human approval. An authorized human must
+approve the exact architecture, task, scope, and policy versions and their consistency
+before operational use. Missing intent, conflicts, or context require human clarification;
+do not invent requirements, redefine interfaces, or expand context automatically.
+
+The external controller supplies read-only handoff/ beside writable candidate/.
+Copy seed/implementation.ts to candidate/implementation.ts; export named implement.
+Work only in candidate/**, further narrowed by scope. Private helpers/tests are permitted
+only there and only under policy. Do not edit contracts, shared types, requirements,
+trusted tests, wiring, dependency manifests/lockfiles, or policy. New dependencies,
+interfaces, or responsibilities require human approval.
+
+The external environment supplies ESM (type: module) and strict NodeNext TypeScript.
+The seed's type-only .js import resolves to the .d.ts and disappears from emitted JS;
+no runtime contract.js exists. Submit candidate/implementation.ts and permitted private
+files for external trusted compilation, named-export checking, and verification.
+Void operations must explicitly return undefined under this authoring convention;
+the runtime still accepts implicit undefined. Static typing proves neither exact own
+keys (symbol extras can type-check, including empty records), nominal origin, finite
+numbers, nor predicates. The canonical contract and runtime verifier remain authoritative.
+
+Do not modify packages: discard and rederive into fresh output after input changes.
+Any architecture edit requires all still-selected Boxes from that source to be
+regenerated with whole-system validation, even if resulting bytes are identical.
+Task/scope edits affect referencing Boxes; shared policy affects all references.
+Rules/environment changes require full comparison and regression checks; intentional
+rendering changes require a rules-version decision. Retire removed/renamed selections
+without silently migrating candidates. Candidate/private-test/trusted-test-only changes
+require affected verification, not handoff regeneration. Approval changes may alter
+authorization without changing bytes. There is no automated currentness or promotion gate.
+
+These directories and Node subprocesses are NOT security boundaries. This adapter
+loads/executes no candidates and provides no sandbox, dependency enforcement, or evidence
+tracking. Untrusted execution requires M3 isolation; evidence enforcement belongs to M4.
+",
+  "contract.box-spec.json": "{
+  "format": "boundscript/box-development-spec",
+  "version": 1,
+  "system": "GreetingSystem",
+  "box": "Greeter",
+  "operation": {
+    "name": "greet",
+    "input": {
+      "name": "user",
+      "type": {
+        "kind": "record",
+        "name": "User",
+        "fields": [
+          {
+            "name": "active",
+            "type": "boolean"
+          },
+          {
+            "name": "id",
+            "type": "string"
+          },
+          {
+            "name": "name",
+            "type": "string"
+          },
+          {
+            "name": "score",
+            "type": "number"
+          }
+        ]
+      }
+    },
+    "resultType": {
+      "kind": "record",
+      "name": "Greeting",
+      "fields": [
+        {
+          "name": "message",
+          "type": "string"
+        },
+        {
+          "name": "recipientId",
+          "type": "string"
+        }
+      ]
+    },
+    "postcondition": {
+      "kind": "string-not-equal",
+      "target": {
+        "kind": "field",
+        "name": "message"
+      },
+      "value": ""
+    }
+  }
+}
+",
+  "generated/contract.d.ts": "export type Record_Greeting = {
+  "message": string;
+  "recipientId": string;
+};
+
+export type Record_User = {
+  "active": boolean;
+  "id": string;
+  "name": string;
+  "score": number;
+};
+
+export type Input = Record_User;
+export type Result = Record_Greeting;
+export type Implementation = (input: Input) => Result | Promise<Result>;
+",
+  "handoff.json": "{
+  "format": "boundscript/box-handoff",
+  "version": 1,
+  "derivationVersion": 1,
+  "system": "GreetingSystem",
+  "box": "Greeter",
+  "operation": "greet",
+  "inputs": {
+    "architecture": "examples/structured-types.bound",
+    "task": "tests/fixtures/handoff/greet-task.md",
+    "scope": "tests/fixtures/handoff/scope.md",
+    "policy": "tests/fixtures/handoff/policy.md"
+  },
+  "entrypoint": {
+    "source": "candidate/implementation.ts",
+    "export": "implement"
+  }
+}
+",
+  "policy.md": "# Trusted fixture policy
+
+No additional dependencies. Use only the externally prepared TypeScript/Node tools.
+Do not modify manifests, lockfiles, protected handoffs, or policy.
+These fixture instructions are not sandbox enforcement or approval evidence.
+",
+  "scope.md": "Scope without final newline",
+  "seed/implementation.ts": "import type { Implementation } from '../handoff/generated/contract.js';
+
+export const implement: Implementation = (input) => {
+  throw new Error('Not implemented');
+};
+",
+  "task.md": "﻿# Unapproved Ω "quotes"
+Nonempty intent
+",
+}
+`;

@@ -1,0 +1,15 @@
+{
+  "extends": "../tsconfig.base.json",
+  "compilerOptions": {
+    "composite": true,
+    "rootDir": ".",
+    "outDir": "../.tool-dist",
+    "tsBuildInfoFile": "../.tool-dist/.tsbuildinfo"
+  },
+  "references": [
+    { "path": "../packages/artifact" },
+    { "path": "../packages/compiler" },
+    { "path": "../packages/language" }
+  ],
+  "include": ["*.ts"]
+}

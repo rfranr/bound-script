@@ -1,0 +1,2 @@
+import type { Implementation } from '../handoff/generated/contract.js';
+export const implement: Implementation = async (user) => ({ message: `Hello, ${user.name}!`, recipientId: user.id });

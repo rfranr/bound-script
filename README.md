@@ -20,11 +20,13 @@ See the [roadmap](docs/roadmap.md) for the current milestone, completion criteri
 
 Today the repository implements a Langium parser and diagnostics, deterministic compiler, versioned executable artifacts, artifact-driven runtime, and CLI. It supports sequential director-to-box invocation, primitive and flat-record data contracts, minimal string postconditions, portable canonical Box contract extraction through `bound spec`, and standalone single-invocation verification of trusted functions.
 
-It does **not** implement agent-driven construction, candidate loading, task derivation, behavioral acceptance runners, evidence reports, candidate promotion, dependency/capability declarations, or sandbox enforcement. Imports and general control flow are also unsupported. Current host implementations are trusted functions running in the host process.
+The external [deterministic task derivation adapter](docs/task-derivation.md) assembles canonical contracts and human-owned task/scope/policy snapshots into bounded packages; structural success does not verify human approval. Assignment 0019 delivery remains pending Product Owner acceptance and M2 remains In Progress.
+
+It does **not** implement agent-driven construction, candidate loading, behavioral acceptance runners, evidence reports, candidate promotion, dependency/capability declarations, or sandbox enforcement. Imports and general control flow are also unsupported. Current host implementations are trusted functions running in the host process.
 
 The planned workflow is: human requirements → Architect proposal → approval → deterministic contract extraction and task derivation → independent implementation → independent and integration verification → evidence-backed acceptance and promotion. A contract is not a complete implementation brief: intended behavior still needs human-owned tasks, examples, and trusted tests. A passing type check or finite test cannot prove arbitrary semantic correctness.
 
-The immediate roadmap begins with a standalone verifier reusing existing contract semantics, then task derivation and a two-Box pilot. Sequential work with existing coding tools comes before parallel orchestration. Development isolation must protect trusted specifications and tests from candidates; production isolation and a new agent framework are not initial requirements. Declared restrictions are not enforcement guarantees.
+The standalone verifier reuses existing contract semantics; task derivation is delivered pending acceptance, with a two-Box agent pilot still planned. Sequential work with existing coding tools comes before parallel orchestration. Development isolation must protect trusted specifications and tests from candidates; production isolation and a new agent framework are not initial requirements. Declared restrictions are not enforcement guarantees.
 
 The product hypothesis will be compared against ordinary TypeScript interfaces, Markdown tasks, tests, and existing agents, measuring coordination effort, boundary drift, and comprehension—not merely successful integration. BoundScript does not make code generation deterministic; it makes its boundaries and supported acceptance checks explicit and reproducible.
 
@@ -178,6 +180,14 @@ The structured demo now includes this check; `npm run --silent demo:structured-t
 Only `ensure result != "literal"` on a string result, or `ensure result.field != "literal"` on a declared string record field, is supported. The literal may be empty or nonempty and uses normal string escaping. `void`, non-string targets, and unknown fields are rejected with source-located diagnostics. There is no `==`, chained access, expression evaluation, reference to inputs, boolean combination, or director-level assertion syntax.
 
 The runtime awaits the host, validates the **entire output data type first**, checks the postcondition, and only then binds the result and continues. Host exceptions remain execution errors and malformed outputs remain data-contract errors, not postcondition violations. Predicates are serialized as explicit descriptors and interpreted without `eval` or generated code. These checks are **not security boundaries**: trusted host code may already have caused side effects, and failure provides no rollback or side-effect isolation.
+
+## Deterministic task packages
+
+```sh
+npm run handoff -- "$PWD" tests/fixtures/handoff/input.json /tmp/bound-handoffs --all
+```
+
+Use a fresh output and human-approved inputs for operational use. See [usage, protected-context boundaries, regeneration policy, and independent consumer checks](docs/task-derivation.md). No candidate execution, sandbox, orchestration, or evidence enforcement is included.
 
 ## Box development specification
 

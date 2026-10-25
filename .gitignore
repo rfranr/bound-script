@@ -3,6 +3,7 @@ dist/
 packages/language/src/generated/
 coverage/
 .test-dist/
+.tool-dist/
 *.tsbuildinfo
 .DS_Store
 .env

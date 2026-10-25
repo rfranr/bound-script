@@ -1,0 +1,10 @@
+{
+  "format": "boundscript/handoff-input",
+  "version": 1,
+  "architecture": "examples/structured-types.bound",
+  "policy": "tests/fixtures/handoff/policy.md",
+  "boxes": [
+    { "system": "GreetingSystem", "box": "LoadUser", "task": "tests/fixtures/handoff/load-task.md", "scope": "tests/fixtures/handoff/scope.md" },
+    { "system": "GreetingSystem", "box": "Greeter", "task": "tests/fixtures/handoff/greet-task.md", "scope": "tests/fixtures/handoff/scope.md" }
+  ]
+}

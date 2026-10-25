@@ -1,9 +1,13 @@
 # Assignment 0019 — Implement Deterministic Task Derivation
 
-**Status:** Proposed
+**Status:** Pending Product Owner acceptance
 **Milestone:** [M2 — Deterministic task derivation](../roadmap.md#m2--deterministic-task-derivation)
 **Design:** [Assignment 0018](0018-design-deterministic-task-derivation.md), including its five approved architectural decisions and Product Owner acceptance record.
 **Direction:** [Accepted Proposal 0013](../proposals/0013-deterministic-architecture-for-probabilistic-construction.md).
+
+## Implementation authorization
+
+The Product Owner separately approved Assignment 0019 and explicitly authorized implementation of the accepted Assignment 0018 scope, complete mandatory checks, and commit/push to the current feature branch. Implementation delivery remains pending Product Owner acceptance; it does not complete M2. Earlier references below to waiting for separate authorization describe the original proposal gate, now satisfied by that explicit instruction.
 
 ## Objective
 

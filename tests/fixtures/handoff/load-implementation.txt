@@ -1,0 +1,2 @@
+import type { Implementation } from '../handoff/generated/contract.js';
+export const implement: Implementation = (id) => ({ id, name: 'World', active: true, score: 7 });

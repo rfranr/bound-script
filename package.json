@@ -14,6 +14,7 @@
   "scripts": {
     "langium:generate": "langium generate -f packages/language/langium-config.json",
     "build": "npm run langium:generate --silent && tsc -b",
+    "handoff": "npm run build --silent 1>&2 && node .tool-dist/derive-handoff.js",
     "bound": "npm run build --silent 1>&2 && node packages/cli/dist/bin.js",
     "demo:director-box": "npm run build --silent 1>&2 && node examples/director-box/dist/run.js",
     "demo:box-composition": "npm run build --silent 1>&2 && node examples/box-composition/dist/run.js",

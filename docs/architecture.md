@@ -22,7 +22,7 @@ Approved BoundScript source is intended to be the authoritative machine-readable
 
 Today parsing, semantic diagnostics, shared declaration lowering, `extractBoxDevelopmentSpec`, the strict version-1 JSON codec, and `bound spec` provide this foundation. They describe only the supported one-operation interfaces, primitive/flat-record types, and minimal `ensure` predicates. Dependencies and capabilities are not formal declarations yet. Source extraction still validates a whole system that requires a runtime director, even though the exported JSON contains no director. Specification semantics must evolve through explicit, compatible version decisions.
 
-Deterministic task derivation is planned. Each handoff should combine the canonical Box contract and relevant shared types with an external functional task, examples, fixed entrypoint, permitted dependencies/tools, and controlled candidate workspace. Task metadata, instructions, workspace configuration, and evidence stay separate from the formal contract. The current spec is not a complete implementation brief.
+The external [deterministic task derivation adapter](task-derivation.md) combines the canonical Box contract (with resolved shared types) with human-owned task/scope/policy snapshots, generated declarations, and a fixed entrypoint seed. Structural checks do not verify human approval. An external controller must provide protected handoff context and the prepared candidate environment; workspace isolation is not implemented. Task metadata, instructions, workspace configuration, and evidence stay separate from the formal contract. The current spec is not a complete implementation brief.
 
 ### 3. Independent implementation
 
@@ -154,7 +154,7 @@ BoundScript has no language-level `test`, `mock`, or `expect` constructs. Use Vi
 
 ## Future, not scaffolded
 
-Proposal 0013 prioritizes standalone verification, deterministic task derivation, the independent implementation pilot, evidence/integration, controlled architectural evolution, and comparative evaluation. Only the standalone single-invocation verification foundation is implemented; the broader construction workflow capabilities remain planned. The older exploration list below is retained as possible future work, not the immediate roadmap:
+Proposal 0013 prioritizes standalone verification, deterministic task derivation, the independent implementation pilot, evidence/integration, controlled architectural evolution, and comparative evaluation. Standalone single-invocation verification and the external deterministic task adapter are implemented; task delivery remains pending Product Owner acceptance. The broader agent construction, isolation, and evidence workflow capabilities remain planned. The older exploration list below is retained as possible future work, not the immediate roadmap:
 
 - grammar and semantic-model expansion beyond the executable subset;
 - richer behavioral contracts beyond single string-inequality postconditions;
