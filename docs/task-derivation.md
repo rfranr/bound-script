@@ -1,6 +1,6 @@
 # Deterministic Box handoffs
 
-Assignment [0019](assignments/0019-implement-deterministic-task-derivation.md) implements the accepted [0018 design](assignments/0018-design-deterministic-task-derivation.md). Delivery is pending Product Owner acceptance; M2 is **In Progress**, not complete. This is an external repository adapter, not a compiler/runtime feature, planner, candidate loader, or agent integration.
+Assignment [0019](assignments/0019-implement-deterministic-task-derivation.md) implements the accepted [0018 design](assignments/0018-design-deterministic-task-derivation.md). The Product Owner [accepted reviewed implementation `b692da02f54a36beabce47f1bc41e4d7a68ac926`](assignments/0019-implement-deterministic-task-derivation.md#product-owner-acceptance-and-completion-evidence), including its exclusive publication correction, and authorized **M2 — Completed**. M3 remains Planned and requires its own design assignment and separate Product Owner approval; no M3 implementation has started. This is an external repository adapter, not a compiler/runtime feature, planner, candidate loader, or agent integration.
 
 ## Human gate and invocation
 
@@ -129,4 +129,4 @@ Tested with **Node v24.16.0**, **TypeScript 5.9.3**, locked repository dependenc
 - `tests/handoff-consumer.test.ts`: 16 design-spike cases plus all primitives, sorted/deduplicated aliases and prefix collisions (20 independent strict compilation cases); successful built ESM imports without runtime declarations. Separate LoadUser/Greeter packages consume fixed trusted implementations and prewritten wiring, strictly decode packaged JSON, and verify human-owned expected outputs. A guarded Node consumption process forbids compiler-root/frontend/Langium loading and director execution; malformed output is rejected rather than repaired.
 - Existing verifier tests retain coverage for finite numbers, exact own fields/symbol extras, and output-before-postcondition ordering. No duplicate evaluator or changed formal/runtime semantics.
 
-See [roadmap delivery evidence](roadmap.md#m2--deterministic-task-derivation) for full regression results and remaining acceptance gate. These tests do not demonstrate agent determinism, universal correctness, dependency/security enforcement, the M3 pilot, or comparative evaluation.
+See [roadmap delivery evidence](roadmap.md#m2--deterministic-task-derivation) for full regression results and the verified, accepted M2 exit gate. These tests do not demonstrate agent determinism, universal correctness, dependency/security enforcement, the M3 pilot, or comparative evaluation.

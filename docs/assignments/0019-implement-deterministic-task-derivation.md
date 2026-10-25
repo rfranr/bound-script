@@ -1,13 +1,13 @@
 # Assignment 0019 — Implement Deterministic Task Derivation
 
-**Status:** Pending Product Owner acceptance
+**Status:** Completed
 **Milestone:** [M2 — Deterministic task derivation](../roadmap.md#m2--deterministic-task-derivation)
 **Design:** [Assignment 0018](0018-design-deterministic-task-derivation.md), including its five approved architectural decisions and Product Owner acceptance record.
 **Direction:** [Accepted Proposal 0013](../proposals/0013-deterministic-architecture-for-probabilistic-construction.md).
 
 ## Implementation authorization
 
-The Product Owner separately approved Assignment 0019 and explicitly authorized implementation of the accepted Assignment 0018 scope, complete mandatory checks, and commit/push to the current feature branch. Implementation delivery remains pending Product Owner acceptance; it does not complete M2. Earlier references below to waiting for separate authorization describe the original proposal gate, now satisfied by that explicit instruction.
+The Product Owner separately approved Assignment 0019 and explicitly authorized implementation of the accepted Assignment 0018 scope, complete mandatory checks, and commit/push to the current feature branch. The Product Owner subsequently accepted the reviewed implementation and explicitly authorized completing this assignment and closing M2; see the [acceptance record](#product-owner-acceptance-and-completion-evidence). Earlier references below to Proposed status, waiting for authorization, and pending acceptance describe historical gates, not the current status. Delivery alone did not establish acceptance or milestone closure.
 
 ## Objective
 
@@ -121,4 +121,29 @@ No general task language/new DSL, task planner/orchestrator/scheduler, agent/pro
 
 Report changed files, invocation/package example, deterministic comparison results, independent compilation/verification/wiring results, regression results, supported tool versions, deviations, and unresolved questions. Follow repository commit conventions and push only with authorization. Do not mark this assignment Completed or close M2 on implementation delivery alone; explicit Product Owner acceptance remains required.
 
-Preparation and publication of this **Proposed** assignment are authorized documentation work only. No production implementation is authorized by this document's creation or by the acceptance of Assignment 0018.
+Preparation and publication of this **Proposed** assignment were authorized documentation work only. Production implementation required the separate authorization recorded above, not this document's creation or acceptance of Assignment 0018.
+
+## Product Owner acceptance and completion evidence
+
+The Product Owner explicitly accepted Assignment 0019, including the corrected exclusive publication mechanism and its regression coverage, and authorized marking this assignment **Completed** and closing **M2 — Completed**. Acceptance is against the reviewed implementation, not this documentation commit:
+
+- **Accepted implementation:** `b692da02f54a36beabce47f1bc41e4d7a68ac926` — atomic exclusive publication and concurrent-destination regressions, building on initial implementation `75ab1c59f2877e7d923cb4a47656d1c6029ab3bd`.
+- **Accepted publication correction:** A complete staged sibling tree is exposed by atomic exclusive relative symlink creation, rather than the originally specified final directory rename. Concurrent empty/populated directories, files, and symlinks are never replaced. Failed publication cleans only this invocation's unpublished backing tree and fails closed if symlink publication is unavailable. Successful backing data is disposable output, not persistent execution state. This explicitly accepted correction supersedes the final-rename mechanism in Requirement 2 without changing package bytes, contract version 1, or derivation rules version 1.
+- **Verification environment:** Node v24.16.0, TypeScript 5.9.3, Linux, locked repository dependencies. The complete checks listed below were rerun successfully while recording acceptance, with no implementation changes from the reviewed commit. No universal cross-version/platform reproducibility claim is made.
+
+| Criterion | Verified evidence on the accepted implementation | Result |
+| --- | --- | --- |
+| AC-01 | `tests/handoff.test.ts`: existing whole-system extraction/strict canonical codec, unused valid Box selection, byte-identical published Greeter contract, and invalid source/selection/binding rejection before publication. | Satisfied |
+| AC-02 | Exact relative file sets/bytes match across repeated output roots, permuted keys/Boxes, changed cwd and filesystem creation order; Markdown bytes are preserved, unrelated bindings do not change selected packages, and equal content at a different input path changes only metadata. No hashes or handwritten public interfaces. | Satisfied |
+| AC-03 | Eight-file golden snapshot checks metadata order/version/identity/paths, instructions, declarations, seed, and protected snapshots; no source, unrelated context, hidden tests, or environment identity is bundled. | Satisfied |
+| AC-04 | Unsafe paths, symlinks/nonregular or missing files, invalid UTF-8, empty Markdown, and unsupported shapes fail without partial publication. Six publication tests cover complete output, four separate-process destination races preserving inode/contents, cleanup, and fail-closed unsupported publication. Nonempty unapproved text can render; approval remains human-owned. | Satisfied |
+| AC-05 | Two-Box matrix separates conservative regeneration scope from byte differences for source/shared-record/predicate, task/scope, policy, rules/environment-review, removed selections, and candidate/test-only changes. Valid irrelevant source edits yield identical bytes. Existing grammar rejects comments with no publication; no grammar expansion or automated currentness claim. | Satisfied within the documented existing-language constraint |
+| AC-06 | `tests/handoff-consumer.test.ts`: 20 independent strict ESM/NodeNext compilation cases reproduce all 16 design-spike outcomes and extend primitives/aliases/prefix collisions. Successful built imports need no runtime declaration module; strict packaged-JSON decoding and fixed-input verification prohibit compiler-root/frontend/Langium loading and director execution. | Satisfied |
+| AC-07 | Separate LoadUser/Greeter packages compile trusted fixtures independently and integrate via prewritten wiring with exact human-owned expected outputs; malformed output is rejected without interface/candidate repair. This is not the M3 agent pilot. | Satisfied |
+| AC-08 | `npm run check`: 416 tests in 17 files and type checking pass. Build, director-box/composition/structured-types demos, Hello World CLI, byte-identical canonical `bound spec` export, and handoff CLI smoke check pass. Existing verifier finite-number, own-key/symbol-extra, and output-before-postcondition coverage remains passing. | Satisfied |
+
+**M2 exit gate verified:** identical explicit inputs under the same supported rules/environment repeatedly produce byte-identical bounded per-Box tasks, with public interfaces derived from existing canonical contracts rather than manually duplicated. Human approval of operational inputs remains a prerequisite, not an adapter claim. The Product Owner's explicit acceptance and closure authorization, together with this evidence, establish M2 completion; implementation delivery alone did not.
+
+No acceptance correction remains unresolved. The existing no-comment-syntax constraint and static typing limits remain documented; directories and subprocesses provide no untrusted-code isolation. M2 completion does not establish agent determinism, arbitrary functional correctness, M3 isolation, M4 evidence enforcement, or comparative evaluation.
+
+**M3 remains Planned and has not started.** It requires its own design assignment and separate Product Owner approval before implementation. This acceptance creates no M3 assignment or implementation authorization; the evaluation protocol and baseline must still be defined before M3 implementation begins.

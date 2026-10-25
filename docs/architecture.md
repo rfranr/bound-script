@@ -154,7 +154,7 @@ BoundScript has no language-level `test`, `mock`, or `expect` constructs. Use Vi
 
 ## Future, not scaffolded
 
-Proposal 0013 prioritizes standalone verification, deterministic task derivation, the independent implementation pilot, evidence/integration, controlled architectural evolution, and comparative evaluation. Standalone single-invocation verification and the external deterministic task adapter are implemented; task delivery remains pending Product Owner acceptance. The broader agent construction, isolation, and evidence workflow capabilities remain planned. The older exploration list below is retained as possible future work, not the immediate roadmap:
+Proposal 0013 prioritizes standalone verification, deterministic task derivation, the independent implementation pilot, evidence/integration, controlled architectural evolution, and comparative evaluation. Standalone single-invocation verification and the external deterministic task adapter are implemented and accepted; M1 and M2 are Completed (see the [roadmap](roadmap.md)). M3 remains Planned and requires its own design assignment and separate Product Owner approval before implementation. The broader agent construction, isolation, and evidence workflow capabilities remain planned. The older exploration list below is retained as possible future work, not the immediate roadmap:
 
 - grammar and semantic-model expansion beyond the executable subset;
 - richer behavioral contracts beyond single string-inequality postconditions;
