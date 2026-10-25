@@ -1,9 +1,9 @@
 # Assignment 0018 — Design Deterministic Task Derivation (M2)
 
-**Status:** Proposed
+**Status:** Completed
 **Milestone:** [M2 — Deterministic task derivation](../roadmap.md#m2--deterministic-task-derivation)
 **Direction:** [Accepted Proposal 0013](../proposals/0013-deterministic-architecture-for-probabilistic-construction.md), especially Sections 3, 5, 6, 8–11.
-**Scope:** Design only, including a disposable technical spike; pending Product Owner review and approval. This document does not authorize production implementation or start or complete M2.
+**Scope:** Design only, including a disposable technical spike; approved and accepted by the Product Owner. Production implementation requires separate authorization under Assignment 0019. Design acceptance does not complete M2.
 
 ## Objective and authority
 
@@ -36,7 +36,7 @@ The initial proposal coupled derivation to hash-pinned references, approval cove
 
 A Git revision plus ordinary human review can select inputs operationally; it is not an additional package schema or proof of approval. M2 does not reject dirty trees as an authorization proxy. Cross-version/compiler/platform reproducibility beyond the supported, tested environment is not promised. Changed derivation behavior requires updating the explicit rules version and tests.
 
-## Proposed design — not implemented or approved
+## Approved design — not implemented
 
 ### 1. External repository adapter
 
@@ -232,7 +232,7 @@ Use existing Vitest/TypeScript and trusted fixtures only; no agents or untrusted
 
 For this design revision, run local Markdown link/section/status checks and `git diff --check`; report the disposable spike separately. Production regression tests are not claimed as run for unimplemented functionality.
 
-## Decisions requiring Product Owner approval
+## Architectural decisions approved by the Product Owner
 
 1. External adapter with minimal path-only bindings/informational metadata; omit hashes, approval references, package ID, and per-package toolchain pinning from M2.
 2. Human-controlled approval prerequisite without automated approval enforcement; verbatim protected task/scope/policy snapshots and existing repository tooling.
@@ -240,8 +240,20 @@ For this design revision, run local Markdown link/section/status checks and `git
 4. Conservative all-source regeneration policy, allowing unchanged output bytes; fresh publication rather than candidate updates or a semantic impact graph.
 5. M2 renders reproducible bounded context; M3 enforces development isolation and M4 defines evidence identity, stale-evidence/promotion controls, and any stronger authorization/integrity mechanism.
 
-These are proposals, not accepted architectural decisions. Return any need for new contract semantics, automated approval, or orchestration to the Product Owner rather than expanding scope.
+The Product Owner explicitly approved all five decisions above as part of accepting this revised design. Return any newly discovered need for new contract semantics, automated approval, or orchestration to the Product Owner rather than expanding scope.
 
 ## Delivery and authorization boundary
 
-Update this document in place under the original assignment. Commit and push of this design revision to the current feature branch are explicitly authorized. Report SHA, documentation checks, spike results, limitations, and pending decisions. Preserve Proposed status; do not alter reviews/other assignments, record acceptance, implement M2, or change milestone status. Separate implementation authorization remains required.
+The design was delivered and revised under this assignment; the Product Owner subsequently authorized recording acceptance and preparing [Assignment 0019 — Implement Deterministic Task Derivation](0019-implement-deterministic-task-derivation.md). Assignment 0019 remains Proposed pending separate review and implementation authorization. This acceptance record authorizes neither production code nor M2 closure.
+
+## Product Owner acceptance and completion evidence
+
+The Product Owner explicitly approved and accepted the revised Assignment 0018 design and all five documented architectural decisions, and authorized marking this design assignment **Completed**.
+
+- **Accepted design revision:** `049ffc626e82e2f07fbc566979d9dbe6b6c4c098` — simplified M2 metadata, explicit human approval boundary, deterministic-output versus invalidation distinction, and disposable TypeScript feasibility results.
+- **D-01:** The accepted document specifies exact inputs/package files, existing component reuse, entrypoint, scope, alternatives, exclusions, and future implementation tests. It was delivered as Proposed without production changes or milestone status changes; this later acceptance updates its assignment status only.
+- **D-02:** The revision separates mechanical structural validation from human approval, and deterministic rendering from conservative regeneration and M4 evidence/promotion responsibilities.
+- **D-03:** Sixteen independent TypeScript compilation cases had zero unexpected outcomes; successful cases also passed built ESM import checks. Explicit `undefined` returns and empty-record symbol-key limitations are documented. Disposable artifacts were removed, not committed.
+- **Documentation verification:** Local links, required sections/status, balanced code fences, and whitespace checks passed for the accepted revision. No production functionality or production regression results are claimed.
+
+No architectural decision among the five remains pending. M2's implementation exit gate is still outstanding; accepting this design does not establish task derivation is implemented, authorize the M3 pilot, or complete M2.

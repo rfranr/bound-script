@@ -8,13 +8,13 @@ This is the authoritative **current execution plan and milestone tracker**. [Acc
 
 **M1 — Completed:** The Product Owner accepted Assignment 0017 after all mandatory checks passed on the corrected implementation (`5d15c9b`). The criterion-by-criterion evidence below confirms M1's exit gate, not merely assignment delivery.
 
-**Next execution priority: M2 — Planned**, deterministic task derivation; no M2 execution assignment is defined or started. Detailed pilot design remains M3 work and comparative baseline/evaluation design remains M6 work. The evaluation protocol and baseline must be defined before M3 implementation begins. No later milestone is completed or authorized by M1 closure.
+**Next execution priority: M2 — Planned (implementation not started).** The Product Owner accepted [Assignment 0018's design](assignments/0018-design-deterministic-task-derivation.md#product-owner-acceptance-and-completion-evidence) and its five architectural decisions; the design assignment is Completed. [Assignment 0019](assignments/0019-implement-deterministic-task-derivation.md) is Proposed pending separate review and implementation authorization. M2's implementation exit gate remains outstanding. Detailed pilot design remains M3 work and comparative baseline/evaluation design remains M6 work. The evaluation protocol and baseline must be defined before M3 implementation begins. No later milestone is completed or authorized by design acceptance.
 
 | Milestone | Status | Execution assignments | Existing foundations |
 | --- | --- | --- | --- |
 | M0 — Approve the product thesis | Completed | 0014, 0015 | Proposal 0013 |
 | M1 — Standalone contract verification | Completed | [0016 — Verifier design](assignments/0016-design-standalone-box-verifier.md), [0017 — Implementation (accepted)](assignments/0017-implement-standalone-box-verifier.md) | 0012, 0013 |
-| M2 — Deterministic task derivation | Planned | Not yet defined | 0013 |
+| M2 — Deterministic task derivation | Planned | [0018 — Design (accepted)](assignments/0018-design-deterministic-task-derivation.md), [0019 — Implementation (Proposed)](assignments/0019-implement-deterministic-task-derivation.md) | 0013 |
 | M3 — Independent implementation pilot | Planned | Not yet defined | M1 verification, M2 handoffs |
 | M4 — Integration and evidence | Planned | Not yet defined | M1–M3 outputs |
 | M5 — Architectural evolution experiment | Planned | Not yet defined | M2–M4 workflow |
@@ -62,9 +62,11 @@ All M1 completion criteria are verified, with no missing evidence. Completion is
 - **Objective:** Derive consistent, bounded per-Box implementation contexts from approved inputs.
 - **Scope/deliverables:** Handoff packages combining approved BoundScript specs and external functional tasks; reuse the existing spec format and a fixed TypeScript entrypoint. No general task language.
 - **Completion criteria:** Identical approved inputs repeatedly yield equivalent tasks without manually duplicated public interfaces.
-- **Execution assignments:** Not yet defined.
+- **Execution assignments:** [0018 — Design Deterministic Task Derivation](assignments/0018-design-deterministic-task-derivation.md) is Completed after explicit Product Owner acceptance of revision `049ffc626e82e2f07fbc566979d9dbe6b6c4c098` and all five architectural decisions. [0019 — Implement Deterministic Task Derivation](assignments/0019-implement-deterministic-task-derivation.md) is Proposed pending separate Product Owner review and implementation authorization; production implementation has not started.
+- **Design progress/evidence:** The [0018 acceptance record](assignments/0018-design-deterministic-task-derivation.md#product-owner-acceptance-and-completion-evidence) documents structural validation versus human approval, minimal path-only metadata, fixed TypeScript entrypoint/projection, and conservative regeneration separately from output determinism. Its disposable spike passed 16 independent compilation cases with no unexpected outcomes and built ESM import checks for successful cases; static empty-record limitations remain documented. These are design/feasibility results, not evidence that derivation is implemented.
+- **Remaining gate:** Implement and verify 0019's deterministic packages, independent consumer/wiring tests, and regressions; obtain explicit assignment acceptance and milestone closure authorization. M2 remains Planned for implementation and is not Completed by design acceptance.
 - **Existing foundations:** Assignment 0013's portable contracts are a shared foundation, not task derivation.
-- **Dependencies:** Approved architecture and portable specs; follows M1 so independently produced implementations can be checked.
+- **Dependencies:** Approved architecture and human-owned functional inputs, portable specs, and the accepted M1 verifier. The adapter performs structural checks, not human approval verification; isolation remains M3 work and durable evidence/promotion remains M4 work.
 
 ### M3 — Independent implementation pilot
 
