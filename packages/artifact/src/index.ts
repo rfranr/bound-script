@@ -11,8 +11,8 @@ export const EXECUTABLE_ARTIFACT_VERSION = 1 as const;
 export const DIRECTOR_PROGRAM_MEDIA_TYPE =
   'application/vnd.boundscript.director-program+json' as const;
 
-/** Version 3 carries resolved primitive/flat-record contracts at each invocation. */
-export const DIRECTOR_PROGRAM_VERSION = 3 as const;
+/** Version 4 adds an optional, explicitly structured result postcondition. */
+export const DIRECTOR_PROGRAM_VERSION = 4 as const;
 
 export type PrimitiveType = 'string' | 'number' | 'boolean';
 
@@ -38,6 +38,12 @@ export type InvocationArgument =
   | { readonly kind: 'literal'; readonly value: string }
   | { readonly kind: 'variable'; readonly name: string };
 
+export interface Postcondition {
+  readonly kind: 'string-not-equal';
+  readonly target: { readonly kind: 'result' } | { readonly kind: 'field'; readonly name: string };
+  readonly value: string;
+}
+
 export type InvokeInstruction = {
   readonly operation: 'invoke';
   readonly implementation: string;
@@ -46,8 +52,8 @@ export type InvokeInstruction = {
   readonly inputType: ValueType;
   readonly argument: InvocationArgument;
 } & (
-  | { readonly resultType: ValueType; readonly result: string }
-  | { readonly resultType: 'void'; readonly result?: never }
+  | { readonly resultType: ValueType; readonly result: string; readonly postcondition?: Postcondition }
+  | { readonly resultType: 'void'; readonly result?: never; readonly postcondition?: never }
 );
 
 export type DirectorInstruction = PrintInstruction | PrintVariableInstruction | InvokeInstruction;

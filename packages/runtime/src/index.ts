@@ -6,6 +6,7 @@ import {
   type DirectorProgram,
   type ExecutableArtifact,
   type InvocationArgument,
+  type Postcondition,
   type ValueType
 } from '@boundscript/artifact';
 
@@ -31,6 +32,22 @@ export class RuntimeExecutionError extends Error {
   constructor(message: string) {
     super(message);
     this.name = 'RuntimeExecutionError';
+  }
+}
+
+/** A behavioral failure, distinct from host execution and data-contract errors. */
+export class PostconditionViolationError extends RuntimeExecutionError {
+  readonly code = 'runtime.postcondition-violation';
+
+  constructor(
+    readonly box: string,
+    readonly operation: string,
+    readonly predicate: Postcondition,
+    readonly observed: string
+  ) {
+    const target = predicate.target.kind === 'result' ? 'result' : `result.${predicate.target.name}`;
+    super(`Postcondition violation for box "${box}.${operation}": ensure ${target} != ${JSON.stringify(predicate.value)}; observed ${target} = ${JSON.stringify(observed)}.`);
+    this.name = 'PostconditionViolationError';
   }
 }
 
@@ -104,6 +121,9 @@ export class BoundScriptRuntime implements ExecutionRuntime {
         }
         if (instruction.resultType !== 'void') {
           assertBoundaryValue(result, instruction.resultType, instruction.implementation, boundary, 'output');
+          if (instruction.postcondition) {
+            assertPostcondition(result, instruction.postcondition, instruction.box, instruction.boxOperation);
+          }
           variables.set(instruction.result, result);
         } else if (result !== undefined) {
           throw new RuntimeExecutionError(`Implementation "${instruction.implementation}" must return undefined for a void operation. ${boundary} output expected "void", got ${valueCategory(result)}.`);
@@ -165,12 +185,33 @@ function isDirectorProgram(value: unknown): value is DirectorProgram {
           typeof instruction.box === 'string' && typeof instruction.boxOperation === 'string' &&
           isValueType(instruction.inputType) &&
           isInvocationArgument(instruction.argument) &&
-          ((isValueType(instruction.resultType) && typeof instruction.result === 'string') ||
-            (instruction.resultType === 'void' && !Object.hasOwn(instruction, 'result')));
+          ((isValueType(instruction.resultType) && typeof instruction.result === 'string' &&
+            (!Object.hasOwn(instruction, 'postcondition') || isPostcondition(instruction.postcondition, instruction.resultType))) ||
+            (instruction.resultType === 'void' && !Object.hasOwn(instruction, 'result') && !Object.hasOwn(instruction, 'postcondition')));
       default:
         return false;
     }
   });
+}
+
+function isPostcondition(value: unknown, resultType: ValueType): value is Postcondition {
+  if (!isRecord(value) || value.kind !== 'string-not-equal' || typeof value.value !== 'string' ||
+      !isRecord(value.target)) return false;
+  const target = value.target;
+  return (target.kind === 'result' && resultType === 'string') ||
+    (target.kind === 'field' && typeof target.name === 'string' &&
+      typeof resultType !== 'string' && resultType.fields.some(
+        (field) => field.name === target.name && field.type === 'string'
+      ));
+}
+
+/** Called only after output type validation and descriptor compatibility checks. */
+function assertPostcondition(result: unknown, predicate: Postcondition, box: string, operation: string): void {
+  const observed = predicate.target.kind === 'result'
+    ? result : (result as Record<string, unknown>)[predicate.target.name];
+  if (observed === predicate.value) {
+    throw new PostconditionViolationError(box, operation, predicate, observed);
+  }
 }
 
 function resolveArgument(argument: InvocationArgument, variables: ReadonlyMap<string, unknown>): unknown {

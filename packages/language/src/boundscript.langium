@@ -23,7 +23,12 @@ TypeName returns string:
 BoxNode:
     'box' name=ID '{'
         'operation' operation=ID '(' input=ID ':' inputType=TypeName ')' ':' resultType=TypeName
+        ensure=EnsureNode?
     '}'
+;
+
+EnsureNode:
+    'ensure' target=ID ('.' field=ID)? '!=' value=STRING
 ;
 
 DirectorNode:

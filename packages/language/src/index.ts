@@ -5,6 +5,7 @@ import type { SystemNode } from './generated/ast.js';
 
 export type {
   BoxNode,
+  EnsureNode,
   RecordTypeNode,
   FieldNode,
   InvocationStatementNode,
@@ -135,6 +136,25 @@ export function validateBoundScript(program: SystemNode): readonly LanguageDiagn
         report('void-input', `Input of "${box.name}.${box.operation}" cannot be void.`, box, property);
       } else if (type !== 'void' && !primitiveTypes.has(type) && !types.has(type)) {
         report('unknown-type', `Unknown type "${type}".`, box, property);
+      }
+    }
+    const ensure = box.ensure;
+    if (ensure) {
+      const record = program.types.find((type) => type.name === box.resultType);
+      if (ensure.target !== 'result') {
+        report('ensure-invalid-target', 'Postcondition target must be result or result.field, not an input or variable.', ensure, 'target');
+      } else if (box.resultType === 'void') {
+        report('ensure-void-result', `Postcondition on "${box.name}.${box.operation}" cannot target a void result.`, ensure, 'target');
+      } else if (ensure.field && record) {
+        const field = record.fields.find((field) => field.name === ensure.field);
+        if (!field) {
+          report('ensure-unknown-field', `Unknown postcondition field "${ensure.field}" on type "${record.name}".`, ensure, 'field');
+        } else if (field.type !== 'string') {
+          report('ensure-non-string-field', `Postcondition field "${record.name}.${field.name}" must be string, not "${field.type}".`, ensure, 'field');
+        }
+      } else if (ensure.field || box.resultType !== 'string') {
+        report('ensure-invalid-target', `Postcondition must target a string result or a string record field, not "${box.resultType}".`,
+          ensure, ensure.field ? 'field' : 'target');
       }
     }
   }

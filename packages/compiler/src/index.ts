@@ -7,6 +7,7 @@ import {
   type InvocationArgument,
   type ExecutableArtifact,
   type PrimitiveType,
+  type Postcondition,
   type ValueType
 } from '@boundscript/artifact';
 import { validateBoundScript, type SourceRange, type SystemNode } from '@boundscript/language';
@@ -83,8 +84,16 @@ export class BoundScriptCompiler implements Compiler<SystemNode> {
             inputType: resolveType(box.inputType),
             argument
           };
+          const postcondition: Postcondition | undefined = box.ensure ? {
+            kind: 'string-not-equal',
+            target: box.ensure.field ? { kind: 'field', name: box.ensure.field } : { kind: 'result' },
+            value: box.ensure.value
+          } : undefined;
           return statement.name
-            ? { ...invocation, resultType: resolveType(box.resultType), result: statement.name }
+            ? {
+                ...invocation, resultType: resolveType(box.resultType), result: statement.name,
+                ...(postcondition ? { postcondition } : {})
+              }
             : { ...invocation, resultType: 'void' };
         }
         return statement.variable
