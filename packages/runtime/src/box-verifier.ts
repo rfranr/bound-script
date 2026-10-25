@@ -84,15 +84,20 @@ export async function verifyBoxImplementation(
 
 /** Defensive descriptor check only; portable-envelope authority remains with the strict decoder. */
 function isVerificationContract(value: unknown): value is BoxVerificationContract {
-  if (!isRecord(value) || typeof value.box !== 'string' || !value.box || !isRecord(value.operation)) return false;
-  const operation = value.operation;
-  if (typeof operation.name !== 'string' || !operation.name || !isRecord(operation.input) ||
-      !isValueType(operation.input.type)) return false;
-  const hasPostcondition = 'postcondition' in operation;
-  return operation.resultType === 'void'
-    ? !hasPostcondition
-    : isValueType(operation.resultType) &&
-      (!hasPostcondition || isPostcondition(operation.postcondition, operation.resultType));
+  try {
+    if (!isRecord(value) || typeof value.box !== 'string' || !value.box || !isRecord(value.operation)) return false;
+    const operation = value.operation;
+    if (typeof operation.name !== 'string' || !operation.name || !isRecord(operation.input) ||
+        !isValueType(operation.input.type)) return false;
+    const hasPostcondition = 'postcondition' in operation;
+    return operation.resultType === 'void'
+      ? !hasPostcondition
+      : isValueType(operation.resultType) &&
+        (!hasPostcondition || isPostcondition(operation.postcondition, operation.resultType));
+  } catch {
+    // Contract getters/proxy traps can fail before any invocation-value checks run.
+    return false;
+  }
 }
 
 function inspectionFailure(phase: 'input' | 'output' | 'postcondition', error: unknown): BoxVerificationResult {

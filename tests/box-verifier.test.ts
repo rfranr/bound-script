@@ -58,6 +58,21 @@ describe('standalone Box verification', () => {
     expect(candidate).not.toHaveBeenCalled();
   });
 
+  it.each(['contract getter', 'contract proxy', 'descriptor getter', 'operation has trap'])
+    ('classifies a throwing %s during initial validation as invalid-contract', async (kind) => {
+      const fail = () => { throw new Error('contract inspection failed'); };
+      let view = contract();
+      if (kind === 'contract getter') Object.defineProperty(view, 'operation', { get: fail });
+      else if (kind === 'contract proxy') view = new Proxy(view, { get: fail });
+      else if (kind === 'descriptor getter') Object.defineProperty(view.operation.input, 'type', { get: fail });
+      else view = { ...view, operation: new Proxy(view.operation, { has: fail }) };
+      const candidate = vi.fn();
+      await expect(verifyBoxImplementation(view, candidate, 'fixed')).resolves.toEqual({
+        ok: false, failure: { kind: 'invalid-contract', message: 'Invalid Box verification contract view.' }
+      });
+      expect(candidate).not.toHaveBeenCalled();
+    });
+
   it.each([undefined, null, {}, 'function'])('rejects non-function candidates: %j', async (candidate) => {
     expect(await verifyBoxImplementation(contract(), candidate as BoxImplementation, 'fixed'))
       .toMatchObject({ ok: false, failure: { kind: 'invalid-implementation' } });
