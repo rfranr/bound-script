@@ -1,9 +1,13 @@
 # Assignment 0021 — Qualify Existing Pilot Tooling
 
 **Status:** In Progress
-**Milestone:** Pre-execution prerequisite for [M3 — Independent implementation pilot](../roadmap.md#m3--independent-implementation-pilot); M3 remains **Planned**.
+**Milestone relationship:** **No longer a prerequisite** for [M3 — Independent implementation pilot](../roadmap.md#m3--independent-implementation-pilot), which remains **Planned** under the Product Owner-directed bounded feasibility amendment.
 **Design:** [Completed Assignment 0020](0020-design-independent-implementation-pilot.md#product-owner-acceptance-and-completion-evidence), accepted revision `7b75de628a91b81ee0160ba34360297ff2b4e15c`.
 **Scope:** The Product Owner accepted the proposal for a **limited first phase: documentation review and read-only environment inventory only**. No tooling installation/reconfiguration, credential-value access, sandbox/environment launch, authentication/model probe, or pilot assets/agents are authorized. Any later qualification phase requires separate explicit approval; M3 implementation/execution remains unapproved.
+
+## Subsequent Product Owner decision — M3 dependency removed
+
+The Product Owner reduced generation isolation for the first M3 feasibility experiment and removed Docker Sandboxes, Gondolin, OAuth-proxy compatibility and this assignment as prerequisites. See [0020's bounded amendment](0020-design-independent-implementation-pilot.md#bounded-feasibility-amendment) and [Proposed 0022](0022-run-bounded-independent-implementation-pilot.md). The qualification findings remain historical/unqualified, not Pass results. No further qualification work is undertaken or authorized by this documentation revision; the remaining plan below is not an M3 gate or runbook. Status is retained as **In Progress** awaiting a separate decision on this qualification track; removal of a dependency does not silently mark it Completed or Cancelled.
 
 ## Limited phase authorization and findings
 
@@ -13,7 +17,7 @@ The Product Owner reviewed proposal commit `97db84685fdd49207fa0a7d8650c3802c7b3
 
 Assignment 0021 remains **In Progress**, awaiting Product Owner review of these findings. No later phase starts automatically.
 
-## Objective and priority
+## Original qualification objective and priority
 
 Determine whether existing documented tools can meet 0020's essential isolation, credential-handling, protected-workspace, and reproducibility requirements **while preserving the existing OpenAI/Pi provider and model configuration**, without custom infrastructure.
 
@@ -29,7 +33,7 @@ The existing session metadata identifies provider `openai-codex`, model `gpt-6.1
 | B-02 | The reviewed stock Docker Sandboxes Pi kit documents Anthropic credential substitution; compatibility with the selected OpenAI Codex/Pi authentication/model path is unverified. | Can an existing documented mechanism preserve the exact OpenAI provider/model and keep real credentials outside model-directed code, including refresh if applicable? |
 | B-03 | Read-only shares, restricted egress, resource/cleanup controls, and repeatable kit/image/tool versions were not exercised locally. Kit-tag pinning alone may still select a moving Pi image. | Do existing supported settings satisfy all essential controls on the chosen host, without a new proxy, extension, or controller platform? |
 
-The [accepted isolation design](0020-design-independent-implementation-pilot.md#51-select-an-existing-whole-session-sandbox) prefers whole-session Docker Sandboxes/Pi-kit authoring and ordinary credential-free Docker evaluation. Qualify compatibility with the existing OpenAI configuration **before** spending effort installing a kit whose documented provider path differs. Do not make tool convenience determine the provider/model.
+The [original design acceptance](0020-design-independent-implementation-pilot.md#product-owner-acceptance-and-completion-evidence) preferred whole-session sandbox/credential-proxy qualification. That M3 prerequisite is now superseded. The historical qualification plan below would require its own approval if resumed; it does not block the bounded tool-free-generation/container-only-execution experiment.
 
 ## Qualification plan and phase gates
 
@@ -65,7 +69,7 @@ Produce one short Markdown report with:
 - A minimal manual runbook using existing commands, actual versions/image references, resource/stop settings, permitted mounts/endpoints, and redacted evidence. Keep raw logs, secrets, generated files, and probe outputs outside Git; do not build evidence machinery.
 - Explicit outcome: **Qualified for the existing configuration**, **Blocked**, or **Inconclusive**. Any install/update, provider/model change, alternative mechanism, unsupported essential control, or further prerequisite must be called out for approval. No automatic fallback.
 
-Qualification is necessary but not sufficient for M3 readiness. Even a successful report does not authorize creating experiment assets, launching pilot agents, executing the comparison, or marking M3 In Progress/Completed. Product Owner acceptance of qualification and a separate pilot implementation/execution assignment are still required.
+Qualification was originally planned as necessary but not sufficient for M3 readiness. It is **no longer required for the bounded pilot**. This report still authorizes no assets, pilot agents, comparison or milestone completion; proposed 0022 requires its own approval, independent of this qualification track.
 
 ## Scope and exclusions
 

@@ -5,6 +5,8 @@
 **Outcome:** **Inconclusive for the exact current configuration; no mechanism is locally qualified.** The reviewed stock Pi kit does not supply its OpenAI Codex authentication path. Existing Gondolin tool isolation is provider-independent in principle, but neither examined example establishes all required protections unchanged. This is not proof that no existing tool can ever satisfy them.
 **Milestone:** M3 remains **Planned**. No provider/model switch is proposed.
 
+**Subsequent scope decision:** The Product Owner removed whole-agent sandbox/OAuth-proxy qualification and Assignment 0021 as M3 prerequisites. This is a historical phase-1 report, not a gate for [0020's bounded experiment](../assignments/0020-design-independent-implementation-pilot.md#bounded-feasibility-amendment) or [Proposed 0022](../assignments/0022-run-bounded-independent-implementation-pilot.md). Its unknowns remain unknown; no mechanism is newly qualified and none of the further inquiries/setup below is required or authorized for that pilot. Assignment 0021 is not automatically Completed/Cancelled.
+
 ## 1. Inventory and limits of observation
 
 Read package metadata/shipped source, public upstream documentation, selected session metadata, executable locations/version banners, and filesystem existence/permission metadata only. Did not start Pi, connect to a runtime daemon, open credential/configuration contents, invoke an auth resolver, install/reconfigure anything, start a sandbox, make an authentication/refresh/inference probe, or implement experiment assets. Public documentation retrieval is not a provider compatibility test.
@@ -76,7 +78,7 @@ Plain Docker/Podman authoring with a real token in an environment variable/auth 
 
 No runtime acceptance criterion is marked Pass. This report contributes documentation/inventory evidence to Q-01/Q-02/Q-04/Q-05; Q-03 local qualification and any auth/lifecycle probe remain unperformed. Q-06's no-pilot constraint is retained. Assignment 0021 stays **In Progress**, awaiting Product Owner review of phase 1; M3 stays **Planned**.
 
-## 5. Smallest proposed next step — approval requested, not executed
+## 5. Original proposed next step — not executed, no longer an M3 prerequisite
 
 **Do not install a runtime or authorize a model probe yet.** First:
 
