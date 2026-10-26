@@ -1,21 +1,22 @@
 # Assignment 0021 — Qualify Existing Pilot Tooling
 
-**Status:** In Progress
+**Status:** Completed
+**Qualification outcome:** Inconclusive — accepted phase-1 infrastructure investigation; no runtime is qualified.
 **Milestone relationship:** **No longer a prerequisite** for [M3 — Independent implementation pilot](../roadmap.md#m3--independent-implementation-pilot), which remains **Planned** under the Product Owner-directed bounded feasibility amendment.
 **Design:** [Completed Assignment 0020](0020-design-independent-implementation-pilot.md#product-owner-acceptance-and-completion-evidence), accepted revision `7b75de628a91b81ee0160ba34360297ff2b4e15c`.
-**Scope:** The Product Owner accepted the proposal for a **limited first phase: documentation review and read-only environment inventory only**. No tooling installation/reconfiguration, credential-value access, sandbox/environment launch, authentication/model probe, or pilot assets/agents are authorized. Any later qualification phase requires separate explicit approval; M3 implementation/execution remains unapproved.
+**Scope:** Concluded by explicit Product Owner decision after the limited documentation/read-only inventory phase. The phase-1 report is accepted **Inconclusive**; broader setup/runtime/auth checks were not performed. No further OAuth proxy, Gondolin or Docker Sandboxes qualification is required for the initial M3 pilot. No installation, credential access, environment/model probe or pilot work is authorized by this conclusion.
 
 ## Subsequent Product Owner decision — M3 dependency removed
 
-The Product Owner reduced generation isolation for the first M3 feasibility experiment and removed Docker Sandboxes, Gondolin, OAuth-proxy compatibility and this assignment as prerequisites. See [0020's bounded amendment](0020-design-independent-implementation-pilot.md#bounded-feasibility-amendment) and [Proposed 0022](0022-run-bounded-independent-implementation-pilot.md). The qualification findings remain historical/unqualified, not Pass results. No further qualification work is undertaken or authorized by this documentation revision; the remaining plan below is not an M3 gate or runbook. Status is retained as **In Progress** awaiting a separate decision on this qualification track; removal of a dependency does not silently mark it Completed or Cancelled.
+The Product Owner deliberately reduced the experimental risk policy, removed this investigation as an M3 dependency, and explicitly accepted its phase-1 report as an inconclusive infrastructure investigation. See [0020's bounded amendment](0020-design-independent-implementation-pilot.md#bounded-feasibility-amendment) and [Proposed 0023 — assets only](0023-prepare-and-freeze-independent-pilot-assets.md). This assignment is **Completed by that explicit conclusion**, not by passing unperformed qualification checks. Findings remain historical/unqualified. The original plan below is retained for traceability, not as an active M3 gate or instruction to resume qualification.
 
 ## Limited phase authorization and findings
 
-The Product Owner reviewed proposal commit `97db84685fdd49207fa0a7d8650c3802c7b36c3a` and authorized only the first phase to determine documented compatibility with the current OpenAI Codex/Pi provider, model, and authentication method without exposing credentials to agent-executed code. This starts Assignment 0021, not M3 execution, and is not acceptance of qualification results or permission for the broader setup/probe plan below.
+The Product Owner reviewed proposal commit `97db84685fdd49207fa0a7d8650c3802c7b36c3a` and authorized only the first phase to determine documented compatibility with the current OpenAI Codex/Pi provider, model, and authentication method without exposing credentials to agent-executed code. That authorization started Assignment 0021, not M3 execution; it did not accept qualification results or activate the broader setup/probe plan below. The later conclusion is recorded at the end of this document.
 
 [Phase 1 findings](../development/0021-tooling-qualification-findings.md) record supported/conditional options, source-level OAuth/JWT compatibility evidence, nonsecret inventory, B-01–B-03 disposition, and the smallest proposed next approval. **No mechanism is locally qualified.** Actual credential entry/source was not inspected; built-in provider OAuth behavior is established from shipped source, while exact active-method confirmation still needs nonsecret operator attestation. Stock Pi-kit OpenAI support and the existing Gondolin alternative's protected-workspace settings remain unresolved. No provider/model switch occurred or is authorized.
 
-Assignment 0021 remains **In Progress**, awaiting Product Owner review of these findings. No later phase starts automatically.
+The Product Owner has accepted these phase-1 findings and concluded Assignment 0021 **Completed, outcome Inconclusive**. No later phase is authorized; no mechanism is thereby declared supported, safe or locally qualified.
 
 ## Original qualification objective and priority
 
@@ -37,16 +38,16 @@ The [original design acceptance](0020-design-independent-implementation-pilot.md
 
 ## Qualification plan and phase gates
 
-### 1. Documentation and feasibility first — authorized scope
+### 1. Documentation and feasibility first — completed limited phase
 
 - Record redacted host/OS/virtualization availability, executable availability, tool versions, and the selected Pi provider/model/reasoning. Inspect only necessary nonsecret configuration metadata; do not read auth stores into a model transcript or use credential-printing commands.
 - Review release-matched upstream Pi/runtime documentation for the **actual OpenAI authentication path**, required endpoints, credential substitution or host-side credential separation, and essential workspace controls. Distinguish documented support, upstream tests, local observations, and unverified assumptions.
 - Assess the preferred existing mechanism first. If it lacks the required OpenAI path, document that precise gap. At most one already available, documented alternative may be proposed for Product Owner review, including an existing Pi isolation capability only if all enabled tools and executable actions are covered without code changes. Do not patch example extensions, write an adapter, or survey/build a new platform.
 - Deliver a short go/no-go setup plan naming the existing mechanism, exact versions/configuration, expected file/network exposure, any install/update, and any nonzero provider cost. Installation/configuration and runtime/auth probes require explicit approval of that plan; if not already included in the execution authorization, stop here and request it. Any departure from 0020's preferred isolation mechanism needs Product Owner approval, not an implicit design waiver.
 
-### 2. Small local qualification — NOT authorized in the current phase
+### 2. Small local qualification — not performed; no continuation authorized
 
-The following is retained as a later-phase proposal, not an instruction to execute now. Only after separate approval of the setup plan, use disposable **generic trusted probes**, not ContactOnboarding source/tasks, a solution candidate, a pilot driver, acceptance corpus, or baseline assets. Use existing CLIs and ordinary manual checks; no persistent controller code or automated agent runner.
+The following is the original unperformed later-phase proposal, retained for traceability only; this concluded assignment authorizes no continuation. Only after separate approval of the setup plan, use disposable **generic trusted probes**, not ContactOnboarding source/tasks, a solution candidate, a pilot driver, acceptance corpus, or baseline assets. Use existing CLIs and ordinary manual checks; no persistent controller code or automated agent runner.
 
 | Essential check | Minimal evidence / pass condition |
 | --- | --- |
@@ -69,15 +70,15 @@ Produce one short Markdown report with:
 - A minimal manual runbook using existing commands, actual versions/image references, resource/stop settings, permitted mounts/endpoints, and redacted evidence. Keep raw logs, secrets, generated files, and probe outputs outside Git; do not build evidence machinery.
 - Explicit outcome: **Qualified for the existing configuration**, **Blocked**, or **Inconclusive**. Any install/update, provider/model change, alternative mechanism, unsupported essential control, or further prerequisite must be called out for approval. No automatic fallback.
 
-Qualification was originally planned as necessary but not sufficient for M3 readiness. It is **no longer required for the bounded pilot**. This report still authorizes no assets, pilot agents, comparison or milestone completion; proposed 0022 requires its own approval, independent of this qualification track.
+Qualification was originally planned as necessary but not sufficient for M3 readiness. It is **no longer required for the bounded pilot**. This report still authorizes no assets, pilot agents, comparison or milestone completion. Proposed 0023 is the assets-only next step; revised execution needs separate approval, independent of this concluded qualification track.
 
 ## Scope and exclusions
 
-Allowed after separate authorization: release-matched document review, redacted configuration inventory, narrowly approved existing-tool setup, generic trusted access/resource/auth probes, and the short report/runbook. Do not add repository packages, runtime/compiler/grammar changes, custom Pi tools/extensions/transports, a credential proxy, provider integration, sandbox implementation, controller service, orchestration, or M4 evidence/promotion infrastructure. Do not modify ContactOnboarding, its approved requirements/frozen integration protocol, or the preregistered TypeScript baseline to fit a tool.
+The original plan proposed release-matched review, inventory, separately approved setup/probes and a report/runbook. Only its limited documentation/read-only inventory phase was authorized and delivered; the remaining plan is now closed, not an active instruction. Do not add repository packages, runtime/compiler/grammar changes, custom Pi tools/extensions/transports, a credential proxy, provider integration, sandbox implementation, controller service, orchestration, or M4 evidence/promotion infrastructure. Do not modify ContactOnboarding, its approved requirements/frozen integration protocol, or the preregistered TypeScript baseline to fit a tool.
 
-The current phase delivers **documentation/source review, read-only nonsecret inventory, and findings/status documentation only**. It does not authorize opening credential stores or credential-bearing configuration, resolving/refreshing authentication, installing/reconfiguring tools, starting environments, or running model/pilot probes. Source review and executable version banners are not sandbox qualification.
+The concluded phase delivered **documentation/source review, read-only nonsecret inventory, and findings/status documentation only**. It does not authorize opening credential stores or credential-bearing configuration, resolving/refreshing authentication, installing/reconfiguring tools, starting environments, or running model/pilot probes. Source review and executable version banners are not sandbox qualification.
 
-## Acceptance criteria for later authorized qualification
+## Original broader qualification criteria (not all performed)
 
 | ID | Required evidence |
 | --- | --- |
@@ -90,4 +91,14 @@ The current phase delivers **documentation/source review, read-only nonsecret in
 
 ## Phase 1 delivery checks and review boundary
 
-Validate local Markdown links/anchors, fences, In Progress/Planned statuses, B-01–B-03 findings, provider/model preservation, and the limited authorization language; run `git diff --check`. The findings distinguish installed/public-source evidence from actual authentication state and unperformed runtime checks. No new pilot regression or runtime qualification result is claimed. Commit/push the authorized findings/status documentation, then wait for Product Owner review. Installation/configuration, credential access/resolution, sandbox launches, model calls, generic runtime probes, and pilot work remain unapproved.
+Phase-1 delivery checked local Markdown links/anchors/fences, then-current In Progress/Planned statuses, B-01–B-03 findings, provider/model preservation and limited authorization language. The accepted findings distinguish source/inventory evidence from actual authentication state and unperformed runtime checks. No pilot regression or runtime qualification result was claimed.
+
+## Product Owner acceptance and conclusion
+
+The Product Owner explicitly accepted the [phase-1 report](../development/0021-tooling-qualification-findings.md) as an **Inconclusive infrastructure investigation**, concluded this assignment, and removed further sandbox/OAuth-proxy qualification as an initial M3 prerequisite.
+
+- **Accepted report revision:** `847e52805f467bf2007dd30f07fad387a90806bf` — documentation/source compatibility analysis and read-only inventory. Later context notes preserve its technical findings; they do not add runtime evidence.
+- **Performed:** public/shipped-source review, nonsecret session/package/executable/permission metadata inventory, explicit compatibility gaps, residual-risk analysis, and a redacted findings report. No credential store values were accessed, credentials resolved/refreshed, runtime started, or auth/model probe performed.
+- **Not performed / not passed:** actual auth-source confirmation, end-to-end provider/proxy compatibility, protected-workspace/egress/resource/lifecycle sandbox tests, or any locally qualified runtime. Q-01/Q-02 received bounded documentary/inventory evidence; Q-03 runtime qualification remains unperformed. Q-04–Q-06 record the no-custom-infrastructure, honest-reporting and no-pilot scope. This conclusion does not claim all original broader criteria passed.
+- **Binding outcome:** **Completed** describes acceptance/conclusion of the authorized investigation; **Inconclusive** describes qualification. B-01–B-03 unknowns are retained, not silently repaired or converted to Pass. No further qualification phase or provider/model change is authorized.
+- **Next step:** [Proposed Assignment 0023](0023-prepare-and-freeze-independent-pilot-assets.md) prepares/finalizes actual pilot assets only after its own approval. M3 stays **Planned** until revised execution is explicitly approved; asset preparation/acceptance alone authorizes no agents or pilot.

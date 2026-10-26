@@ -3,15 +3,17 @@
 **Status:** Proposed
 **Milestone:** [M3 — Independent implementation pilot](../roadmap.md#m3--independent-implementation-pilot), **Planned**.
 **Design:** [Assignment 0020 — bounded feasibility amendment](0020-design-independent-implementation-pilot.md#bounded-feasibility-amendment), directed by the Product Owner.
-**Authority:** Preparation of this document is authorized; implementation, experiment assets, containers, and agent execution are **not yet authorized**. Wait for explicit Product Owner approval. If later authorization covers preparation but not launching agents, stop after preparation and report readiness.
+**Authority:** **Deferred execution proposal, not the next implementation step.** The Product Owner requested [Proposed 0023 — asset preparation/freeze only](0023-prepare-and-freeze-independent-pilot-assets.md) first. No work/agents are authorized here. After actual assets are reviewed/frozen, revised pilot execution must be explicitly approved; asset preparation or acceptance cannot activate this proposal. M3 stays Planned until that execution approval.
 
 ## Objective
 
 Run one bounded ContactOnboarding trial: independent Pi sessions implement `NormalizeContact` and `RenderWelcome` from their respective M2 handoffs; a human controller compiles/verifies them using M1 and integrates the frozen pair without negotiating interfaces, changing architecture, or repairing implementations.
 
-Keep 0020's exact source/contracts, N-01–N-05/R-01–R-05 requirements, examples, corpus coverage, frozen integration/failure protocol, attempt budgets, metrics, and preregistered conventional TypeScript baseline. The baseline is prepared/frozen before the pilot, not executed under this assignment. No M6 comparison or automatic M3 closure.
+Keep 0020's exact source/contracts, N-01–N-05/R-01–R-05 requirements, examples, corpus coverage, frozen integration/failure protocol, attempt budgets, metrics, and preregistered conventional TypeScript baseline. Reuse the actual accepted frozen revision from 0023 without changing tests, wiring or authority. The baseline is prepared/frozen before the pilot, not executed here. This deferred proposal covers eventual trial/reporting only after revised execution approval; no M6 comparison or automatic M3 closure.
 
-## 1. Minimal preparation after approval
+## 1. Asset prerequisites — preparation is now assigned to Proposed 0023
+
+The following prerequisites are retained for execution review; they do not authorize duplicate asset preparation or a combined preparation/launch phase under this deferred proposal. Use 0023's assets-only scope first. Agent choice/CLI details below are an external operator profile, never language/compiler/runtime/handoff-format integration.
 
 - Prepare the human-owned architecture, per-Box task/scope/policy/bindings, fixed prompts, complete expected-output corpus, and predefined wiring from 0020. Obtain approval of their actual versions and consistency before operational derivation/model calls. Tasks describe behavior without restating public interfaces. Freeze tests and baseline assets/evaluation rules before either agent; do not invent hidden requirements or change expectations after observing results.
 - Use existing M2 extraction/derivation with an explicit root and fresh output, twice; compare exact relative files/bytes. Copy only each selected real eight-file package into its own separate temporary workspace as `handoff/`. Keep the output symlink/backing data together until copying is complete; do not distribute the whole derivation parent.
@@ -62,7 +64,7 @@ Follow 0020 Section 7 unchanged in experimental substance:
 
 Record 0020's human interventions/minutes, clarification requests, proposed/attempted/actual interface changes, context/tool violations, independent/integration failures, retries/revisions, supplied context, tokens/cost where observable, and workflow overhead. Tool calls are expected to be zero; container/private checks and mechanical source transcription are separate controller work. Do not count them as agent tool use or conceal their cost.
 
-Deliver the small trusted experiment assets/runbook and a redacted report with actual frozen input/test/tool versions, per-attempt local snapshot references, full independent/frozen integration results, negative outcomes, deviations, and unverified properties. Keep raw sessions, secrets, handoff/build directories and temporary candidate outputs out of Git; no promotion, hash/evidence database, M4 enforcement, or M6 comparison execution. Before agents, run `npm run check`, `npm run build`, the director-box/composition/structured-types demos, Hello World CLI, and canonical `bound spec` reference comparison. These repository regressions use trusted fixtures only; never import pilot candidates on the host.
+Use the accepted 0023 assets/runbook unchanged and deliver a redacted execution report with actual frozen input/test/tool versions, per-attempt local snapshot references, full independent/frozen integration results, negative outcomes, deviations, and unverified properties. Keep raw sessions, secrets, handoff/build directories and temporary candidate outputs out of Git; no promotion, hash/evidence database, M4 enforcement, or M6 comparison execution. Before agents, run `npm run check`, `npm run build`, the director-box/composition/structured-types demos, Hello World CLI, and canonical `bound spec` reference comparison. These repository regressions use trusted fixtures only; never import pilot candidates on the host.
 
 ## Acceptance criteria after explicit implementation/execution approval
 
@@ -79,4 +81,4 @@ Deliver the small trusted experiment assets/runbook and a redacted report with a
 
 ## Current documentation-only boundary
 
-For this revision, create only this Proposed assignment and update design/roadmap/status documentation. Check links/anchors/fences, unchanged functional source/contracts/requirements/protocol/metrics/baseline, status and approval gates, and whitespace. Do not implement assets, build/pull images, start containers/Pi sessions, inspect credentials, or call a model provider. Wait for Product Owner approval before preparation or launching either implementation agent.
+This remains a Proposed, deferred execution document. The current next assignment is 0023 for actual asset creation/freeze after its own approval. Do not implement assets, build/pull images, start containers/Pi sessions, inspect credentials or call a provider under this proposal. After asset review, obtain explicit approval of revised execution before either agent; no automatic launch or M3 status change follows from asset acceptance.

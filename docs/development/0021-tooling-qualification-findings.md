@@ -1,11 +1,11 @@
 # Assignment 0021 — Phase 1 tooling findings
 
-**Assignment:** [0021 — Qualify Existing Pilot Tooling](../assignments/0021-qualify-existing-pilot-tooling.md), **In Progress**.
+**Assignment:** [0021 — Qualify Existing Pilot Tooling](../assignments/0021-qualify-existing-pilot-tooling.md), **Completed by Product Owner acceptance/conclusion**; qualification outcome remains **Inconclusive**.
 **Phase:** Authorized documentation/source review and read-only environment inventory only.
 **Outcome:** **Inconclusive for the exact current configuration; no mechanism is locally qualified.** The reviewed stock Pi kit does not supply its OpenAI Codex authentication path. Existing Gondolin tool isolation is provider-independent in principle, but neither examined example establishes all required protections unchanged. This is not proof that no existing tool can ever satisfy them.
 **Milestone:** M3 remains **Planned**. No provider/model switch is proposed.
 
-**Subsequent scope decision:** The Product Owner removed whole-agent sandbox/OAuth-proxy qualification and Assignment 0021 as M3 prerequisites. This is a historical phase-1 report, not a gate for [0020's bounded experiment](../assignments/0020-design-independent-implementation-pilot.md#bounded-feasibility-amendment) or [Proposed 0022](../assignments/0022-run-bounded-independent-implementation-pilot.md). Its unknowns remain unknown; no mechanism is newly qualified and none of the further inquiries/setup below is required or authorized for that pilot. Assignment 0021 is not automatically Completed/Cancelled.
+**Product Owner conclusion:** This phase-1 report is explicitly accepted as an **Inconclusive infrastructure investigation**, and Assignment 0021 is concluded **Completed** on that basis. No further OAuth proxy, Gondolin or Docker Sandboxes qualification is an M3 prerequisite. Its unknowns remain unknown, no runtime is qualified, and the further inquiry/setup proposals below are not authorized or needed for the bounded pilot. [Proposed 0023](../assignments/0023-prepare-and-freeze-independent-pilot-assets.md) is the assets-only next step; [0020's bounded design](../assignments/0020-design-independent-implementation-pilot.md#bounded-feasibility-amendment) still requires separate execution approval. Completion is an explicit scope conclusion, not automatic acceptance of unperformed checks.
 
 ## 1. Inventory and limits of observation
 
@@ -76,7 +76,7 @@ Plain Docker/Podman authoring with a real token in an environment variable/auth 
 | B-02 — exact OpenAI/Pi auth | Built-in OAuth/JWT behavior established from shipped source; generic Codex sentinel mismatch identified; actual active credential source/type not read. **Blocked on exact-method confirmation and a supported credential-safe integration.** | Nonsecret operator attestation; existing release-matched Pi/OpenAI configuration evidence, or an approved provider-independent host-Pi route. No token access or provider/model change. |
 | B-03 — protected context / controls | Stock examples do not establish the necessary read-only/writable split plus egress/resources/cleanup/version controls for the proposed use. **Unverified; no runtime checks run.** | Documented supported settings first; later, separately approved generic probes for protected shares, no host/peer/test access, network and resource/whole-environment cleanup, and reproducible versions. No chmod/prompt/directory substitute for the real boundary. |
 
-No runtime acceptance criterion is marked Pass. This report contributes documentation/inventory evidence to Q-01/Q-02/Q-04/Q-05; Q-03 local qualification and any auth/lifecycle probe remain unperformed. Q-06's no-pilot constraint is retained. Assignment 0021 stays **In Progress**, awaiting Product Owner review of phase 1; M3 stays **Planned**.
+No runtime acceptance criterion is marked Pass. This report contributes documentation/inventory evidence to Q-01/Q-02/Q-04/Q-05; Q-03 local qualification and any auth/lifecycle probe remain unperformed. Q-06's no-pilot constraint is retained. At phase-1 delivery Assignment 0021 awaited review. It is now **Completed with accepted Inconclusive outcome**; no unperformed check is marked Pass. M3 stays **Planned**.
 
 ## 5. Original proposed next step — not executed, no longer an M3 prerequisite
 

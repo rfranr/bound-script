@@ -3,7 +3,7 @@
 **Status:** Completed
 **Milestone:** [M3 — Independent implementation pilot](../roadmap.md#m3--independent-implementation-pilot)
 **Direction:** [Accepted Proposal 0013](../proposals/0013-deterministic-architecture-for-probabilistic-construction.md), especially Sections 2, 6, 7, 10, and 11.
-**Scope:** Completed design, with the Product Owner-directed [bounded feasibility amendment](#bounded-feasibility-amendment). M3 remains **Planned**. This revision prepares only design/documentation and [Proposed Assignment 0022](0022-run-bounded-independent-implementation-pilot.md); wait for Product Owner approval before implementation or launching either agent. Assignment 0021 and whole-agent sandbox/OAuth-proxy qualification are no longer M3 prerequisites.
+**Scope:** Completed design, with the Product Owner-directed [bounded feasibility amendment](#bounded-feasibility-amendment). M3 remains **Planned**. The next step is [Proposed Assignment 0023 — prepare/freeze assets only](0023-prepare-and-freeze-independent-pilot-assets.md); it needs its own implementation approval and cannot launch agents. [0022's execution proposal](0022-run-bounded-independent-implementation-pilot.md) is deferred until actual assets are reviewed/frozen and revised execution is explicitly approved. M3 stays Planned through asset preparation. Assignment 0021 is concluded Completed with accepted Inconclusive outcome, not a qualified runtime or an M3 prerequisite.
 
 ## Review revision and authority
 
@@ -18,6 +18,8 @@ Propose one small, preregistered trial: two fresh Pi sessions implement `Normali
 This tests feasibility and coordination at a fixed boundary, not whether BoundScript is superior to conventional TypeScript. A successful pair is one observation; failures are first-class results, not a reason to repair interfaces or quietly rerun until success. Section 8 preregisters a minimal conventional baseline for later, separately authorized M6 execution.
 
 The Product Owner owns scenario, business rules, contracts, examples, test expectations, budget, isolation policy, and final acceptance. An Architect proposes changes; implementers cannot approve them. The controller follows a runbook, not an autonomous scheduler. Follow the [development workflow](../development/developer-workflow.md); neither a passing run nor acceptance of this design completes M3.
+
+**Agent- and sandbox-independent BoundScript:** independent implementation contexts and immutable approved architectural authority are essential; a particular coding agent, provider or sandbox is not. Freeze the actual source/contracts, requirements, tests and wiring, retain protected originals outside agent control, and stop/reapprove rather than negotiate or repair boundaries. Pi and container CLI choices are replaceable **external operator profiles**, not language/compiler/runtime integrations or handoff-format semantics. Do not add agent SDKs, callbacks, provider/sandbox fields, adapters or credential mechanisms to BoundScript core or M2 bindings/metadata/templates. Existing portable contracts, generated entrypoint types, M1 and M2 remain unchanged; choosing a different external tool would require an approved experiment-profile revision, not a new contract authority.
 
 ## 2. Investigated foundations and constraints
 
@@ -172,7 +174,7 @@ Each agent receives only its own eight-file handoff plus the common frozen gener
 
 ### 4.2 Session separation
 
-Use two ordinary **tool-free Pi sessions**, sequentially A then B, from separate temporary workspaces containing only the respective materialized `handoff/`. They start from empty history, not forks/clones/continuations of this design session or the peer. Keep controller-owned session/log storage separate and outside the delivered workspaces; resume only that Box's own history for its allowed revision. Architecture originals, hidden tests, wiring, reference implementations, baseline and peer code/history remain outside each workspace/context.
+The current external operator profile uses two ordinary **tool-free Pi sessions**, sequentially A then B, from separate temporary workspaces containing only the respective materialized `handoff/`. They start from empty history, not forks/clones/continuations of this design session or the peer. Keep controller-owned session/log storage separate and outside the delivered workspaces; resume only that Box's own history for its allowed revision. Architecture originals, hidden tests, wiring, reference implementations, baseline and peer code/history remain outside each workspace/context.
 
 Use `--no-tools` together with `--no-extensions`, `--no-mcp`, `--no-skills`, `--no-prompt-templates`, `--no-themes`, `--no-context-files`, `--no-approve`, and a fixed explicit `--system-prompt`. Load no explicit extensions/resources, enable no tools mid-run, and use no shell/`!` commands or model-directed host file reads/writes. The controller explicitly attaches/embeds only the eight selected handoff files using Pi's documented `@file` input or equivalent reviewed text. Before submitting the generation prompt, verify/record that the effective declared tool set is empty; if it is not, stop rather than rely on a prompt. No custom permission extension, SDK, RPC or orchestration is needed.
 
@@ -182,11 +184,13 @@ The common frozen prompt says: use only your supplied handoff, emit complete per
 
 ## 5. Bounded controls and trusted controller
 
-### 5.1 Organizational separation, not an agent sandbox
+### 5.1 Essential contexts and immutable authority
+
+**Essential:** independent contexts with no peer code/history/negotiation; immutable approved source/contracts, requirements, acceptance tests and integration wiring for the trial; deterministic per-Box handoffs; failure/intervention accounting; and no generated-code execution on the host. Immutable authority means frozen human-approved versions outside candidate control, not new runtime object-freezing, hash machinery or an authenticated approval engine. Any authority/test/wiring change invalidates the affected frozen trial and returns for visible review and approval.
 
 Use two separate temporary workspaces and deliver only the respective M2 handoff to each tool-free session. **Directories and worktrees are organizational boundaries, not security sandboxes.** Disabling model-callable tools reduces the model's execution/file-access affordance but does not OS-isolate the trusted Pi client, its credentials, or the human operator. Do not claim stronger isolation. Keep authoritative architecture, frozen tests/wiring, peer implementation, sessions/logs and tool configuration outside both workspaces; attach no such material to prompts.
 
-The Product Owner explicitly accepts this reduced generation boundary for a first feasibility experiment. No generated code executes on the host: it remains inert text until compilation/testing in disposable containers. Docker Sandboxes, Gondolin, OAuth-proxy compatibility and Assignment 0021 are **not prerequisites**. Do not install/configure them or continue qualification work to enable this trial.
+**Not pilot objectives:** production-grade agent isolation, credential proxying, sandbox/provider qualification or adversarial attestation. The Product Owner deliberately accepts the residual risk of an existing trusted agent tool in an organizationally restricted temporary workspace. Tool-disabled generation does not protect against a compromised client, operator mistakes, leaked prompt attachments or every host-side effect of that client. No generated code executes on the host: it remains inert text until compilation/testing in disposable containers. Docker Sandboxes, Gondolin, OAuth-proxy compatibility and Assignment 0021 are **not prerequisites**. Do not install/configure them or continue qualification work to enable this trial.
 
 ### 5.2 Candidate execution remains container-only
 
@@ -203,9 +207,9 @@ All candidate compilation, private checks, independent acceptance tests and inte
 
 ### 5.3 Removed prerequisites
 
-The previous B-01 (agent sandbox availability), B-02 (Pi/OpenAI OAuth proxy compatibility), and agent-isolation portions of B-03 are removed as M3 gates by Product Owner decision. Their [0021 findings](../development/0021-tooling-qualification-findings.md) are not invalidated or marked Pass; they are no longer needed for this experiment. Assignment 0021 is not a prerequisite and is not automatically Completed or Cancelled. No further qualification work is authorized by this amendment.
+The previous B-01 (agent sandbox availability), B-02 (Pi/OpenAI OAuth proxy compatibility), and agent-isolation portions of B-03 are removed as M3 gates by Product Owner decision. Their [0021 findings](../development/0021-tooling-qualification-findings.md) are not invalidated or marked Pass; they are no longer needed for this experiment. The Product Owner has separately accepted the 0021 phase-1 report as an **Inconclusive infrastructure investigation** and explicitly concluded that assignment **Completed**. This is not a Pass/qualified-runtime result. No further OAuth proxy, Gondolin or Docker Sandboxes qualification is required or authorized for the initial M3 pilot.
 
-Ordinary readiness of the actual offline candidate containers and frozen test environment remains required within proposed 0022. This is not a replacement agent-sandbox qualification project. No custom transport, provider integration, proxy, orchestration, sandbox service, or evidence infrastructure is to be built.
+Ordinary readiness of the actual offline candidate containers and frozen test environment is prepared under Proposed 0023, then reviewed before any revised execution approval. This is not a replacement agent-sandbox qualification project. No custom transport, provider integration, proxy, orchestration, sandbox service, or evidence infrastructure is to be built.
 
 ### 5.4 Minimal controller duties
 
@@ -228,7 +232,7 @@ Container results/pass flags are not authenticated evidence. Candidate and tests
 
 Classify results separately: setup/strict-decode failure; compile failure; export/load failure; each existing M1 `failure.kind` (inspection errors are not proven mismatches); functional assertion failure; integration failure; timeout/resource/transport failure; isolation violation; infrastructure interruption. Invalid input is a harness-negative control and must prevent invocation, not be misreported as a business-invalid contact. A shape-conforming but wrong message is a functional failure, not M1 success establishing correctness. Do not copy M1 evaluators or change compiler/runtime behavior.
 
-The fixed tests/runbook proposed under 0022 are ordinary experiment assets, not a production loader/transpiler service, orchestration API, agent sandbox package or M4 evidence/promotion system. Existing containers provide the actual candidate execution boundary, not the temporary directories or a Node subprocess.
+The fixed tests/runbook proposed under asset-only 0023 are ordinary experiment assets, not a production loader/transpiler service, orchestration API, agent sandbox package or M4 evidence/promotion system. Existing containers provide the actual candidate execution boundary, not the temporary directories or a Node subprocess.
 
 ## 7. Reproducible protocol and failure handling
 
@@ -314,7 +318,7 @@ An experiment conducted according to protocol can validly report **failure or in
 
 ## 11. Approved design and remaining operational decisions
 
-The Product Owner accepted the scenario, two-Box experiment, frozen integration/failure protocol and baseline, and subsequently directed the reduced boundary in the [bounded feasibility amendment](#bounded-feasibility-amendment). Actual frozen input/test versions, tool-free generation/container readiness, budgets and implementation/agent execution still require approval under proposed 0022. No provider/model change without explicit Product Owner approval; 0021/OAuth-proxy qualification is not a gate.
+The Product Owner accepted the scenario, two-Box experiment, frozen integration/failure protocol and baseline, and subsequently directed the reduced boundary in the [bounded feasibility amendment](#bounded-feasibility-amendment). Proposed 0023 prepares actual input/test assets and the container runbook without agents; their freeze/acceptance must precede separate revised execution approval. Tool choice/settings stay outside BoundScript core/handoff semantics. No provider/model change without explicit Product Owner approval; 0021/OAuth-proxy qualification is not a gate.
 
 | ID | Decision |
 | --- | --- |
@@ -323,7 +327,7 @@ The Product Owner accepted the scenario, two-Box experiment, frozen integration/
 | P-03 | Apply the Product Owner-directed reduced boundary: separate temporary workspaces, tool-free Pi source generation, all candidate compile/tests in disposable credential-free network-disabled containers with restricted mounts. Record organizational versus security boundaries and residual risks; no agent-sandbox/provider-proxy qualification or custom infrastructure. |
 | P-04 | Preserve native OpenAI/Pi provider/model/reasoning; no switch without explicit approval. Freeze actual versions, own-package prompts, empty tool sets, existing attempt/feedback budgets and spending cap before the two approved sessions. No credential migration/proxy compatibility gate or repairs after integration freeze. |
 | P-05 | Retain the endorsed preregistered TypeScript baseline/evaluation protocol unchanged; approve concrete corpus/prompt equivalence and baseline assets before M3 execution. Actual baseline execution/product comparison still requires separate M6 authorization. |
-| P-06 | Review Proposed Assignment 0022 before implementation or launching either agent. This revision is design/documentation only, not permission to prepare assets, start containers/model calls or mark M3 In Progress/Completed. No 0021 result is required. |
+| P-06 | Review Proposed 0023 for asset creation/freeze only. Actual assets remain pending acceptance after preparation; revised execution needs separate explicit approval and 0022 is deferred. This revision creates documents only, not assets/containers/agents or M3 progress. 0021 is concluded Inconclusive and non-gating. |
 
 No new public contract authority, provider integration, agent framework, orchestration service, scheduler, job manager, dependency language, hash manifest, evidence database, candidate promotion, M4 enforcement, M5 evolution, or M6 comparison execution is proposed here.
 
@@ -348,7 +352,7 @@ Require separate authorization to prepare actual approved assets and execute the
 
 Actual pilot evidence must include both independent session/snapshot histories, all attempted submissions/failures/interventions/budgets, independent compile/M1/functional results, unchanged frozen-pair integration outcomes, protected-context observations, and unverified properties. M3's exit gate requires both candidates to pass their independent checks and all prewritten integration assertions **without integration-time implementation edits, interface negotiation, architecture changes, or controller repair**. Report allowed pre-freeze revisions transparently; a failed/inconclusive experiment cannot be relabelled as satisfying that gate.
 
-For **this design/documentation-only amendment**, check links/anchors/fences, status and approval gates, unchanged functional source/rules/corpus, no-repair integration/failure protocol, metrics and baseline, plus proposed-source parsing/extraction and whitespace. Do not create experiment assets/handoffs, build/pull images, start containers/Pi sessions or execute candidates/baseline. Existing regression counts are reference evidence, not pilot results. Prepare Proposed Assignment 0022 and update the roadmap without starting M3; wait for Product Owner approval before launching agents.
+For **this design/documentation-only amendment**, check links/anchors/fences, status and approval gates, unchanged functional source/rules/corpus, no-repair integration/failure protocol, metrics and baseline, plus proposed-source parsing/extraction and whitespace. Do not create experiment assets/handoffs, build/pull images, start containers/Pi sessions or execute candidates/baseline. Existing regression counts are reference evidence, not pilot results. Prepare Proposed Assignment 0023 for assets only and update the roadmap/0021 conclusion without starting M3; wait for asset review and explicit revised execution approval before launching agents.
 
 ### Design-delivery verification (before acceptance)
 
@@ -386,5 +390,6 @@ The Product Owner explicitly reduced isolation requirements for the first M3 exp
 
 - Use separate temporary workspaces with only each Box's M2 handoff delivered. Prefer **tool-free native Pi sessions** and mechanically saved source text. Directories/worktrees are organizational boundaries, not security sandboxes; Pi itself remains trusted host software.
 - Run **all** candidate compilation, private/acceptance tests and integration assertions only in disposable, credential-free, network-disabled containers with restricted mounts. Never execute generated code on the host. Keep authoritative architecture, trusted test originals, peer code and context outside each generation workspace. Read-only evaluation mounts protect files, not secrecy/attestation.
-- Docker Sandboxes, Gondolin, OAuth proxy compatibility and Assignment 0021 are removed as M3 prerequisites. Existing 0021 findings remain unqualified historical evidence, not Pass results. No custom orchestration/security infrastructure or provider/model switch is authorized.
-- [Assignment 0022](0022-run-bounded-independent-implementation-pilot.md) is **Proposed** for review. This revision is design/documentation only: no assets, agents, containers or new model calls. M3 stays **Planned**; wait for Product Owner approval before implementation or launching either agent. Successful delivery still requires separate acceptance/exit-gate authorization; M6 comparison is not started.
+- Independent contexts and immutable human-approved architectural/test/wiring authority are essential; production-grade isolation and credential proxying are not objectives. Keep all agent/sandbox choices in the external operator runbook. No Pi-specific language/compiler/runtime/handoff integration, agent adapter, orchestration, sandbox framework or credential proxy is permitted.
+- Docker Sandboxes, Gondolin, OAuth proxy compatibility and Assignment 0021 are removed as M3 prerequisites. The Product Owner accepted 0021's phase-1 report as **Inconclusive** and explicitly concluded 0021 **Completed**; unknowns remain unknown, not Pass results. No further such qualification or provider/model switch is authorized.
+- [Assignment 0023](0023-prepare-and-freeze-independent-pilot-assets.md) is **Proposed** for creating/freezing actual assets only after approval. [0022's execution proposal](0022-run-bounded-independent-implementation-pilot.md) is deferred pending asset review and separate revised execution approval. This revision creates documents only: no assets, agents, containers or new model calls. M3 stays **Planned until revised execution is explicitly approved**, not merely until assets are delivered. M6 comparison is not started.
