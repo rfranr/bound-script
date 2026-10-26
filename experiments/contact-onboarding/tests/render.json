@@ -1,0 +1,561 @@
+[
+  {
+    "id": "R-I-01",
+    "requirements": [
+      "R-02",
+      "R-03",
+      "R-04",
+      "R-05"
+    ],
+    "input": {
+      "requestId": "r1",
+      "displayName": "Ada",
+      "email": "ada@example.com",
+      "locale": "en",
+      "consent": true,
+      "trialDays": 7,
+      "valid": true,
+      "reason": "OK"
+    },
+    "expected": {
+      "requestId": "r1",
+      "send": true,
+      "recipient": "ada@example.com",
+      "subject": "Welcome",
+      "html": "<p>Hello, Ada!</p><p>Your trial lasts 7 days.</p>",
+      "reason": "OK"
+    }
+  },
+  {
+    "id": "R-I-02",
+    "requirements": [
+      "R-02",
+      "R-03",
+      "R-04",
+      "R-05"
+    ],
+    "input": {
+      "requestId": "r-7",
+      "displayName": "Ada <Lovelace>",
+      "email": "ada@example.com",
+      "locale": "fr",
+      "consent": true,
+      "trialDays": 7,
+      "valid": true,
+      "reason": "OK"
+    },
+    "expected": {
+      "requestId": "r-7",
+      "send": true,
+      "recipient": "ada@example.com",
+      "subject": "Bienvenue",
+      "html": "<p>Bonjour, Ada &lt;Lovelace&gt; !</p><p>Votre essai dure 7 jours.</p>",
+      "reason": "OK"
+    }
+  },
+  {
+    "id": "R-I-03",
+    "requirements": [
+      "R-02",
+      "R-03",
+      "R-04",
+      "R-05"
+    ],
+    "input": {
+      "requestId": "r1",
+      "displayName": "Ada",
+      "email": "ada@example.com",
+      "locale": "en",
+      "consent": true,
+      "trialDays": 0,
+      "valid": true,
+      "reason": "OK"
+    },
+    "expected": {
+      "requestId": "r1",
+      "send": true,
+      "recipient": "ada@example.com",
+      "subject": "Welcome",
+      "html": "<p>Hello, Ada!</p><p>No trial is included.</p>",
+      "reason": "OK"
+    }
+  },
+  {
+    "id": "R-I-04",
+    "requirements": [
+      "R-02",
+      "R-03",
+      "R-04",
+      "R-05"
+    ],
+    "input": {
+      "requestId": "r1",
+      "displayName": "Élise",
+      "email": "ada@example.com",
+      "locale": "fr",
+      "consent": true,
+      "trialDays": 30,
+      "valid": true,
+      "reason": "OK"
+    },
+    "expected": {
+      "requestId": "r1",
+      "send": true,
+      "recipient": "ada@example.com",
+      "subject": "Bienvenue",
+      "html": "<p>Bonjour, Élise !</p><p>Votre essai dure 30 jours.</p>",
+      "reason": "OK"
+    }
+  },
+  {
+    "id": "R-I-05",
+    "requirements": [
+      "R-02",
+      "R-03",
+      "R-04",
+      "R-05"
+    ],
+    "input": {
+      "requestId": "r1",
+      "displayName": "Ada",
+      "email": "ada@example.com",
+      "locale": "fr",
+      "consent": true,
+      "trialDays": 0,
+      "valid": true,
+      "reason": "OK"
+    },
+    "expected": {
+      "requestId": "r1",
+      "send": true,
+      "recipient": "ada@example.com",
+      "subject": "Bienvenue",
+      "html": "<p>Bonjour, Ada !</p><p>Aucun essai inclus.</p>",
+      "reason": "OK"
+    }
+  },
+  {
+    "id": "R-I-06",
+    "requirements": [
+      "R-02",
+      "R-03",
+      "R-04",
+      "R-05"
+    ],
+    "input": {
+      "requestId": "r1",
+      "displayName": "Ada",
+      "email": "ada@example.com",
+      "locale": "en",
+      "consent": true,
+      "trialDays": 1,
+      "valid": true,
+      "reason": "OK"
+    },
+    "expected": {
+      "requestId": "r1",
+      "send": true,
+      "recipient": "ada@example.com",
+      "subject": "Welcome",
+      "html": "<p>Hello, Ada!</p><p>Your trial lasts 1 days.</p>",
+      "reason": "OK"
+    }
+  },
+  {
+    "id": "R-I-07",
+    "requirements": [
+      "R-02",
+      "R-03",
+      "R-04",
+      "R-05"
+    ],
+    "input": {
+      "requestId": "r1",
+      "displayName": "A&B \"C\" 'D' <E>",
+      "email": "ada@example.com",
+      "locale": "en",
+      "consent": true,
+      "trialDays": 7,
+      "valid": true,
+      "reason": "OK"
+    },
+    "expected": {
+      "requestId": "r1",
+      "send": true,
+      "recipient": "ada@example.com",
+      "subject": "Welcome",
+      "html": "<p>Hello, A&amp;B &quot;C&quot; &#39;D&#39; &lt;E&gt;!</p><p>Your trial lasts 7 days.</p>",
+      "reason": "OK"
+    }
+  },
+  {
+    "id": "R-I-08",
+    "requirements": [
+      "R-02",
+      "R-03",
+      "R-04",
+      "R-05"
+    ],
+    "input": {
+      "requestId": "r1",
+      "displayName": "&lt; 😀",
+      "email": "ada@example.com",
+      "locale": "en",
+      "consent": true,
+      "trialDays": 7,
+      "valid": true,
+      "reason": "OK"
+    },
+    "expected": {
+      "requestId": "r1",
+      "send": true,
+      "recipient": "ada@example.com",
+      "subject": "Welcome",
+      "html": "<p>Hello, &amp;lt; 😀!</p><p>Your trial lasts 7 days.</p>",
+      "reason": "OK"
+    }
+  },
+  {
+    "id": "R-I-09",
+    "requirements": [
+      "R-01",
+      "R-05"
+    ],
+    "input": {
+      "requestId": "r1",
+      "displayName": "Ada",
+      "email": "ada@example.com",
+      "locale": "en",
+      "consent": false,
+      "trialDays": 7,
+      "valid": true,
+      "reason": "OK"
+    },
+    "expected": {
+      "requestId": "r1",
+      "send": false,
+      "recipient": "",
+      "subject": "Not sent",
+      "html": "",
+      "reason": "NO_CONSENT"
+    }
+  },
+  {
+    "id": "R-I-10",
+    "requirements": [
+      "R-01",
+      "R-05"
+    ],
+    "input": {
+      "requestId": "",
+      "displayName": "",
+      "email": "bad",
+      "locale": "en",
+      "consent": true,
+      "trialDays": 0.5,
+      "valid": false,
+      "reason": "BAD_ID"
+    },
+    "expected": {
+      "requestId": "",
+      "send": false,
+      "recipient": "",
+      "subject": "Not sent",
+      "html": "",
+      "reason": "BAD_ID"
+    }
+  },
+  {
+    "id": "R-I-11",
+    "requirements": [
+      "R-01",
+      "R-05"
+    ],
+    "input": {
+      "requestId": "r1",
+      "displayName": "",
+      "email": "bad",
+      "locale": "en",
+      "consent": true,
+      "trialDays": -1,
+      "valid": false,
+      "reason": "BAD_NAME"
+    },
+    "expected": {
+      "requestId": "r1",
+      "send": false,
+      "recipient": "",
+      "subject": "Not sent",
+      "html": "",
+      "reason": "BAD_NAME"
+    }
+  },
+  {
+    "id": "R-I-12",
+    "requirements": [
+      "R-01",
+      "R-05"
+    ],
+    "input": {
+      "requestId": "r1",
+      "displayName": "Ada",
+      "email": "bad",
+      "locale": "en",
+      "consent": false,
+      "trialDays": 31,
+      "valid": false,
+      "reason": "BAD_EMAIL"
+    },
+    "expected": {
+      "requestId": "r1",
+      "send": false,
+      "recipient": "",
+      "subject": "Not sent",
+      "html": "",
+      "reason": "BAD_EMAIL"
+    }
+  },
+  {
+    "id": "R-I-13",
+    "requirements": [
+      "R-01",
+      "R-05"
+    ],
+    "input": {
+      "requestId": "r1",
+      "displayName": "Ada",
+      "email": "ada@example.com",
+      "locale": "en",
+      "consent": true,
+      "trialDays": 0.5,
+      "valid": false,
+      "reason": "BAD_DAYS"
+    },
+    "expected": {
+      "requestId": "r1",
+      "send": false,
+      "recipient": "",
+      "subject": "Not sent",
+      "html": "",
+      "reason": "BAD_DAYS"
+    }
+  },
+  {
+    "id": "R-I-14",
+    "requirements": [
+      "R-01",
+      "R-05"
+    ],
+    "input": {
+      "requestId": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+      "displayName": "Ada",
+      "email": "ada@example.com",
+      "locale": "en",
+      "consent": true,
+      "trialDays": 7,
+      "valid": false,
+      "reason": "BAD_ID"
+    },
+    "expected": {
+      "requestId": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+      "send": false,
+      "recipient": "",
+      "subject": "Not sent",
+      "html": "",
+      "reason": "BAD_ID"
+    }
+  },
+  {
+    "id": "R-I-15",
+    "requirements": [
+      "R-01",
+      "R-05"
+    ],
+    "input": {
+      "requestId": "r1",
+      "displayName": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "email": "ada@example.com",
+      "locale": "en",
+      "consent": true,
+      "trialDays": 7,
+      "valid": false,
+      "reason": "BAD_NAME"
+    },
+    "expected": {
+      "requestId": "r1",
+      "send": false,
+      "recipient": "",
+      "subject": "Not sent",
+      "html": "",
+      "reason": "BAD_NAME"
+    }
+  },
+  {
+    "id": "R-I-16",
+    "requirements": [
+      "R-01",
+      "R-05"
+    ],
+    "input": {
+      "requestId": "r1",
+      "displayName": "A",
+      "email": "ada@example.com",
+      "locale": "en",
+      "consent": false,
+      "trialDays": 7,
+      "valid": false,
+      "reason": "BAD_NAME"
+    },
+    "expected": {
+      "requestId": "r1",
+      "send": false,
+      "recipient": "",
+      "subject": "Not sent",
+      "html": "",
+      "reason": "BAD_NAME"
+    }
+  },
+  {
+    "id": "R-direct-no-renormalize",
+    "requirements": [
+      "R-02",
+      "R-03",
+      "R-04",
+      "R-05"
+    ],
+    "input": {
+      "requestId": " id ",
+      "displayName": " Ada ",
+      "email": " RAW@MAIL ",
+      "locale": "FR",
+      "consent": true,
+      "trialDays": -1,
+      "valid": true,
+      "reason": "OK"
+    },
+    "expected": {
+      "requestId": " id ",
+      "send": true,
+      "recipient": " RAW@MAIL ",
+      "subject": "Welcome",
+      "html": "<p>Hello,  Ada !</p><p>Your trial lasts -1 days.</p>",
+      "reason": "OK"
+    }
+  },
+  {
+    "id": "R-direct-fraction",
+    "requirements": [
+      "R-02",
+      "R-04"
+    ],
+    "input": {
+      "requestId": "r1",
+      "displayName": "Ada",
+      "email": "ada@example.com",
+      "locale": "en",
+      "consent": true,
+      "trialDays": 0.5,
+      "valid": true,
+      "reason": "OK"
+    },
+    "expected": {
+      "requestId": "r1",
+      "send": true,
+      "recipient": "ada@example.com",
+      "subject": "Welcome",
+      "html": "<p>Hello, Ada!</p><p>Your trial lasts 0.5 days.</p>",
+      "reason": "OK"
+    }
+  },
+  {
+    "id": "R-direct-empty-reason",
+    "requirements": [
+      "R-01"
+    ],
+    "input": {
+      "requestId": "r1",
+      "displayName": "Ada",
+      "email": "ada@example.com",
+      "locale": "en",
+      "consent": false,
+      "trialDays": 7,
+      "valid": false,
+      "reason": ""
+    },
+    "expected": {
+      "requestId": "r1",
+      "send": false,
+      "recipient": "",
+      "subject": "Not sent",
+      "html": "",
+      "reason": ""
+    }
+  },
+  {
+    "id": "R-direct-valid-ignores-reason",
+    "requirements": [
+      "R-02"
+    ],
+    "input": {
+      "requestId": "r1",
+      "displayName": "Ada",
+      "email": "ada@example.com",
+      "locale": "en",
+      "consent": true,
+      "trialDays": 7,
+      "valid": true,
+      "reason": "BAD_EMAIL"
+    },
+    "expected": {
+      "requestId": "r1",
+      "send": true,
+      "recipient": "ada@example.com",
+      "subject": "Welcome",
+      "html": "<p>Hello, Ada!</p><p>Your trial lasts 7 days.</p>",
+      "reason": "OK"
+    }
+  },
+  {
+    "id": "R-direct-fr-one",
+    "requirements": [
+      "R-03",
+      "R-04"
+    ],
+    "input": {
+      "requestId": "r1",
+      "displayName": "Ada",
+      "email": "ada@example.com",
+      "locale": "fr",
+      "consent": true,
+      "trialDays": 1,
+      "valid": true,
+      "reason": "OK"
+    },
+    "expected": {
+      "requestId": "r1",
+      "send": true,
+      "recipient": "ada@example.com",
+      "subject": "Bienvenue",
+      "html": "<p>Bonjour, Ada !</p><p>Votre essai dure 1 jours.</p>",
+      "reason": "OK"
+    }
+  },
+  {
+    "id": "R-I-17",
+    "requirements": ["R-02", "R-03", "R-04", "R-05"],
+    "input": {"requestId":"_","displayName":"Élise","email":"ada@example.com","locale":"fr","consent":true,"trialDays":7,"valid":true,"reason":"OK"},
+    "expected": {"requestId":"_","send":true,"recipient":"ada@example.com","subject":"Bienvenue","html":"<p>Bonjour, Élise !</p><p>Votre essai dure 7 jours.</p>","reason":"OK"}
+  },
+  {
+    "id": "R-I-18",
+    "requirements": ["R-02", "R-03", "R-04", "R-05"],
+    "input": {"requestId":"r1","displayName":"&<>\"' &amp;","email":"ada@example.com","locale":"fr","consent":true,"trialDays":7,"valid":true,"reason":"OK"},
+    "expected": {"requestId":"r1","send":true,"recipient":"ada@example.com","subject":"Bienvenue","html":"<p>Bonjour, &amp;&lt;&gt;&quot;&#39; &amp;amp; !</p><p>Votre essai dure 7 jours.</p>","reason":"OK"}
+  },
+  {
+    "id": "R-direct-exponent",
+    "requirements": ["R-02", "R-04"],
+    "input": {"requestId":"r1","displayName":"Ada","email":"ada@example.com","locale":"en","consent":true,"trialDays":1e21,"valid":true,"reason":"OK"},
+    "expected": {"requestId":"r1","send":true,"recipient":"ada@example.com","subject":"Welcome","html":"<p>Hello, Ada!</p><p>Your trial lasts 1e+21 days.</p>","reason":"OK"}
+  }
+]

@@ -1,0 +1,966 @@
+[
+  {
+    "id": "N-basic",
+    "requirements": [
+      "N-01",
+      "N-02",
+      "N-03",
+      "N-04",
+      "N-05"
+    ],
+    "input": {
+      "requestId": "r1",
+      "name": "Ada",
+      "email": "ada@example.com",
+      "locale": "en",
+      "consent": true,
+      "trialDays": 7
+    },
+    "expected": {
+      "requestId": "r1",
+      "displayName": "Ada",
+      "email": "ada@example.com",
+      "locale": "en",
+      "consent": true,
+      "trialDays": 7,
+      "valid": true,
+      "reason": "OK"
+    }
+  },
+  {
+    "id": "N-public-E01",
+    "requirements": [
+      "N-01",
+      "N-02",
+      "N-03",
+      "N-04",
+      "N-05"
+    ],
+    "input": {
+      "requestId": " r-7 ",
+      "name": "  Ada\t  <Lovelace>  ",
+      "email": " ADA@EXAMPLE.COM ",
+      "locale": " FR ",
+      "consent": true,
+      "trialDays": 7
+    },
+    "expected": {
+      "requestId": "r-7",
+      "displayName": "Ada <Lovelace>",
+      "email": "ada@example.com",
+      "locale": "fr",
+      "consent": true,
+      "trialDays": 7,
+      "valid": true,
+      "reason": "OK"
+    }
+  },
+  {
+    "id": "N-ascii-trim",
+    "requirements": [
+      "N-01",
+      "N-03",
+      "N-04"
+    ],
+    "input": {
+      "requestId": "\r\n R_1- \t",
+      "name": "\r A\n\tB \r",
+      "email": "\tA.B+C_D-E@EX-AMPLE.CO.UK\n",
+      "locale": "\rEN\t",
+      "consent": true,
+      "trialDays": 7
+    },
+    "expected": {
+      "requestId": "R_1-",
+      "displayName": "A B",
+      "email": "a.b+c_d-e@ex-ample.co.uk",
+      "locale": "en",
+      "consent": true,
+      "trialDays": 7,
+      "valid": true,
+      "reason": "OK"
+    }
+  },
+  {
+    "id": "N-unicode",
+    "requirements": [
+      "N-01",
+      "N-02"
+    ],
+    "input": {
+      "requestId": "r1",
+      "name": " Élise 😀 ",
+      "email": "ada@example.com",
+      "locale": "en",
+      "consent": true,
+      "trialDays": 7
+    },
+    "expected": {
+      "requestId": "r1",
+      "displayName": "Élise 😀",
+      "email": "ada@example.com",
+      "locale": "en",
+      "consent": true,
+      "trialDays": 7,
+      "valid": true,
+      "reason": "OK"
+    }
+  },
+  {
+    "id": "N-id-empty-priority",
+    "requirements": [
+      "N-02",
+      "N-05"
+    ],
+    "input": {
+      "requestId": "",
+      "name": " \t",
+      "email": "bad",
+      "locale": "en",
+      "consent": true,
+      "trialDays": 0.5
+    },
+    "expected": {
+      "requestId": "",
+      "displayName": "",
+      "email": "bad",
+      "locale": "en",
+      "consent": true,
+      "trialDays": 0.5,
+      "valid": false,
+      "reason": "BAD_ID"
+    }
+  },
+  {
+    "id": "N-id32",
+    "requirements": [
+      "N-02"
+    ],
+    "input": {
+      "requestId": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+      "name": "Ada",
+      "email": "ada@example.com",
+      "locale": "en",
+      "consent": true,
+      "trialDays": 7
+    },
+    "expected": {
+      "requestId": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+      "displayName": "Ada",
+      "email": "ada@example.com",
+      "locale": "en",
+      "consent": true,
+      "trialDays": 7,
+      "valid": true,
+      "reason": "OK"
+    }
+  },
+  {
+    "id": "N-id33",
+    "requirements": [
+      "N-02",
+      "N-05"
+    ],
+    "input": {
+      "requestId": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+      "name": "Ada",
+      "email": "ada@example.com",
+      "locale": "en",
+      "consent": true,
+      "trialDays": 7
+    },
+    "expected": {
+      "requestId": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+      "displayName": "Ada",
+      "email": "ada@example.com",
+      "locale": "en",
+      "consent": true,
+      "trialDays": 7,
+      "valid": false,
+      "reason": "BAD_ID"
+    }
+  },
+  {
+    "id": "N-id-unicode",
+    "requirements": [
+      "N-02",
+      "N-05"
+    ],
+    "input": {
+      "requestId": "é",
+      "name": "Ada",
+      "email": "ada@example.com",
+      "locale": "en",
+      "consent": true,
+      "trialDays": 7
+    },
+    "expected": {
+      "requestId": "é",
+      "displayName": "Ada",
+      "email": "ada@example.com",
+      "locale": "en",
+      "consent": true,
+      "trialDays": 7,
+      "valid": false,
+      "reason": "BAD_ID"
+    }
+  },
+  {
+    "id": "N-id-space",
+    "requirements": [
+      "N-02",
+      "N-05"
+    ],
+    "input": {
+      "requestId": "a b",
+      "name": "Ada",
+      "email": "ada@example.com",
+      "locale": "en",
+      "consent": true,
+      "trialDays": 7
+    },
+    "expected": {
+      "requestId": "a b",
+      "displayName": "Ada",
+      "email": "ada@example.com",
+      "locale": "en",
+      "consent": true,
+      "trialDays": 7,
+      "valid": false,
+      "reason": "BAD_ID"
+    }
+  },
+  {
+    "id": "N-id-nbsp",
+    "requirements": [
+      "N-01",
+      "N-02",
+      "N-05"
+    ],
+    "input": {
+      "requestId": " r1 ",
+      "name": "Ada",
+      "email": "ada@example.com",
+      "locale": "en",
+      "consent": true,
+      "trialDays": 7
+    },
+    "expected": {
+      "requestId": " r1 ",
+      "displayName": "Ada",
+      "email": "ada@example.com",
+      "locale": "en",
+      "consent": true,
+      "trialDays": 7,
+      "valid": false,
+      "reason": "BAD_ID"
+    }
+  },
+  {
+    "id": "N-name0-priority",
+    "requirements": [
+      "N-01",
+      "N-02",
+      "N-05"
+    ],
+    "input": {
+      "requestId": "r1",
+      "name": " \t\r\n",
+      "email": "bad",
+      "locale": "en",
+      "consent": true,
+      "trialDays": -1
+    },
+    "expected": {
+      "requestId": "r1",
+      "displayName": "",
+      "email": "bad",
+      "locale": "en",
+      "consent": true,
+      "trialDays": -1,
+      "valid": false,
+      "reason": "BAD_NAME"
+    }
+  },
+  {
+    "id": "N-name1",
+    "requirements": [
+      "N-02"
+    ],
+    "input": {
+      "requestId": "r1",
+      "name": "Z",
+      "email": "ada@example.com",
+      "locale": "en",
+      "consent": true,
+      "trialDays": 7
+    },
+    "expected": {
+      "requestId": "r1",
+      "displayName": "Z",
+      "email": "ada@example.com",
+      "locale": "en",
+      "consent": true,
+      "trialDays": 7,
+      "valid": true,
+      "reason": "OK"
+    }
+  },
+  {
+    "id": "N-name80",
+    "requirements": [
+      "N-02"
+    ],
+    "input": {
+      "requestId": "r1",
+      "name": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "email": "ada@example.com",
+      "locale": "en",
+      "consent": true,
+      "trialDays": 7
+    },
+    "expected": {
+      "requestId": "r1",
+      "displayName": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "email": "ada@example.com",
+      "locale": "en",
+      "consent": true,
+      "trialDays": 7,
+      "valid": true,
+      "reason": "OK"
+    }
+  },
+  {
+    "id": "N-name81",
+    "requirements": [
+      "N-02",
+      "N-05"
+    ],
+    "input": {
+      "requestId": "r1",
+      "name": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "email": "ada@example.com",
+      "locale": "en",
+      "consent": true,
+      "trialDays": 7
+    },
+    "expected": {
+      "requestId": "r1",
+      "displayName": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "email": "ada@example.com",
+      "locale": "en",
+      "consent": true,
+      "trialDays": 7,
+      "valid": false,
+      "reason": "BAD_NAME"
+    }
+  },
+  {
+    "id": "N-utf16-80",
+    "requirements": [
+      "N-01",
+      "N-02"
+    ],
+    "input": {
+      "requestId": "r1",
+      "name": "😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀",
+      "email": "ada@example.com",
+      "locale": "en",
+      "consent": true,
+      "trialDays": 7
+    },
+    "expected": {
+      "requestId": "r1",
+      "displayName": "😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀",
+      "email": "ada@example.com",
+      "locale": "en",
+      "consent": true,
+      "trialDays": 7,
+      "valid": true,
+      "reason": "OK"
+    }
+  },
+  {
+    "id": "N-utf16-82",
+    "requirements": [
+      "N-02",
+      "N-05"
+    ],
+    "input": {
+      "requestId": "r1",
+      "name": "😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀",
+      "email": "ada@example.com",
+      "locale": "en",
+      "consent": true,
+      "trialDays": 7
+    },
+    "expected": {
+      "requestId": "r1",
+      "displayName": "😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀",
+      "email": "ada@example.com",
+      "locale": "en",
+      "consent": true,
+      "trialDays": 7,
+      "valid": false,
+      "reason": "BAD_NAME"
+    }
+  },
+  {
+    "id": "N-control",
+    "requirements": [
+      "N-01",
+      "N-02",
+      "N-05"
+    ],
+    "input": {
+      "requestId": "r1",
+      "name": "A\u0000B",
+      "email": "ada@example.com",
+      "locale": "en",
+      "consent": true,
+      "trialDays": 7
+    },
+    "expected": {
+      "requestId": "r1",
+      "displayName": "A\u0000B",
+      "email": "ada@example.com",
+      "locale": "en",
+      "consent": true,
+      "trialDays": 7,
+      "valid": false,
+      "reason": "BAD_NAME"
+    }
+  },
+  {
+    "id": "N-del",
+    "requirements": [
+      "N-02",
+      "N-05"
+    ],
+    "input": {
+      "requestId": "r1",
+      "name": "AB",
+      "email": "ada@example.com",
+      "locale": "en",
+      "consent": true,
+      "trialDays": 7
+    },
+    "expected": {
+      "requestId": "r1",
+      "displayName": "AB",
+      "email": "ada@example.com",
+      "locale": "en",
+      "consent": true,
+      "trialDays": 7,
+      "valid": false,
+      "reason": "BAD_NAME"
+    }
+  },
+  {
+    "id": "N-vertical-tab",
+    "requirements": [
+      "N-01",
+      "N-02",
+      "N-05"
+    ],
+    "input": {
+      "requestId": "r1",
+      "name": "\u000bAda\u000b",
+      "email": "ada@example.com",
+      "locale": "en",
+      "consent": true,
+      "trialDays": 7
+    },
+    "expected": {
+      "requestId": "r1",
+      "displayName": "\u000bAda\u000b",
+      "email": "ada@example.com",
+      "locale": "en",
+      "consent": true,
+      "trialDays": 7,
+      "valid": false,
+      "reason": "BAD_NAME"
+    }
+  },
+  {
+    "id": "N-locale-fallback-zero",
+    "requirements": [
+      "N-04",
+      "N-05"
+    ],
+    "input": {
+      "requestId": "r1",
+      "name": "Ada",
+      "email": "ada@example.com",
+      "locale": "es",
+      "consent": false,
+      "trialDays": 0
+    },
+    "expected": {
+      "requestId": "r1",
+      "displayName": "Ada",
+      "email": "ada@example.com",
+      "locale": "en",
+      "consent": false,
+      "trialDays": 0,
+      "valid": true,
+      "reason": "OK"
+    }
+  },
+  {
+    "id": "N-email-priority",
+    "requirements": [
+      "N-03",
+      "N-04",
+      "N-05"
+    ],
+    "input": {
+      "requestId": "r1",
+      "name": "Ada",
+      "email": " BAD ",
+      "locale": "en",
+      "consent": false,
+      "trialDays": 31
+    },
+    "expected": {
+      "requestId": "r1",
+      "displayName": "Ada",
+      "email": "bad",
+      "locale": "en",
+      "consent": false,
+      "trialDays": 31,
+      "valid": false,
+      "reason": "BAD_EMAIL"
+    }
+  },
+  {
+    "id": "N-email-numeric",
+    "requirements": [
+      "N-03"
+    ],
+    "input": {
+      "requestId": "r1",
+      "name": "Ada",
+      "email": "1@2.3",
+      "locale": "en",
+      "consent": true,
+      "trialDays": 7
+    },
+    "expected": {
+      "requestId": "r1",
+      "displayName": "Ada",
+      "email": "1@2.3",
+      "locale": "en",
+      "consent": true,
+      "trialDays": 7,
+      "valid": true,
+      "reason": "OK"
+    }
+  },
+  {
+    "id": "N-email-leading-dot",
+    "requirements": [
+      "N-03",
+      "N-05"
+    ],
+    "input": {
+      "requestId": "r1",
+      "name": "Ada",
+      "email": ".a@b.co",
+      "locale": "en",
+      "consent": true,
+      "trialDays": 7
+    },
+    "expected": {
+      "requestId": "r1",
+      "displayName": "Ada",
+      "email": ".a@b.co",
+      "locale": "en",
+      "consent": true,
+      "trialDays": 7,
+      "valid": false,
+      "reason": "BAD_EMAIL"
+    }
+  },
+  {
+    "id": "N-email-double-dot",
+    "requirements": [
+      "N-03",
+      "N-05"
+    ],
+    "input": {
+      "requestId": "r1",
+      "name": "Ada",
+      "email": "a..b@c.co",
+      "locale": "en",
+      "consent": true,
+      "trialDays": 7
+    },
+    "expected": {
+      "requestId": "r1",
+      "displayName": "Ada",
+      "email": "a..b@c.co",
+      "locale": "en",
+      "consent": true,
+      "trialDays": 7,
+      "valid": false,
+      "reason": "BAD_EMAIL"
+    }
+  },
+  {
+    "id": "N-email-trailing-dot",
+    "requirements": [
+      "N-03",
+      "N-05"
+    ],
+    "input": {
+      "requestId": "r1",
+      "name": "Ada",
+      "email": "a.@b.co",
+      "locale": "en",
+      "consent": true,
+      "trialDays": 7
+    },
+    "expected": {
+      "requestId": "r1",
+      "displayName": "Ada",
+      "email": "a.@b.co",
+      "locale": "en",
+      "consent": true,
+      "trialDays": 7,
+      "valid": false,
+      "reason": "BAD_EMAIL"
+    }
+  },
+  {
+    "id": "N-email-local-domain",
+    "requirements": [
+      "N-03",
+      "N-05"
+    ],
+    "input": {
+      "requestId": "r1",
+      "name": "Ada",
+      "email": "a@localhost",
+      "locale": "en",
+      "consent": true,
+      "trialDays": 7
+    },
+    "expected": {
+      "requestId": "r1",
+      "displayName": "Ada",
+      "email": "a@localhost",
+      "locale": "en",
+      "consent": true,
+      "trialDays": 7,
+      "valid": false,
+      "reason": "BAD_EMAIL"
+    }
+  },
+  {
+    "id": "N-email-domain-underscore",
+    "requirements": [
+      "N-03",
+      "N-05"
+    ],
+    "input": {
+      "requestId": "r1",
+      "name": "Ada",
+      "email": "a@b_c.co",
+      "locale": "en",
+      "consent": true,
+      "trialDays": 7
+    },
+    "expected": {
+      "requestId": "r1",
+      "displayName": "Ada",
+      "email": "a@b_c.co",
+      "locale": "en",
+      "consent": true,
+      "trialDays": 7,
+      "valid": false,
+      "reason": "BAD_EMAIL"
+    }
+  },
+  {
+    "id": "N-email-domain-leading-hyphen",
+    "requirements": [
+      "N-03",
+      "N-05"
+    ],
+    "input": {
+      "requestId": "r1",
+      "name": "Ada",
+      "email": "a@-b.co",
+      "locale": "en",
+      "consent": true,
+      "trialDays": 7
+    },
+    "expected": {
+      "requestId": "r1",
+      "displayName": "Ada",
+      "email": "a@-b.co",
+      "locale": "en",
+      "consent": true,
+      "trialDays": 7,
+      "valid": false,
+      "reason": "BAD_EMAIL"
+    }
+  },
+  {
+    "id": "N-email-domain-trailing-hyphen",
+    "requirements": [
+      "N-03",
+      "N-05"
+    ],
+    "input": {
+      "requestId": "r1",
+      "name": "Ada",
+      "email": "a@b-.co",
+      "locale": "en",
+      "consent": true,
+      "trialDays": 7
+    },
+    "expected": {
+      "requestId": "r1",
+      "displayName": "Ada",
+      "email": "a@b-.co",
+      "locale": "en",
+      "consent": true,
+      "trialDays": 7,
+      "valid": false,
+      "reason": "BAD_EMAIL"
+    }
+  },
+  {
+    "id": "N-email-unicode-case",
+    "requirements": [
+      "N-03",
+      "N-05"
+    ],
+    "input": {
+      "requestId": "r1",
+      "name": "Ada",
+      "email": "İ@EXAMPLE.COM",
+      "locale": "en",
+      "consent": true,
+      "trialDays": 7
+    },
+    "expected": {
+      "requestId": "r1",
+      "displayName": "Ada",
+      "email": "İ@example.com",
+      "locale": "en",
+      "consent": true,
+      "trialDays": 7,
+      "valid": false,
+      "reason": "BAD_EMAIL"
+    }
+  },
+  {
+    "id": "N-email-internal-space",
+    "requirements": [
+      "N-03",
+      "N-05"
+    ],
+    "input": {
+      "requestId": "r1",
+      "name": "Ada",
+      "email": "a b@c.co",
+      "locale": "en",
+      "consent": true,
+      "trialDays": 7
+    },
+    "expected": {
+      "requestId": "r1",
+      "displayName": "Ada",
+      "email": "a b@c.co",
+      "locale": "en",
+      "consent": true,
+      "trialDays": 7,
+      "valid": false,
+      "reason": "BAD_EMAIL"
+    }
+  },
+  {
+    "id": "N-email-trailing-newline-middle",
+    "requirements": [
+      "N-03",
+      "N-05"
+    ],
+    "input": {
+      "requestId": "r1",
+      "name": "Ada",
+      "email": "a\n@b.co",
+      "locale": "en",
+      "consent": true,
+      "trialDays": 7
+    },
+    "expected": {
+      "requestId": "r1",
+      "displayName": "Ada",
+      "email": "a\n@b.co",
+      "locale": "en",
+      "consent": true,
+      "trialDays": 7,
+      "valid": false,
+      "reason": "BAD_EMAIL"
+    }
+  },
+  {
+    "id": "N-days-negative",
+    "requirements": [
+      "N-04",
+      "N-05"
+    ],
+    "input": {
+      "requestId": "r1",
+      "name": "Ada",
+      "email": "ada@example.com",
+      "locale": "en",
+      "consent": true,
+      "trialDays": -1
+    },
+    "expected": {
+      "requestId": "r1",
+      "displayName": "Ada",
+      "email": "ada@example.com",
+      "locale": "en",
+      "consent": true,
+      "trialDays": -1,
+      "valid": false,
+      "reason": "BAD_DAYS"
+    }
+  },
+  {
+    "id": "N-days-zero",
+    "requirements": [
+      "N-04",
+      "N-05"
+    ],
+    "input": {
+      "requestId": "r1",
+      "name": "Ada",
+      "email": "ada@example.com",
+      "locale": "en",
+      "consent": true,
+      "trialDays": 0
+    },
+    "expected": {
+      "requestId": "r1",
+      "displayName": "Ada",
+      "email": "ada@example.com",
+      "locale": "en",
+      "consent": true,
+      "trialDays": 0,
+      "valid": true,
+      "reason": "OK"
+    }
+  },
+  {
+    "id": "N-days-one",
+    "requirements": [
+      "N-04",
+      "N-05"
+    ],
+    "input": {
+      "requestId": "r1",
+      "name": "Ada",
+      "email": "ada@example.com",
+      "locale": "en",
+      "consent": true,
+      "trialDays": 1
+    },
+    "expected": {
+      "requestId": "r1",
+      "displayName": "Ada",
+      "email": "ada@example.com",
+      "locale": "en",
+      "consent": true,
+      "trialDays": 1,
+      "valid": true,
+      "reason": "OK"
+    }
+  },
+  {
+    "id": "N-days-max",
+    "requirements": [
+      "N-04",
+      "N-05"
+    ],
+    "input": {
+      "requestId": "r1",
+      "name": "Ada",
+      "email": "ada@example.com",
+      "locale": "en",
+      "consent": true,
+      "trialDays": 30
+    },
+    "expected": {
+      "requestId": "r1",
+      "displayName": "Ada",
+      "email": "ada@example.com",
+      "locale": "en",
+      "consent": true,
+      "trialDays": 30,
+      "valid": true,
+      "reason": "OK"
+    }
+  },
+  {
+    "id": "N-days-above",
+    "requirements": [
+      "N-04",
+      "N-05"
+    ],
+    "input": {
+      "requestId": "r1",
+      "name": "Ada",
+      "email": "ada@example.com",
+      "locale": "en",
+      "consent": true,
+      "trialDays": 31
+    },
+    "expected": {
+      "requestId": "r1",
+      "displayName": "Ada",
+      "email": "ada@example.com",
+      "locale": "en",
+      "consent": true,
+      "trialDays": 31,
+      "valid": false,
+      "reason": "BAD_DAYS"
+    }
+  },
+  {
+    "id": "N-days-fraction",
+    "requirements": [
+      "N-04",
+      "N-05"
+    ],
+    "input": {
+      "requestId": "r1",
+      "name": "Ada",
+      "email": "ada@example.com",
+      "locale": "en",
+      "consent": true,
+      "trialDays": 0.5
+    },
+    "expected": {
+      "requestId": "r1",
+      "displayName": "Ada",
+      "email": "ada@example.com",
+      "locale": "en",
+      "consent": true,
+      "trialDays": 0.5,
+      "valid": false,
+      "reason": "BAD_DAYS"
+    }
+  },
+  {
+    "id": "N-decomposed-id1",
+    "requirements": ["N-01", "N-02", "N-04", "N-05"],
+    "input": {"requestId":"_","name":" Élise ","email":"ada@example.com","locale":" FR ","consent":true,"trialDays":7},
+    "expected": {"requestId":"_","displayName":"Élise","email":"ada@example.com","locale":"fr","consent":true,"trialDays":7,"valid":true,"reason":"OK"}
+  }
+]

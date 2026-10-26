@@ -1,0 +1,11 @@
+# Frozen implementation policy
+
+The supplied contract/declarations are authoritative. Implement only your assigned responsibility and the task's published rules. Do not change public types, operation identities, responsibilities, dependencies, contract predicates or architecture; propose changes to the human and stop. The controller cannot approve architecture changes or repair your code.
+
+Use ECMAScript only. No additional dependencies, external reads/writes, network, environment, time or randomness. Do not mutate inputs. Emit complete permitted TypeScript files as text; do not execute code, activate tools, invoke shell commands or request model-directed host reads/writes. Finish with READY, CLARIFICATION (cite requirements), or ARCHITECTURE_PROPOSAL. Do not invent intent.
+
+Only your own supplied package and common instructions are available. Do not request peer source/history, architecture originals, hidden tests, reference implementations or baseline assets. Independent contexts and immutable architectural/test authority are essential. Hidden tests exercise only published requirements. The controller may point to existing text, not provide algorithms or peer feedback.
+
+One initial episode and at most one own-context revision, each at most 30 elapsed minutes or 40 model responses, whichever comes first. Clarification ends an episode. Both initial submissions must exist before any acceptance feedback. A substantive transcription change is prohibited repair. Unexpected files or a submission over 10 MiB are rejected. No retry, replacement agent or changed model without explicit authorization.
+
+Temporary workspaces are organizational boundaries, not security sandboxes. Generation uses existing trusted host software with no callable tools; this does not OS-isolate that client or the operator. All compilation and execution, including private checks, occur only in disposable credential-free offline containers. Read-only tests protect originals, not secrecy or honest JavaScript execution. Container kernels/images, the native client and the operator remain trusted. Production-grade isolation and credential proxying are not objectives of this non-adversarial feasibility trial.

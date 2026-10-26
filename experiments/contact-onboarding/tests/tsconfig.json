@@ -1,0 +1,18 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "strict": true,
+    "exactOptionalPropertyTypes": true,
+    "noUncheckedIndexedAccess": true,
+    "isolatedModules": true,
+    "verbatimModuleSyntax": true,
+    "types": [],
+    "skipLibCheck": false,
+    "rootDir": ".",
+    "outDir": "built",
+    "noEmitOnError": true
+  },
+  "include": ["candidate/**/*.ts", "consumer.ts"]
+}

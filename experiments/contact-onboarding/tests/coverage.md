@@ -1,0 +1,30 @@
+# Frozen coverage and expected-value review
+
+39 normalizer rows, 24 renderer rows, 18 complete integration rows. Cases are literal synthetic data, not outputs captured from a candidate/control. Array order is frozen. All outputs contain every field. Independent suites use human-owned inputs, not a peer. Expected values were author-reviewed against the published rules; **independent human/Product Owner review is still required before operational freeze/agent delivery**. Passing a reference fixture is not that review.
+
+| Requirement | Independent case IDs | Integration case IDs |
+| --- | --- | --- |
+| N-01 | N-basic, N-public-E01, N-ascii-trim, N-unicode, N-id-nbsp, N-name0-priority, N-utf16-80, N-control, N-vertical-tab, N-decomposed-id1 | I-01, I-02, I-04, I-07, I-08, I-11, I-17, I-18 |
+| N-02 | N-basic, N-public-E01, N-unicode, N-id-empty-priority, N-id32, N-id33, N-id-unicode, N-id-space, N-id-nbsp, N-name0-priority, N-name1, N-name80, N-name81, N-utf16-80, N-utf16-82, N-control, N-del, N-vertical-tab, N-decomposed-id1 | I-01, I-02, I-07, I-10, I-11, I-14, I-15, I-16, I-17, I-18 |
+| N-03 | N-basic, N-public-E01, N-ascii-trim, N-email-priority, N-email-numeric, N-email-leading-dot, N-email-double-dot, N-email-trailing-dot, N-email-local-domain, N-email-domain-underscore, N-email-domain-leading-hyphen, N-email-domain-trailing-hyphen, N-email-unicode-case, N-email-internal-space, N-email-trailing-newline-middle | I-01, I-02, I-12 |
+| N-04 | N-basic, N-public-E01, N-ascii-trim, N-locale-fallback-zero, N-email-priority, N-days-negative, N-days-zero, N-days-one, N-days-max, N-days-above, N-days-fraction, N-decomposed-id1 | I-01, I-02, I-03, I-04, I-05, I-06, I-09, I-12, I-13, I-16, I-17 |
+| N-05 | N-basic, N-public-E01, N-id-empty-priority, N-id33, N-id-unicode, N-id-space, N-id-nbsp, N-name0-priority, N-name81, N-utf16-82, N-control, N-del, N-vertical-tab, N-locale-fallback-zero, N-email-priority, N-email-leading-dot, N-email-double-dot, N-email-trailing-dot, N-email-local-domain, N-email-domain-underscore, N-email-domain-leading-hyphen, N-email-domain-trailing-hyphen, N-email-unicode-case, N-email-internal-space, N-email-trailing-newline-middle, N-days-negative, N-days-zero, N-days-one, N-days-max, N-days-above, N-days-fraction, N-decomposed-id1 | I-01, I-02, I-03, I-10, I-11, I-12, I-13, I-14, I-15, I-16, I-17, I-18 |
+| R-01 | R-I-09, R-I-10, R-I-11, R-I-12, R-I-13, R-I-14, R-I-15, R-I-16, R-direct-empty-reason | I-09, I-10, I-11, I-12, I-13, I-14, I-15, I-16 |
+| R-02 | R-I-01, R-I-02, R-I-03, R-I-04, R-I-05, R-I-06, R-I-07, R-I-08, R-direct-no-renormalize, R-direct-fraction, R-direct-valid-ignores-reason, R-I-17, R-I-18, R-direct-exponent | I-01, I-02, I-03, I-04, I-05, I-06, I-07, I-08, I-17, I-18 |
+| R-03 | R-I-01, R-I-02, R-I-03, R-I-04, R-I-05, R-I-06, R-I-07, R-I-08, R-direct-no-renormalize, R-direct-fr-one, R-I-17, R-I-18 | I-01, I-02, I-03, I-04, I-05, I-06, I-07, I-08, I-17, I-18 |
+| R-04 | R-I-01, R-I-02, R-I-03, R-I-04, R-I-05, R-I-06, R-I-07, R-I-08, R-direct-no-renormalize, R-direct-fraction, R-direct-fr-one, R-I-17, R-I-18, R-direct-exponent | I-01, I-02, I-03, I-04, I-05, I-06, I-07, I-08, I-17, I-18 |
+| R-05 | R-I-01, R-I-02, R-I-03, R-I-04, R-I-05, R-I-06, R-I-07, R-I-08, R-I-09, R-I-10, R-I-11, R-I-12, R-I-13, R-I-14, R-I-15, R-I-16, R-direct-no-renormalize, R-I-17, R-I-18 | I-01, I-02, I-03, I-04, I-05, I-06, I-07, I-08, I-09, I-10, I-11, I-12, I-13, I-14, I-15, I-16, I-17, I-18 |
+
+## Scope and intentional exceptions
+
+- Normalizer data cover ASCII end trimming/collapse and non-ASCII preservation, composed/decomposed Unicode (no normalization), one/32/33-unit identifiers and invalid characters, names of 0/1/80/81 UTF-16 units plus 40/41 emoji, C0/DEL, accepted/rejected email subset, en/fr/fallback, both consent values, days -1/0/1/30/31/fractional, all priorities and canonicalization even on error. `N-decomposed-id1` also covers a one-character underscore identity.
+
+- Renderer data cover both languages, fallback without renormalization, zero/one/max days, exact suppression fields/invalid-before-consent priority, unchanged identity, all five escaped characters/entity-looking text in English and French, Unicode, direct inconsistent reason and out-of-range finite numbers. Every independent row is invoked twice with input-mutation/repeat assertions. Integration asserts both records and unchanged input, plus a final same-live-object probe.
+
+- Direct renderer mixed-case locale/raw email/name, negative/fractional/exponent days and empty invalid reason intentionally have **no canonical producer integration counterpart**: those records cannot be emitted by a valid producer. They test R-01/R-02/R-04 directly, without secretly adding producer requirements to the renderer.
+
+- NaN/Infinity, missing/extra/symbol keys and throwing getters cannot be represented faithfully in JSON. Container-only trusted controls exercise these through M1, including no invocation on invalid inputs, inspection/execution exceptions, malformed outputs and predicates. These are harness controls, not business integration rows or new semantics. Existing repository M1 tests remain the semantics oracle.
+
+- The table maps each requirement independently and in applicable integration, not every combinatorial boundary to every integration row. Repetition, input preservation, exact output keys/types/predicates are common suite assertions. No finite corpus proves purity, absence of arbitrary side effects, adversarial honesty or universal correctness; static import review and offline restricted containers do not constitute authenticated results.
+
+- `controls/{compile-error,missing-export,load-error,malformed,predicate,behavior}.ts` demonstrate distinct expected failures. `controls/normalize.ts` and `controls/render.ts` are trusted harness positives, never agent solutions. `controls/private-tests.ts` checks the private-check route. `controls/lifecycle.mjs` is the deliberately hung parent/detached-child timeout/removal control.
