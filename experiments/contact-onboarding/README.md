@@ -1,54 +1,49 @@
-# ContactOnboarding — frozen-asset review candidate (0023)
+# ContactOnboarding pilot — Assignment 0022
 
-**Implementation authorization:** Product Owner approved Assignment 0023, preparation only. **Acceptance pending:** this commit proposes the actual freeze for independent human/Product Owner review, especially expected values and baseline equivalence. Nothing here authorizes agents, a pilot, baseline comparison or milestone closure. M3 remains **Planned**. Do not treat successful controls as pilot results. The assignment/design files remain owner-controlled; this delivery does not silently change their status/requirements.
-
-Authority: [0023](../../docs/assignments/0023-prepare-and-freeze-independent-pilot-assets.md), [approved 0020](../../docs/assignments/0020-design-independent-implementation-pilot.md). Use the Git revision containing the accepted asset tree as the freeze revision, not a mutable working tree. Actual acceptance and subsequent explicit revised execution approval are separate gates. After acceptance, any authority/task/test/wiring edit needs a visible diff, approval, fresh derivation/rechecks and, if a trial has begun, a new trial ID. No automatic approval/hash/evidence machinery is provided.
-
-## Inventory and reproducible preparation
-
-- `system.bound`: exact design source (including the mandatory unused director). `input.json`: exact version-1 M2 bindings; `normalize-task.md`, `render-task.md`, respective `*-scope.md`, `policy.md`: owned human-text inputs, not manually copied interfaces.
-- `tests/{normalize,render,integration}.json`: complete fixed input/output data, intermediate records included for every integration row. [Coverage and exceptions](tests/coverage.md). Case order is array order.
-- `tests/{tsconfig.json,package.json,consumer.ts,build.mjs,evaluate.mjs,wiring.mjs}`: fixed independent compilation/export/ESM/strict-codec/M1/behavioral tests and unchanged live-value wiring. No second BoundScript evaluator. `controls/*`: trusted positive, private-check, compile/export/load, malformed, predicate, behavior and hung-process controls. Never deliver any of these to agents.
-- `generation.md`: common agent-neutral system instructions. [Baseline](baseline/README.md): conventional manual interface authority, scoped declarations/tasks/seeds, concrete assertions, equivalence checks and preregistration. Never deliver it to the BoundScript agents.
-- `prepare.mjs`, `evaluate.sh`, `check-controls.sh`, `check-regressions.sh`: small fixed ordinary commands, not orchestration, agent adapters or security infrastructure. No dependencies/core APIs/DSL/schema/templates changed. [Validation report](VALIDATION.md).
-
-From repository root, with existing dependencies installed and ordinary Docker available:
+From the repository root, run one command:
 
 ```bash
-npm run build --silent
-stage=$(mktemp -d /tmp/bound-contact-review.XXXXXX)/assets
-node experiments/contact-onboarding/prepare.mjs "$stage"
-bash experiments/contact-onboarding/check-controls.sh "$stage"
-bash experiments/contact-onboarding/check-regressions.sh "$stage"
-# After retaining a concise redacted result summary, discard that dedicated staging parent.
+node tooling/run-contact-pilot.mjs --run-dir /tmp/contact-onboarding-01
 ```
 
-Preparation parses/extracts/strictly round-trips the whole trusted source, compares both shared descriptors, renders M2 twice and compares exact file lists/bytes, materializes each real eight-file directory, and stages only the codec/runtime/artifact built closure. It checks conventional declaration fields/signatures without generating them from BoundScript. Compiler root/frontend are needed only for trusted source preparation/regressions; **consumption** guards prohibit their loading or director execution.
+Use a **fresh directory outside the repository**. The runner asks for execution
+confirmation and the approved spending policy before making any model calls.
+Do not confirm until launch and spending are authorized. Installing this runner
+or passing its mocked tests does not launch the pilot.
 
-The host never compiles/imports/executes a submission or a candidate-shaped control. `evaluate.sh` uses the pinned official Node image, read-only selected candidate/handoff/corpus/compiler/library mounts, no full repository/home/credentials/socket/devices/host namespaces, no ambient host environment forwarding, no network, UID/GID 1000, dropped capabilities/no-new-privileges, read-only root, private tmpfs, 1 CPU/512 MiB/64 PIDs. Build and suite deadlines are each 60 s, with 130 s outer deadline and unconditional whole-container removal; attached output is capped at 1 MiB. The lifecycle control uses a **test-only** 2 s timeout. Trusted repository regressions use a separately curated source/dependency closure, writable scratch with `exec` for existing tool binaries, one Vitest worker, one libuv/V8 pool thread and a 600 s development-regression deadline; no pilot source is included. Container commands do not install dependencies or contact a provider. Pulling the pinned public image, if missing, is trusted preparation, not candidate networking.
+Prerequisites: the existing repository dependencies, native authenticated Pi
+1.4.0, Node 24.16.0, TypeScript 5.9.3, Docker 29.1.3, Git, Bash and Python 3.
+Native Pi's global `cacheWarming` must already be `"off"` (the default can make
+extra model requests); the runner checks but never changes global settings.
+Version/profile mismatches stop for review. No authentication probes or provider changes.
 
-## Deferred operator runbook — do not execute agents now
+The runner prepares/checks a separate checkout of frozen revision
+`aee34e3f8445f1a0285c120f2a2bca5ef0b3e3f9`, collects independent tools-off Pi
+JSON responses from A then B, saves source automatically, and invokes the frozen
+Docker evaluator. It never compiles or executes generated source on the host.
+Both initial submissions precede feedback. Any permitted revision uses only the
+same Box's history and operator-approved requirement IDs/failure class—never raw
+test logs. Ambiguous/incomplete output, automatic recovery or compaction stops;
+integration permits no repair.
 
-1. **Before launch:** obtain actual asset acceptance, explicit revised execution approval, approved spending ceiling (not specified here), and approved run ID. Resolve the accepted Git revision; rebuild trusted libraries from that revision with locked tools, run preparation/controls/regressions and confirm exact protected originals. Record actual versions, prompt/package file sizes and model metadata. A changed profile/model/version must be reviewed, not silently substituted. No operator auth-source attestation, sandbox/proxy qualification or credential migration is required; stop on unavailable ordinary containers, never use host code execution.
-2. Create two separate temporary organizational workspaces A/B. Copy only `$stage/NormalizeContact/handoff` or `$stage/RenderWelcome/handoff` as the respective `handoff/` directory, retaining pristine originals and comparing copies before/after. Each must contain exactly `handoff.json`, `README.md`, `contract.box-spec.json`, `task.md`, `scope.md`, `policy.md`, `generated/contract.d.ts`, `seed/implementation.ts`. No full source, parent M2 tree, tests, control/baseline code, peer data/history or this runbook in either context. Attach exactly the own eight files and the common `generation.md` instructions. Paths in provenance are not permission to fetch more context.
-3. Use the existing external native Pi profile in [0020 Section 4.2](../../docs/assignments/0020-design-independent-implementation-pilot.md#42-session-separation): `openai-codex/gpt-6.1-sol`, medium reasoning, two empty independent histories, sequential A then B, never forks/continuations of this development conversation. Disable tools/extensions/MCP/skills/prompts/themes/context discovery/project approval with the specified stock flags and explicit system prompt. Verify/record **empty effective tools before prompting**; do not start/probe Pi in preparation. No `!`, shell, new resources or mid-run tool activation. Keep native auth/session/log storage outside workspaces; inspect/copy no credentials. Exact CLI invocation is an external operator detail, never a BoundScript integration. No model/provider switch without approval.
-4. Mechanically save complete source text, then stop generation and freeze each snapshot. Reject links/special files/config/declarations/resources, unexpected paths or over-10-MiB submissions. No host hooks, imports, formatting, builds, tests, suggested commands, logic/interface repair or peer sharing. Ambiguity is a logged clarification, not a fix. Obtain **both initial snapshots before any acceptance feedback**. Record transcription overhead and all episodes; within-suite behavior is observed in fixed order, not isolated per case.
-5. Container commands for frozen snapshots (A/B below are **candidate directories**, not workspace roots):
+Results: `<run-dir>/results.json`. Private session histories, raw responses,
+numbered command logs, immutable candidate snapshots and `selected-pair.json`
+remain alongside it. Inspect failed-stage logs locally; never give hidden case
+data or peer material to either agent. Review/redact results before sharing;
+record human effort and actual charges separately when not observable. A stopped
+trial is retained, not automatically retried. Do not reuse the run directory.
+A pass does not automatically close M3 or run the conventional baseline.
 
-   ```bash
-   bash experiments/contact-onboarding/evaluate.sh "$stage" normalize /absolute/A/candidate
-   bash experiments/contact-onboarding/evaluate.sh "$stage" render /absolute/B/candidate
-   # Optional explicitly selected emitted private-check module, in its own fresh container:
-   bash experiments/contact-onboarding/evaluate.sh "$stage" normalize /absolute/A/candidate private:private-tests.js
-   # Only after independent results/revisions and exact-pair freeze, agents stopped:
-   bash experiments/contact-onboarding/evaluate.sh "$stage" integration /absolute/A/candidate /absolute/B/candidate
-   ```
+Directories/tools-off are not OS isolation; Docker shares its kernel, and tests
+and candidates share a JavaScript realm. Results are observations, not security
+attestation. Frozen contracts, tests, evaluators and historical validation evidence
+are unchanged; this README and the runner are operator conveniences only.
 
-   Compilation includes all permitted private `.ts` modules. Private checks never replace independent acceptance. Review imports and code/results; computed behavior is not proven safe. Independent suites mount no peer code. Integration aliases existing exports and passes the normalizer's **unchanged live output** to the renderer through M1. It asserts complete intermediate/final rows, not just a pass flag. No coercion, extra responsibility, default, field rename or wiring/test change. Each suite gets fresh scratch/process state; repeated independent calls intentionally observe within-suite state.
-6. Follow **all** [frozen Section 7 responses](../../docs/assignments/0020-design-independent-implementation-pilot.md#7-reproducible-protocol-and-failure-handling): initial plus at most one own-history revision per Box, each 30 minutes/40 model responses. Clarification ends an episode; existing-text pointers count as interventions. After both initial snapshots, supply only own compiler diagnostics or requirement IDs plus failure class, never hidden case/expected values, algorithms or peer outcomes. Reverify the entire revised independent suite. Missing/conflicting intent, new dependencies or architecture requests stop/invalidate the trial pending owner review/new trial. Infrastructure/model failure stops with no silent switch/reset/replacement. Isolation/protected-context violations invalidate the trial, including denied attempts in accounting. Integration failure after exact-pair freeze is final for this trial: **no repair**. Unchanged reruns are separately logged reproducibility checks, not retries or selection.
-7. Record setup/strict-decode, compile, export/load, **each unchanged M1 `failure.kind`**, behavior, integration, timeout/resource/transport, isolation and infrastructure failures separately. Invalid input/no invocation is a negative harness control, not `BAD_DAYS`. M1 success is not behavioral correctness. On stop, record first failing stage/row/requirement, completed rows and **all remaining unrun rows** (or all unrun on setup/load failure), container exit/deadline/cleanup and partial history. Logs/output are untrusted data, not commands or authenticated results; bounded diagnostic logs stay local and only allowed feedback goes to agents.
-8. Use [the event/summary template](events.md), preserving every attempt, failed snapshot, clarification, change/access proposal, denied action, elapsed/active-human time, retries, transcription/check overhead, context files/bytes, actual tokens/cost or `unknown`. Separate planned operational actions from interventions, environment setup from authoring/coordination, and first-pass success from a permitted revision. No automatic promotion or M3 closure; deliver redacted observations for owner acceptance. M6 remains separate.
+Validate without model calls or Docker:
 
-## Residual risk / trust boundary
+```bash
+node --test tests/run-contact-pilot.test.mjs
+```
 
-Directories/worktrees and disabled tools are **not OS sandboxes** for the native client/operator. Client bugs, compromised software, attachment/context mistakes, provider disclosure and operator errors remain possible; use synthetic contacts only. Docker shares the kernel and trusts the image/runtime. Read-only originals preserve architectural/test authority, not secrecy, JavaScript-global integrity or authenticated observations; a malicious candidate can read mounted tests or spoof shared-realm results. Finite assertions do not prove arbitrary correctness/purity. The 10 MiB source limit and tmpfs sizes are not host-wide disk quotas. Production-grade isolation/credential proxying are not objectives. These limits are accepted experimental policy, not solved by an agent adapter, proxy, sandbox framework or new core semantics.
+Authority: [Assignment 0022](../../docs/assignments/0022-run-bounded-independent-implementation-pilot.md).
+Historical preparation evidence: [VALIDATION.md](VALIDATION.md).
