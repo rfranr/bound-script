@@ -4,6 +4,56 @@
 
 **Frozen inputs:** `aee34e3f8445f1a0285c120f2a2bca5ef0b3e3f9`. This newly added operator guide is **not** a change to that frozen input set and must never be attached to either agent. All executable assets come from a separate checkout of the frozen revision, which does not contain this guide. See [0022](../../docs/assignments/0022-run-bounded-independent-implementation-pilot.md) and the [freeze record](../../docs/development/0023-contact-onboarding-freeze.md).
 
+## Quick Start
+**Happy path only:** execution/spending approval and [prerequisites](#1-conventions-prerequisites-and-limits) required; one complete `implementation.ts` per READY response. Keep one Bash terminal open; stop on any preparation error. Never execute generated code on the host. Limit each episode to 30 minutes/40 turns.
+**TERMINAL — preparation, from your existing repository:**
+```bash
+set -o pipefail; umask 077; REPO="$(git rev-parse --show-toplevel)"; FREEZE=aee34e3f8445f1a0285c120f2a2bca5ef0b3e3f9
+RUN="$(mktemp -d /tmp/contact-onboarding-M3-01.XXXXXX)"; FROZEN="$RUN/controller/frozen"; STAGE="$RUN/controller/stage"; ASSETS="$FROZEN/experiments/contact-onboarding"
+mkdir -p "$RUN"/controller/{logs,responses,sessions/A,sessions/B} "$RUN"/agents/{A,B} "$RUN"/submissions/{A,B}/initial/candidate
+git -C "$REPO" worktree add --detach "$FROZEN" "$FREEZE" && cp -a "$REPO/node_modules" "$FROZEN/node_modules" && cd "$FROZEN"
+PI_BIN="$(type -P pi)"; [[ "$PI_BIN" == /* && -x "$PI_BIN" ]] && { node --version && "$PI_BIN" --version && docker version --format '{{.Server.Version}}' && node -p 'require("./node_modules/typescript/package.json").version'; } | tee "$RUN/controller/logs/versions.txt"
+[[ -z "${PI_CODING_AGENT_DIR:-}" || "$PI_CODING_AGENT_DIR" == /* ]] && test ! -e "${PI_CODING_AGENT_DIR:-$HOME/.pi/agent}/APPEND_SYSTEM.md"
+npm run langium:generate --silent && node node_modules/typescript/bin/tsc -b tooling/tsconfig.json packages/runtime/tsconfig.json --pretty false
+IMAGE=node@sha256:55fb5f5a527ea2c5c4a95f963e48ef90aa38c7b346054fdc8ee9957a2b55d205; docker image inspect "$IMAGE" >/dev/null 2>&1 || docker pull "$IMAGE"
+node "$ASSETS/prepare.mjs" "$STAGE" 2>&1 | tee "$RUN/controller/logs/preparation.txt" && bash "$ASSETS/check-controls.sh" "$STAGE" 2>&1 | tee "$RUN/controller/logs/controls.txt" && bash "$ASSETS/check-regressions.sh" "$STAGE" 2>&1 | tee "$RUN/controller/logs/regressions.txt"
+cp -R "$STAGE/NormalizeContact/handoff" "$RUN/agents/A/handoff"; cp -R "$STAGE/RenderWelcome/handoff" "$RUN/agents/B/handoff"; chmod -R a-w "$RUN"/agents/{A,B}/handoff; cp "$ASSETS/events.md" "$RUN/controller/results.md"
+PI_FLAGS=(--provider openai-codex --model gpt-6.1-sol --thinking medium --no-tools --exclude-tools '*' --no-extensions --no-mcp --no-skills --no-prompt-templates --no-themes --no-context-files --no-approve --system-prompt "$ASSETS/generation.md" --verbose)
+```
+**TERMINAL — Agent A (fresh history; no initial prompt):**
+```bash
+(cd "$RUN/agents/A" && timeout --foreground --signal=TERM --kill-after=5s 30m "$PI_BIN" "${PI_FLAGS[@]}" --session-dir "$RUN/controller/sessions/A" --session-id M3-ContactOnboarding-01-A)
+```
+**PI — A:** inspect startup (correct model/medium, no unexpected resources, tools disabled); run local `/session`, record empty history. Then send this **one model prompt** (only A's eight files):
+```text
+@handoff/handoff.json @handoff/README.md @handoff/contract.box-spec.json @handoff/task.md @handoff/scope.md @handoff/policy.md @handoff/generated/contract.d.ts @handoff/seed/implementation.ts Implement only your assigned operation from these eight files and the common system instructions. Emit complete permitted TypeScript files as text and finish with READY, CLARIFICATION, or ARCHITECTURE_PROPOSAL.
+```
+**PI — after READY:** record local `/session` usage; `/copy`, then `/quit`. Native JSONL retains the raw answer. **TERMINAL:** run `dd` below, paste **only the exact implementation body** (no fences/status), then Ctrl+D on an empty line. No fixes; [capture details/helpers](#5-save-as-response-and-inert-source--ordinary-terminal-only).
+```bash
+dd of="$RUN/submissions/A/initial/candidate/implementation.ts" conv=excl status=none
+```
+**TERMINAL — Agent B (A closed; fresh independent history):**
+```bash
+(cd "$RUN/agents/B" && timeout --foreground --signal=TERM --kill-after=5s 30m "$PI_BIN" "${PI_FLAGS[@]}" --session-dir "$RUN/controller/sessions/B" --session-id M3-ContactOnboarding-01-B)
+```
+**PI — B:** repeat startup/empty-history checks and `/session`; send the **identical prompt above**, now resolving only B's eight files. After READY: record `/session`, `/copy`, `/quit`. **TERMINAL:** paste only B's implementation body into this command; Ctrl+D on an empty line.
+```bash
+dd of="$RUN/submissions/B/initial/candidate/implementation.ts" conv=excl status=none
+```
+**TERMINAL — only after both initial snapshots exist; no feedback before this point:**
+```bash
+SESSION_A="$(find "$RUN/controller/sessions/A" -maxdepth 1 -name '*.jsonl' -type f -print)"; SESSION_B="$(find "$RUN/controller/sessions/B" -maxdepth 1 -name '*.jsonl' -type f -print)"; test -f "$SESSION_A" && test -f "$SESSION_B"
+chmod -R a-w "$RUN"/submissions/{A,B}/initial; diff -ru "$STAGE/NormalizeContact/handoff" "$RUN/agents/A/handoff"; diff -ru "$STAGE/RenderWelcome/handoff" "$RUN/agents/B/handoff"
+bash "$ASSETS/evaluate.sh" "$STAGE" normalize "$RUN/submissions/A/initial/candidate" 2>&1 | tee "$RUN/controller/logs/A-initial.txt"; codes=("${PIPESTATUS[@]}"); printf 'evaluator=%s log=%s\n' "${codes[0]}" "${codes[1]}" | tee "$RUN/controller/logs/A-initial.status"
+bash "$ASSETS/evaluate.sh" "$STAGE" render "$RUN/submissions/B/initial/candidate" 2>&1 | tee "$RUN/controller/logs/B-initial.txt"; codes=("${PIPESTATUS[@]}"); printf 'evaluator=%s log=%s\n' "${codes[0]}" "${codes[1]}" | tee "$RUN/controller/logs/B-initial.status"
+```
+**Only if both independent suites pass (39/24 rows, evaluator=0 and log=0), sessions stopped and handoffs unchanged — TERMINAL:** freeze this exact pair and run integration; otherwise use [failures/private checks](#7-evaluate-both-initial-snapshots--docker-only) / [one permitted revision](#8-at-most-one-own-history-revision-per-box), never repair by hand.
+```bash
+printf 'freeze=%s\nA=%s\nB=%s\n' "$FREEZE" "$RUN/submissions/A/initial/candidate" "$RUN/submissions/B/initial/candidate" > "$RUN/controller/selected-pair.txt"
+bash "$ASSETS/evaluate.sh" "$STAGE" integration "$RUN/submissions/A/initial/candidate" "$RUN/submissions/B/initial/candidate" 2>&1 | tee "$RUN/controller/logs/integration.txt"; codes=("${PIPESTATUS[@]}"); printf 'evaluator=%s log=%s\n' "${codes[0]}" "${codes[1]}" | tee "$RUN/controller/logs/integration.status"
+```
+Require 18 integration rows plus live-identity probe; **no integration repair**. Complete `$RUN/controller/results.md` with session/snapshot references, exit codes, first-pass/revision status, failures/unrun rows, turns/timing and cost (or `unknown`); verify cleanup and return a redacted report per [results](#10-record-and-return-the-final-result). Any clarification, incomplete output, extra files, interruption, mismatch or unavailable prerequisite leaves this happy path: use the linked detailed sections, not another initial run.
+
 ## 1. Conventions, prerequisites and limits
 
 - **TERMINAL — Bash** blocks go into your ordinary terminal, **not Pi**. **PI — local command** blocks go into Pi's editor; these built-in slash commands do not request model inference. **PI — send to agent** blocks are actual model prompts. Read the prose between blocks; do not paste the entire document as a script.
