@@ -1,9 +1,9 @@
 # Assignment 0023 — Prepare and Freeze Independent Pilot Assets
 
-**Status:** Proposed
+**Status:** Completed
 **Milestone:** [M3 — Independent implementation pilot](../roadmap.md#m3--independent-implementation-pilot), **Planned** until revised pilot execution is explicitly approved.
 **Design:** [0020 — bounded feasibility amendment](0020-design-independent-implementation-pilot.md#bounded-feasibility-amendment).
-**Authority:** This document is prepared for Product Owner review only. Wait for explicit implementation authorization before creating assets or running preparation checks/containers. Even approval to implement this assignment does **not** authorize agent sessions, candidate generation, provider/auth/model probes, pilot execution, or the M6 comparison. [0022's execution proposal](0022-run-bounded-independent-implementation-pilot.md) is deferred pending asset review and separate execution approval.
+**Authority:** The Product Owner authorized preparation, independently ran validation with all tests passing, and accepted the technical delivery. The delegated final consistency review found no discrepancies; the assets are frozen unchanged at `aee34e3f8445f1a0285c120f2a2bca5ef0b3e3f9` under the conditional freeze instruction. See the [final review/freeze record](../development/0023-contact-onboarding-freeze.md). Completion authorizes no agents, provider/auth probes, pilot or M6 comparison. [0022](0022-run-bounded-independent-implementation-pilot.md) is prepared for separate execution/budget approval; M3 remains Planned.
 
 ## Objective
 
@@ -49,6 +49,6 @@ Preparation may create/test only the assets above after authorization. Acceptanc
 | AC-07 | Freeze/check report identifies actual source/test/tool versions, exact assets and limitations, reports regression results and any blockers, and remains pending Product Owner asset acceptance. No secrets, raw transcripts, generated handoffs/build output, agents or model calls are included in preparation. |
 | AC-08 | M3 stays Planned, 0021 remains concluded Inconclusive/non-gating, and agent execution remains deferred until explicit Product Owner approval of the revised execution phase after asset review. |
 
-## Current proposal-only delivery
+## Original proposal-only delivery (historical)
 
 For this request, create only this Proposed assignment and related acceptance/design/roadmap documentation. Check local links/anchors/fences, statuses, unchanged scenario/contracts/functional rules/frozen protocol/metrics/baseline, stage/portability constraints and whitespace. Do not create pilot assets, run preparation containers, launch agents or make provider calls now. Commit/push the authorized documentation for Product Owner review, then wait.

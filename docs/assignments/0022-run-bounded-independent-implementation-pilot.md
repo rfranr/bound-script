@@ -3,23 +3,45 @@
 **Status:** Proposed
 **Milestone:** [M3 — Independent implementation pilot](../roadmap.md#m3--independent-implementation-pilot), **Planned**.
 **Design:** [Assignment 0020 — bounded feasibility amendment](0020-design-independent-implementation-pilot.md#bounded-feasibility-amendment), directed by the Product Owner.
-**Authority:** **Deferred execution proposal, not the next implementation step.** The Product Owner requested [Proposed 0023 — asset preparation/freeze only](0023-prepare-and-freeze-independent-pilot-assets.md) first. No work/agents are authorized here. After actual assets are reviewed/frozen, revised pilot execution must be explicitly approved; asset preparation or acceptance cannot activate this proposal. M3 stays Planned until that execution approval.
+**Authority:** **Execution-ready proposal; NOT authorized to launch.** The Product Owner accepted 0023 technical preparation and conditionally authorized the asset freeze after the final consistency review. That review found no discrepancies: see the [freeze record](../development/0023-contact-onboarding-freeze.md). Assets are frozen at `aee34e3f8445f1a0285c120f2a2bca5ef0b3e3f9`. The Product Owner must still approve this execution plan and spending policy below. Preparing this proposal launches no agents, containers or provider calls; M3 stays Planned.
 
 ## Objective
 
 Run one bounded ContactOnboarding trial: independent Pi sessions implement `NormalizeContact` and `RenderWelcome` from their respective M2 handoffs; a human controller compiles/verifies them using M1 and integrates the frozen pair without negotiating interfaces, changing architecture, or repairing implementations.
 
-Keep 0020's exact source/contracts, N-01–N-05/R-01–R-05 requirements, examples, corpus coverage, frozen integration/failure protocol, attempt budgets, metrics, and preregistered conventional TypeScript baseline. Reuse the actual accepted frozen revision from 0023 without changing tests, wiring or authority. The baseline is prepared/frozen before the pilot, not executed here. This deferred proposal covers eventual trial/reporting only after revised execution approval; no M6 comparison or automatic M3 closure.
+Keep 0020's exact source/contracts, N-01–N-05/R-01–R-05 requirements, examples, corpus coverage, frozen integration/failure protocol, attempt budgets, metrics, and preregistered conventional TypeScript baseline. Reuse the actual accepted frozen revision from 0023 without changing tests, wiring or authority. The baseline is prepared/frozen before the pilot, not executed here. This proposal covers one trial/report only after explicit execution approval; no M6 comparison or automatic M3 closure.
 
-## 1. Asset prerequisites — preparation is now assigned to Proposed 0023
+## 1. Frozen inputs and pre-call readiness
 
-The following prerequisites are retained for execution review; they do not authorize duplicate asset preparation or a combined preparation/launch phase under this deferred proposal. Use 0023's assets-only scope first. Agent choice/CLI details below are an external operator profile, never language/compiler/runtime/handoff-format integration.
+**Proposed run ID:** `M3-ContactOnboarding-01`. A is NormalizeContact; B is RenderWelcome. Use a dedicated trusted checkout of **`aee34e3f8445f1a0285c120f2a2bca5ef0b3e3f9`**, including its core/M1/M2 source and the entire `experiments/contact-onboarding/` tree. Do not execute mutable HEAD or rewrite any frozen asset, even historical delivery-status text. The later freeze/approval records are controller documentation outside the delivered contexts. Agent choice/CLI details are an external operator profile, never language/compiler/runtime/handoff-format integration.
 
-- Prepare the human-owned architecture, per-Box task/scope/policy/bindings, fixed prompts, complete expected-output corpus, and predefined wiring from 0020. Obtain approval of their actual versions and consistency before operational derivation/model calls. Tasks describe behavior without restating public interfaces. Freeze tests and baseline assets/evaluation rules before either agent; do not invent hidden requirements or change expectations after observing results.
+- Reuse the exact source/task/scope/policy/bindings, `generation.md`, literal expected corpus and array order, tests/configuration/wiring, event template, controls and preregistered conventional baseline at that revision. Technical preparation is accepted and final requirement-to-value review found no discrepancy. No asset authoring, expectation changes, new image/configuration or baseline redesign is part of execution.
 - Use existing M2 extraction/derivation with an explicit root and fresh output, twice; compare exact relative files/bytes. Copy only each selected real eight-file package into its own separate temporary workspace as `handoff/`. Keep the output symlink/backing data together until copying is complete; do not distribute the whole derivation parent.
 - Keep architecture originals, trusted tests, wiring, tool configuration, baseline, reference solutions, logs, and the other Box's code outside both agent workspaces. Ordinary directories/worktrees organize work; they are **not security sandboxes**. The controller retains approved copies and compares handoff snapshots after use.
-- Prepare ordinary strict ESM/NodeNext compile and test commands in an existing disposable container environment. Reuse repository TypeScript, M1/codec built exports, Node assertions or Vitest, and M2 consumer patterns. A small fixed test module, image/config if needed, and manual runbook suffice; no service, custom agent framework, SDK orchestration, tool extension, credential proxy, or security platform.
+- Use the existing frozen `prepare.mjs`, `evaluate.sh`, `check-controls.sh` and `check-regressions.sh` commands in the asset README, unchanged. After execution approval, restage into a fresh external directory and rerun ordinary trusted readiness checks before model calls. Model calls in readiness: **zero**. Evaluator: pinned official Node image/container Node v24.22.1, TypeScript 5.9.3; host preparation Node v24.16.0, Docker 29.1.3 as validated. Record actual versions; if they differ, stop for profile review, not new qualification research or a silent switch. No service, SDK/extension, adapter, credential proxy, framework or new security infrastructure.
 - Before any agent run, exercise the commands with trusted positive/negative fixtures and check the actual container settings: network disabled, no credentials/host home/socket, intended read-only inputs, private scratch, and whole-container deadline cleanup. This is ordinary test-environment readiness, not Assignment 0021 or a separate sandbox/provider qualification project. If containers cannot run with these settings, stop; never substitute host execution of candidate code.
+
+### 1.1 Exact model/time budget and remaining approval
+
+Retain the preregistered 0020/0023 limits; the ceiling is **not a target or permission for extra tries**:
+
+| Budget | Per Box | Entire trial |
+| --- | --- | --- |
+| Initial generation episodes | 1 | 2, A then B |
+| Own-context revision episodes | At most 1 | At most 2, A then B if needed; no new agent |
+| Model-response turns/logical model calls | At most 40 per episode | At most **160** across at most 4 episodes (80 initial + 80 revision) |
+| Elapsed generation time | At most 30 minutes per episode | At most **120 minutes** active generation; waiting/preparation/check overhead separately reported |
+| Normal complete-response path | One initial response; at most one revision response if needed | Expected **2–4** completed responses, not 160 independent submissions |
+| Readiness/smoke/model-probe calls, extra agents, replacement runs, M6 calls | 0 | **0** |
+
+Stop each episode at submission, clarification/proposal, interruption, time limit or turn limit, whichever comes first. Count automatic model-recovery turns against the same allowance; retain failed/interrupted attempts. Streaming chunks are not separate turns. Native provider transport retries are separately recorded, with missing visibility `unknown`: **160 is a logical-turn ceiling, not a claimed hard cap on physical HTTP attempts, tokens or dollars**. No controller-initiated transport retry, budget reset or availability probe; reported infrastructure/model failure stops the trial. This budget covers the two implementation sessions only; no separate model-judge/reporter agent phase is authorized. Any controller assistance in the existing coding conversation is separately reported workflow overhead (usage/cost `unknown` if unobservable), not zero or part of the 160 implementation-turn allowance.
+
+**Product Owner decisions required before launch:**
+
+1. Explicitly authorize this one run, model/settings, order, existing 40-turn/30-minute episode limits and 160-turn/120-minute aggregate ceilings. No launch follows from the asset freeze alone.
+2. Specify a monetary spending ceiling and how it is enforced/observed, **or explicitly approve the response/time budget without an observable monetary ceiling** if native billing does not expose charges. No numerical dollar limit or token allowance has been approved; none defaults to unlimited. An observed-spend stop cannot guarantee against an in-flight request overshoot. A hard financial/request cap requires an already available account/provider control, not a proxy or new framework; if that is required but unavailable, do not launch.
+
+Empty effective tools, matching versions, original-copy comparisons, fresh handoffs and offline-container readiness are operational pre-call checks after approval, not additional infrastructure decisions/research. A mismatch stops execution and returns for review. Baseline comparison, new-trial reruns, model/provider/profile changes and milestone closure require separate later authorization.
 
 ## 2. Tool-free independent generation
 
@@ -52,7 +74,11 @@ Tests and candidate share an evaluation environment/JavaScript realm. A delibera
 
 ## 4. Frozen protocol and integration
 
-Follow 0020 Section 7 unchanged in experimental substance:
+Follow 0020 Section 7 unchanged in experimental substance. Exact normal order: **A initial → B initial → both snapshots retained → A checks → B checks → permitted A revision/checks → permitted B revision/checks → exact passing-pair freeze → one integration selection → report**. Skip a revision when not needed. Clarification of existing text consumes that Box's episode/revision allowance; do not answer/perform revisions before both initial snapshots are retained. A missing/conflicting requirement, architecture request, infrastructure failure or context violation follows the original immediate-stop rule; report later stages unrun. If a Box has no passing selected snapshot after its allowance, report Box failure/integration unrun, not an extra attempt.
+
+Use `evaluate.sh` from the frozen checkout for each inert snapshot: `normalize` and `render` independently, an explicitly selected `private:<emitted-relative.js>` route when private checks exist (a separate fresh container, never a replacement for acceptance), and `integration` only for the stopped/frozen pair. Preserve the **39 normalizer / 24 renderer rows**, repeated-call/input-preservation checks, **18 integration rows** plus live-identity probe, and exact source/config/corpus versions. No tests or expectations change after results.
+
+Protocol:
 
 1. Freeze all approved inputs/tests/wiring/prompts/baseline rules and record versions. Check the tool-free generation/container-only execution setup with trusted fixtures. No extra model smoke call or tooling qualification is required before the two approved sessions.
 2. Collect **both initial submissions before feedback**. Per Box allow one initial episode plus at most one independent revision, each at most 30 elapsed minutes/40 model-response turns. Preserve failures, clarification/proposal episodes, provider retries, usage and missing metadata. No silent model changes, budget reset, extra agents, or cherry-picked reruns.
@@ -64,7 +90,7 @@ Follow 0020 Section 7 unchanged in experimental substance:
 
 Record 0020's human interventions/minutes, clarification requests, proposed/attempted/actual interface changes, context/tool violations, independent/integration failures, retries/revisions, supplied context, tokens/cost where observable, and workflow overhead. Tool calls are expected to be zero; container/private checks and mechanical source transcription are separate controller work. Do not count them as agent tool use or conceal their cost.
 
-Use the accepted 0023 assets/runbook unchanged and deliver a redacted execution report with actual frozen input/test/tool versions, per-attempt local snapshot references, full independent/frozen integration results, negative outcomes, deviations, and unverified properties. Keep raw sessions, secrets, handoff/build directories and temporary candidate outputs out of Git; no promotion, hash/evidence database, M4 enforcement, or M6 comparison execution. Before agents, run `npm run check`, `npm run build`, the director-box/composition/structured-types demos, Hello World CLI, and canonical `bound spec` reference comparison. These repository regressions use trusted fixtures only; never import pilot candidates on the host.
+Use the accepted 0023 assets/runbook unchanged and deliver a redacted execution report with actual frozen input/test/tool versions, per-attempt local snapshot references, full independent/frozen integration results, negative outcomes, deviations, and unverified properties. Keep raw sessions, secrets, handoff/build directories and temporary candidate outputs out of Git; no promotion, hash/evidence database, M4 enforcement, or M6 comparison execution. Before agents, use the frozen `check-regressions.sh`: it runs the existing check components (typecheck plus all 416 tests with one worker), build, three Box demos, Hello World CLI and canonical export comparison inside an offline container with only the curated trusted regression closure. All executable trusted fixture checks stay in containers; no pilot candidate enters that closure or runs on the host. Readiness results reported by the Product Owner are accepted technical evidence; the restaging recheck records the actual trial environment without changing assets.
 
 ## Acceptance criteria after explicit implementation/execution approval
 
@@ -81,4 +107,4 @@ Use the accepted 0023 assets/runbook unchanged and deliver a redacted execution 
 
 ## Current documentation-only boundary
 
-This remains a Proposed, deferred execution document. The current next assignment is 0023 for actual asset creation/freeze after its own approval. Do not implement assets, build/pull images, start containers/Pi sessions, inspect credentials or call a provider under this proposal. After asset review, obtain explicit approval of revised execution before either agent; no automatic launch or M3 status change follows from asset acceptance.
+The final expected-value review found no discrepancies and the current assets are frozen as recorded above. This **Proposed execution plan remains unapproved** until the Product Owner resolves Section 1.1 and explicitly authorizes launch. This request performs documentation/read-only consistency checks only: no asset edits, containers, Pi sessions, provider/auth probes, credentials inspection, implementation agents, pilot or baseline execution. M3 remains Planned.
