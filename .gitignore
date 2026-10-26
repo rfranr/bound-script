@@ -1,12 +1,9 @@
 node_modules/
-dist/
-packages/language/src/generated/
-coverage/
-.test-dist/
-.tool-dist/
-*.tsbuildinfo
+__pycache__/
+*.py[cod]
 .DS_Store
 .env
 .env.*
 !.env.example
+auth.json
 Chat*

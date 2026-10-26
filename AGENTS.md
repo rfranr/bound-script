@@ -2,8 +2,11 @@
 
 ## Project context
 
-- Architecture and technical decisions are documented in `docs/`.
-- Requirements are defined in `docs/assignments/`.
+- Work on BoundScript Next only on `experiment/boundscript-next`.
+- The original implementation is preserved on `feature/agent-driven-architecture`.
+- Architecture and current limitations are documented in `README.md` and
+  `experiments/minimal-box/README.md`.
+- Requirements are defined in `assignments/`.
 - Historical AI conversations are local reference material, excluded from Git. Do not read them unless necessary, and retrieve only relevant sections.
 - Treat historical conversations as exploratory context, not authoritative requirements.
 
@@ -11,14 +14,16 @@
 ## Assignment workflow
 
 - Assignments are owned by the Product Owner; reviews are owned by the Reviewer. Do not modify them without explicit authorization.
-- Read and implement the specified assignment in `docs/assignments/`.
+- Read and implement the specified assignment in `assignments/`.
 - Stay within scope. Ask only when a decision materially affects requirements.
 - Address review corrections under the original assignment unless the scope changes.
 - An assignment may require multiple commits.
 - Include uncommitted assignment or review files in the corresponding implementation or correction commit.
 - Report deviations, unresolved questions and verification results.
-- Developer workflow: `docs/development/developer-workflow.md`.
-  Consult only when clarification about the development process is needed.
+- Run `npm test` for the credential-free one-Box checks. `npm run generate` makes
+  real provider calls and exposes the explicitly authorized auth file to Pi tools.
+- Keep acceptance checks external; do not add a DSL, custom runtime, generic runner
+  or new packages without a concrete requirement.
 
 
 ## Git workflow

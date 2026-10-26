@@ -18,9 +18,9 @@ MODEL = 'openai-codex/gpt-6.1-sol'
 PROMPT = '''Read /inputs/task.md, /inputs/contract.ts and /inputs/slugger.ts using tools.
 Implement the existing Greeting Box in /implementation/greet.ts. Use the tools to
 write the file, not just describe it. No acceptance tests or peer code are available.
-Infrastructure exception to the task's original policy: network is now enabled for
-Pi's provider, and authentication is provisioned as runtime state. Do not inspect,
-print, copy into the submission, or transmit credential files or runtime state.
+Network and authentication are provisioned as runtime capabilities per the task.
+Do not inspect, print, copy into the submission, or transmit credential files or
+runtime state.
 Do not install packages. Keep your only submission file greet.ts. Do not alter the
 contract or task. The filesystem boundary is enforced by Docker, not this prompt.
 '''

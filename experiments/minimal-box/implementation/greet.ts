@@ -1,4 +1,4 @@
-import type { GreetingBox } from '../inputs/contract.ts';
+import type { GreetingBox } from '/inputs/contract.ts';
 
 export const greet: GreetingBox = (name, slugger) => {
   const trimmedName = name.trim();

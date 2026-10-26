@@ -13,7 +13,7 @@ import uuid
 
 HERE = Path(__file__).resolve().parent
 IMAGE = 'node@sha256:55fb5f5a527ea2c5c4a95f963e48ef90aa38c7b346054fdc8ee9957a2b55d205'
-TSC = HERE.parents[2] / 'node_modules/typescript/lib/tsc.js'
+TSC = HERE.parents[1] / 'node_modules/typescript/lib/tsc.js'
 
 
 def run(*args, source=None):

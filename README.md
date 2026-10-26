@@ -27,7 +27,7 @@ packages:
 ## Run
 
 Requires Linux, Docker, Python 3, Node 24.16+, and the digest-pinned Node image
-listed in `docs/boundscript-next/minimal-box/verify.py` already cached locally.
+listed in `experiments/minimal-box/verify.py` already cached locally.
 
 ```bash
 npm ci
@@ -37,7 +37,7 @@ npm run generate # Real Pi generation, independent verification, then promotion
 
 Generation additionally requires the existing Pi 1.4.0 installation and
 `~/.pi/agent/auth.json` at the paths in `generate.py`; it makes billable provider
-calls. See the [experiment](docs/boundscript-next/minimal-box/README.md) for the
+calls. See the [experiment](experiments/minimal-box/README.md) for the
 exact environment, commands and observed results.
 
 **Prototype limitations:** generation has unrestricted bridge networking and
@@ -50,7 +50,8 @@ inherently trustworthy.
 ## Removed, retained, deferred
 
 - **Removed:** Langium, the DSL/compiler/interpreter/director, executable artifact
-  transforms, old demos/tests, ContactOnboarding tooling, and monorepo build setup.
+  transforms, old demos/tests, ContactOnboarding tooling, monorepo build setup, and
+  superseded DSL documentation/assignments/roadmaps (available in Git history).
 - **Retained:** the working one-Box Docker/Pi reference, native TypeScript
   contracts, explicit dependency injection, independent checks and promotion.
 - **Deferred:** two-Box integration, artifact registry, transitive dependency

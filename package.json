@@ -8,8 +8,8 @@
     "node": ">=24.16.0"
   },
   "scripts": {
-    "test": "python3 docs/boundscript-next/minimal-box/verify.py",
-    "generate": "python3 docs/boundscript-next/minimal-box/generate.py",
+    "test": "python3 experiments/minimal-box/verify.py",
+    "generate": "python3 experiments/minimal-box/generate.py",
     "check": "npm test"
   },
   "devDependencies": {
