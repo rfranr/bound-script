@@ -2,33 +2,17 @@
   "name": "boundscript",
   "version": "0.0.0",
   "private": true,
-  "description": "Human-designed, agent-implemented software bounded by explicit contracts.",
+  "description": "Human-defined architectural boundaries for agent-driven development.",
   "license": "UNLICENSED",
-  "type": "module",
   "engines": {
-    "node": ">=22.12.0"
+    "node": ">=24.16.0"
   },
-  "workspaces": [
-    "packages/*"
-  ],
   "scripts": {
-    "langium:generate": "langium generate -f packages/language/langium-config.json",
-    "build": "npm run langium:generate --silent && tsc -b",
-    "handoff": "npm run build --silent 1>&2 && node .tool-dist/derive-handoff.js",
-    "bound": "npm run build --silent 1>&2 && node packages/cli/dist/bin.js",
-    "demo:director-box": "npm run build --silent 1>&2 && node examples/director-box/dist/run.js",
-    "demo:box-composition": "npm run build --silent 1>&2 && node examples/box-composition/dist/run.js",
-    "demo:structured-types": "npm run build --silent 1>&2 && node examples/structured-types/dist/run.js",
-    "clean": "tsc -b --clean && node -e \"require('node:fs').rmSync('packages/language/src/generated', { recursive: true, force: true })\"",
-    "test": "npm run langium:generate --silent && vitest run",
-    "test:watch": "npm run langium:generate --silent && vitest",
-    "typecheck": "npm run langium:generate --silent && tsc -b --pretty false",
-    "check": "npm run typecheck && npm test"
+    "test": "python3 docs/boundscript-next/minimal-box/verify.py",
+    "generate": "python3 docs/boundscript-next/minimal-box/generate.py",
+    "check": "npm test"
   },
   "devDependencies": {
-    "@types/node": "^24.0.0",
-    "langium-cli": "^4.4.0",
-    "typescript": "^5.9.0",
-    "vitest": "^5.0.5"
+    "typescript": "5.9.3"
   }
 }

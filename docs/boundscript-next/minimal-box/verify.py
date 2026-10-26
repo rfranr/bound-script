@@ -76,7 +76,7 @@ def main():
                 run('docker', 'create', '--name', name, '--pull', 'never',
                     '--network', 'none', '--user', f'{uid}:{gid}', '--read-only',
                     '--cap-drop', 'ALL', '--security-opt', 'no-new-privileges',
-                    '--memory', '128m', '--memory-swap', '128m', '--cpus', '1',
+                    '--memory', '256m', '--memory-swap', '256m', '--cpus', '1',
                     '--pids-limit', '32', '--log-driver', 'none',
                     '--workdir', '/implementation', '--env', 'HOME=/implementation',
                     *mounts, IMAGE, 'sleep', '300')
@@ -86,7 +86,7 @@ def main():
                 assert not h['Privileged'] and h['CapDrop'] == ['ALL']
                 assert 'no-new-privileges' in h['SecurityOpt']
                 assert config['Config']['User'] == f'{uid}:{gid}' and uid != 0
-                assert h['Memory'] == h['MemorySwap'] == 134217728
+                assert h['Memory'] == h['MemorySwap'] == 268435456
                 assert h['PidsLimit'] == 32 and h['NanoCpus'] == 1000000000
                 assert len(config['Mounts']) == 5
                 assert {m['Destination'] for m in config['Mounts']} == {

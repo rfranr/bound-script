@@ -1,9 +1,0 @@
-system Multiple {
-  director Main {
-    on start {
-      print("first")
-      print("second")
-      print("third")
-    }
-  }
-}

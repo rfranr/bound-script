@@ -1,9 +1,0 @@
-system Escaped {
-  director Main {
-    on start {
-      print("line one\nline two")
-      print("quoted: \"hello\"")
-      print("slash: \\")
-    }
-  }
-}

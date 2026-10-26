@@ -1,7 +1,0 @@
-system Hello {
-  director Main {
-    on start {
-      print("Hello, World!")
-    }
-  }
-}
