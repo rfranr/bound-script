@@ -1,4 +1,9 @@
-# Real Pi generation — stopped at the credential boundary
+# Real Pi generation — historical credential blocker
+
+**Superseded for this prototype:** the owner subsequently explicitly authorized
+mounting only `auth.json` and enabling generation networking. Real containerized
+Pi generation has now run; see `README.md` for actual results and limitations.
+The findings below describe the earlier, stricter attempt—not the current result.
 
 No agent generation was launched. `implementation/greet.ts`, contracts, task,
 acceptance criteria, verifier and negative checks remain unchanged. No provider

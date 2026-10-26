@@ -1,62 +1,87 @@
 # One-Box boundary experiment
 
-Self-contained experiment on `experiment/boundscript-next`; no DSL/compiler/runtime/pilot changes. Uses the existing locally cached, digest-pinned Node Docker image and repository TypeScript installation. No framework, model calls, image build, downloads, or dependency installation.
+Self-contained experiment on `experiment/boundscript-next`; no DSL/compiler/runtime/pilot changes. Uses the existing locally cached, digest-pinned Node Docker image, installed Pi 1.4.0, and repository TypeScript installation. No framework, broker, packages, image builds, or downloads.
 
-## Run
+## Reproduce
 
-From the repository root, with Python 3, Node, existing `node_modules`, and Docker daemon access:
+From the repository root, as the existing nonroot Pi user, with Python 3, Docker daemon access, existing repository dependencies, and the existing Pi installation/authentication at the paths in `generate.py`:
 
 ```bash
+# Makes real provider calls and replaces greet.ts ONLY after successful verification.
+python3 docs/boundscript-next/minimal-box/generate.py
+
+# Independently recheck the saved implementation without model calls or credentials.
 python3 docs/boundscript-next/minimal-box/verify.py
+
 git diff --check
+docker ps -a --filter name=boundscript-greeting-agent- --format '{{.Names}}'
 docker ps -a --filter name=boundscript-minimal- --format '{{.Names}}'
 ```
 
-Do not run Python with `-O`: verification uses assertions. The script refuses other branches. All subprocess commands and flags are explicit in `verify.py`; temporary paths, container name, uid/gid and host-listener port are selected per run.
+Do not use Python `-O`: verification uses assertions. All commands/flags are explicit in the scripts; temporary paths, container names, uid/gid and host-listener port vary per run. Generation is nondeterministic and incurs provider usage; no superiority or reproducibility-of-output claim is made. The fixed prompt is in `generate.py`. The original task and contracts are unchanged.
 
-The native contract is `contract.ts`; `slugger.ts` is its one authorized dependency contract. `task.md` describes the task. `implementation/greet.ts` is a hand-authored witness, **not an agent-generated result**. Its type-only import resolves to the authorized contract inside the sandbox. The dependency implementation is injected only for the behavior check.
+`contract.ts` is the native Box contract; `slugger.ts` is its one authorized dependency contract. The checked-in `implementation/greet.ts` is now the **unmodified output of the successful real Pi run**, not the previous hand-written seed. Every generation starts with an empty implementation directory. The dependency implementation is injected only during independent verification.
 
-## Isolation and verification
+## Generation boundary
 
-The external Python verifier creates a disposable workspace and mounts exactly:
+Pi and its read/write/edit/bash tools run **inside** the container, using `openai-codex/gpt-6.1-sol`, reasoning `medium`. No host Pi generation or tool-forwarding substitute is used. Only these host-backed paths are mounted:
 
-- `/inputs/task.md`, `/inputs/contract.ts`, `/inputs/slugger.ts`: read-only individual files;
-- `/implementation`: writable disposable copy of the witness implementation.
+| Container path | Authority |
+| --- | --- |
+| `/inputs/task.md`, `/inputs/contract.ts`, `/inputs/slugger.ts` | Individual read-only files |
+| `/implementation` | Fresh writable submission directory |
+| `/opt/pi` | Installed Pi package/dependencies, read-only runtime tooling |
+| `/run/host-auth.json` | Only existing host `auth.json`, read-only, explicitly authorized credential exception |
 
-Docker uses `--network none --read-only --cap-drop ALL --security-opt no-new-privileges`, a non-root uid/gid, 128 MiB memory/swap limit, one CPU, and 32-process limit. No host environment is forwarded. No repository, credentials, host directory containing the inputs, verification script, tests, or Docker socket is mounted. The base image supplies Node and ordinary OS utilities; these are also visible, not just the task files. Kernel-provided pseudo-filesystems and device facilities exist; `/implementation` is the only writable **host-backed** mount.
+No repository, peer implementation, verification code, acceptance tests, host credential directory, Docker socket, or host settings/extensions/sessions are mounted. The base image supplies Node and OS utilities; kernel pseudo-filesystems/device facilities are also visible.
 
-The verifier inspects the effective container configuration, sends fixed action probes over stdin, and receives observations. Expectations, assertions and host sentinel hashes remain outside the container. Behavioral invocation likewise returns data for external assertions; no test suite or oracle is copied into the container. Node executes the candidate only inside Docker. The trusted host TypeScript compiler performs a strict, no-emit type check without executing candidate code:
+A private 64 MiB `/pi-state` tmpfs holds a container-local authentication copy and minimal settings. OAuth refresh can modify only that copy; the host authentication file is hashed before/after and checked unchanged. The tmpfs is writable **runtime state**, not part of the Box submission, and disappears with the container. Credentials remain readable to Pi/tools as explicitly accepted by the owner.
+
+Docker uses a nonroot uid/gid, read-only root, all capabilities dropped, no-new-privileges, one CPU, 512 MiB memory/swap limit, and 64-process limit. Network is unrestricted Docker bridge networking, **not** host networking. Host services reachable over bridge networking are not protected by this experiment.
+
+No host environment is forwarded. Pi disables sessions, extensions, MCP, skills, templates, themes, context discovery, project approval, automatic retries, compaction, cache warming, and automatic catalog/update activity. `--offline` disables Pi's automatic network activity, **not explicit inference requests**. It does not firewall agent tools.
+
+Raw Pi JSON/stderr is captured only in memory and never printed, saved, or committed. Reporting retains only tool counts and an allowlisted read-path summary. Before promotion, a trusted in-container check rejects a submission containing literal credential string values from either original or refreshed auth; no credential values pass through that check's output. This is a precaution, not a general encoded-secret detector or exfiltration defense.
+
+## Independent verification
+
+The agent container is destroyed **before** verification. `verify.py` receives only the candidate source (optional positional path), copies it into a new credential-free, network-disabled container, and runs the existing acceptance checks. Expected results/assertions stay on the host. There are four Box mounts plus read-only TypeScript tooling; no verifier/test files are mounted.
+
+The compiler now runs in the verification container so both absolute `/inputs/contract.ts` and relative contract imports resolve against the real authorized filesystem:
 
 ```bash
-node <repository>/node_modules/typescript/lib/tsc.js --noEmit --strict --target es2022 --module nodenext --allowImportingTsExtensions <temporary-workspace>/implementation/greet.ts
+docker exec <verification-container> node /tools/typescript/lib/tsc.js --noEmit --strict --target es2022 --module nodenext --allowImportingTsExtensions /implementation/greet.ts
 ```
 
-Container and workspace are removed on ordinary completion/failure. An external interruption such as SIGKILL can require manual cleanup.
+Contract, task, required behavior, dependency call expectations, and negative access checks were not relaxed. The source is never executed on the host. Promotion copies only a regular, size-bounded, verified `greet.ts`; raw events, session files, runtime state, and credentials are not copied.
 
-## Observed final run
+## Actual runs
 
-`python3 docs/boundscript-next/minimal-box/verify.py` exited **0**:
+Two real Pi invocations occurred; neither received acceptance-test feedback or a revised business task:
 
-| Check | Observation |
-| --- | --- |
-| Authorized inputs / submission | All three exact contents readable; write confirmed externally |
-| Host sentinel read / write | `ENOENT` / `ENOENT`; host hash unchanged |
-| Protected task write / root write | `EROFS` / `EROFS` |
-| Repository / Docker socket read | `ENOENT` / `ENOENT` |
-| Container `/root/.ssh/id_rsa` read | `EACCES`; no host credentials mounted |
-| Symlink to host sentinel: read / write | `ENOENT` / `ENOENT` |
-| Symlink to protected task: write | `EROFS`; input hashes unchanged |
-| Host loopback listener (`127.0.0.1:59465`) | `ECONNREFUSED`; host received no connection |
-| Numeric external address (`1.1.1.1:443`) | `ENETUNREACH`, not merely timeout |
-| TypeScript contract | Strict no-emit check passed |
-| Behavior / dependency | Three cases passed; injected dependency observed once per case |
+1. **First attempt: failed verification.** Generation succeeded (3 reads, 1 write, 1 bash call), but used an absolute `/inputs/contract.ts` type import. The old host-side compiler could not resolve that container path (`TS2307`, then implicit-any diagnostics). Its temporary submission was discarded and never promoted. This exposed a verifier filesystem assumption, not evidence that the contract should change.
+2. **Fresh second attempt: passed.** After moving the same compiler checks into the independent verification container, Pi again used 3 reads, 1 write, 1 bash call, no edits, and wrote only `greet.ts`. Its three `read` calls named exactly the authorized input files. The saved implementation uses a relative type import. It was not manually repaired.
 
-`git diff --check` exited **0**. Container listing was empty after cleanup. Development runs also passed the access probes; the final version keeps all assertions outside the container.
+For the successful generation command, exit **0**:
 
-## Scope of the evidence
+- Inspected generation mounts and fixed action probes: host sentinel, repository, tests and verifier absent (`ENOENT`); protected writes denied (`EROFS`); symlink host escape denied (`ENOENT`). These actions ran in the actual agent environment before generation, with assertions external.
+- Generation inputs/sentinel and host authentication hashes unchanged; one regular submission file; credential literal scan passed.
+- Independent strict TypeScript check passed.
+- All three existing behavior cases passed, including exactly one injected dependency call with the trimmed name per case.
+- All ten existing forbidden read/write/symlink checks passed.
+- Offline verifier only: host listener `127.0.0.1:53381` returned `ECONNREFUSED`; `1.1.1.1:443` returned `ENETUNREACH`. These results **do not claim network denial during generation**.
+- All containers and temporary workspaces removed. The host auth file was not changed.
 
-This demonstrates authorized access and concrete blocked attempts under an inspected Docker configuration. It does not prove resistance to every possible escape. Docker shares the host kernel; trust includes Docker, its runtime, the image, Node, TypeScript and the external verifier. No actual autonomous agent, hostile-kernel exploit, DNS/IPv6 matrix, or production deployment was tested.
+A separate saved-source verification was also run; see command above. Provider billing was not independently measured. No raw transcript is retained for retrospective command-by-command audit.
 
-The witness is known code. Candidate-returned JSON is not security attestation: malicious JavaScript could fabricate behavior observations or tamper with its own process. The verifier's files and authority remain outside, but this tiny protocol does not establish arbitrary hostile-program correctness. Container-side probes are fixed actions run before candidate import, not candidate self-reports.
+## What this establishes—and does not
 
-Dependency-interface exposure is restricted; use of built-in Node APIs is **not** denied by an import checker. The dependency call is observed for three cases, not proven universally. Writable submissions must never be promoted blindly: they can contain hostile symlinks. Neither sandboxing nor passing these finite checks establishes correctness or preserves restrictions after deployment.
+Observed generation used the three authorized read-tool paths and produced only the permitted source file; protected inputs remained unchanged and controlled filesystem escape attempts failed. This is concrete filesystem-boundary evidence, **not proof that the agent attempted every possible escape or never used Bash to inspect runtime state**. Bash was available, and its raw command/results are not retained. There is no comprehensive syscall/network audit.
+
+The accepted credential exception is real: Pi/tools can read original and refreshed authentication and unrestricted networking permits exfiltration, arbitrary downloads, and access to reachable host/LAN services. Read-only credential mounts do not protect secrecy. No such exfiltration is established by these observations, but this setup does not prevent it. Only literal credential inclusion in the submitted source was checked.
+
+Docker shares the host kernel; trust includes Docker/runtime, base image, Pi, Node, TypeScript and external verifier. Agent code can consume resources within configured limits. Writable runtime state and OS pseudo-filesystems are exceptions to “only implementation writes.” Ordinary completion/failure cleans up; SIGKILL can require manual cleanup.
+
+Dependency-interface exposure is restricted, but there is no import allowlist or universal proof of dependency usage. Candidate-returned data can be fabricated by malicious code; external assertions do not turn this protocol into hostile-program attestation. Passing finite tests does not prove general correctness or preserve build-time restrictions after deployment.
+
+The historical credential blocker in `agent-blocker.md` is superseded only by the owner's explicit authorization to expose `auth.json` and enable generation networking, not by a new security mechanism.

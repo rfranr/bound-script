@@ -7,6 +7,7 @@ from pathlib import Path
 import shutil
 import socket
 import subprocess
+import sys
 import tempfile
 import uuid
 
@@ -33,6 +34,12 @@ def main():
         raise RuntimeError('Run only on experiment/boundscript-next')
     if not TSC.is_file():
         raise RuntimeError('Install existing repository dependencies first')
+    # Optional fresh agent submission; the acceptance checks below are unchanged.
+    submission = Path(sys.argv[1]) if len(sys.argv) == 2 else HERE / 'implementation/greet.ts'
+    if len(sys.argv) > 2 or submission.is_symlink() or not submission.is_file():
+        raise RuntimeError('Expected one regular greet.ts submission')
+    if submission.stat().st_size > 16384:
+        raise RuntimeError('Submission exceeds 16 KiB')
     # Do not pull images or implicitly access the network.
     run('docker', 'image', 'inspect', IMAGE)
     name = 'boundscript-minimal-' + uuid.uuid4().hex[:12]
@@ -44,7 +51,7 @@ def main():
         candidate.mkdir()
         for filename in ('task.md', 'contract.ts', 'slugger.ts'):
             shutil.copyfile(HERE / filename, inputs / filename)
-        shutil.copyfile(HERE / 'implementation/greet.ts', candidate / 'greet.ts')
+        shutil.copyfile(submission, candidate / 'greet.ts')
         # Docker uses the invoking user's uid; ensure it is never root in-container.
         uid, gid = os.getuid(), os.getgid()
         if uid == 0:
@@ -63,7 +70,8 @@ def main():
             mounts = []
             for p in inputs.iterdir():
                 mounts += ['--mount', f'type=bind,src={p},dst=/inputs/{p.name},readonly']
-            mounts += ['--mount', f'type=bind,src={candidate},dst=/implementation']
+            mounts += ['--mount', f'type=bind,src={candidate},dst=/implementation',
+                       '--mount', f'type=bind,src={TSC.parents[1]},dst=/tools/typescript,readonly']
             try:
                 run('docker', 'create', '--name', name, '--pull', 'never',
                     '--network', 'none', '--user', f'{uid}:{gid}', '--read-only',
@@ -80,14 +88,15 @@ def main():
                 assert config['Config']['User'] == f'{uid}:{gid}' and uid != 0
                 assert h['Memory'] == h['MemorySwap'] == 134217728
                 assert h['PidsLimit'] == 32 and h['NanoCpus'] == 1000000000
-                assert len(config['Mounts']) == 4
+                assert len(config['Mounts']) == 5
                 assert {m['Destination'] for m in config['Mounts']} == {
-                    '/inputs/task.md', '/inputs/contract.ts', '/inputs/slugger.ts', '/implementation'}
+                    '/inputs/task.md', '/inputs/contract.ts', '/inputs/slugger.ts',
+                    '/implementation', '/tools/typescript'}
                 assert all(m['RW'] == (m['Destination'] == '/implementation') for m in config['Mounts'])
                 # No host environment is forwarded; only image defaults and fixed HOME.
                 assert set(e.split('=', 1)[0] for e in config['Config']['Env']) <= {
                     'PATH', 'NODE_VERSION', 'YARN_VERSION', 'HOME'}
-                print('PASS effective configuration: four mounts, nonroot, offline, read-only root, limits')
+                print('PASS effective configuration: four Box mounts plus read-only TypeScript tooling, nonroot, offline, limits')
                 run('docker', 'start', name)
 
                 def probe(label, source):
@@ -171,9 +180,11 @@ console.log(JSON.stringify(observed));
                 else:
                     connection.close()
                     raise AssertionError('Sandbox reached host listener')
-                # Trusted compiler parses candidate text; it does not execute the candidate.
-                run('node', str(TSC), '--noEmit', '--strict', '--target', 'es2022',
-                    '--module', 'nodenext', '--allowImportingTsExtensions', str(candidate / 'greet.ts'))
+                # Use the actual contract paths, including absolute /inputs imports.
+                # The trusted compiler and all candidate execution remain offline in Docker.
+                run('docker', 'exec', name, 'node', '/tools/typescript/lib/tsc.js',
+                    '--noEmit', '--strict', '--target', 'es2022', '--module', 'nodenext',
+                    '--allowImportingTsExtensions', '/implementation/greet.ts')
                 print('PASS native TypeScript contract: strict tsc --noEmit')
                 observed = probe('Box behavior', '''
 import { greet } from '/implementation/greet.ts';
