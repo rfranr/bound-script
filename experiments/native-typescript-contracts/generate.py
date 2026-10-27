@@ -173,7 +173,7 @@ console.log(createHash('sha256').update(bytes).digest('hex'));
         # Generation has ended; independent offline verification receives only the submission.
         verification = [sys.executable, str(SPIKE / 'verify.py'), str(submission)]
         try:
-            subprocess.run(verification, check=True, timeout=120)
+            subprocess.run(verification, check=True, timeout=360)
         except (subprocess.SubprocessError, OSError):
             # Generation has ended and the literal credential scan has passed.
             # Never retain failed generation output or a credential-scan failure.

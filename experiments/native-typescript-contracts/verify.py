@@ -1,15 +1,16 @@
 #!/usr/bin/env python3
-"""Fixed NormalizeContact spike; candidate code only executes offline in a container."""
+"""Fixed offline NormalizeContact verification; no candidate execution on the host."""
+from contextlib import contextmanager
 import json
 import os
 from pathlib import Path
 import re
-import stat
 import shutil
+import stat
+import subprocess
 import sys
 import tempfile
 import uuid
-import subprocess
 
 sys.dont_write_bytecode = True
 SPIKE = Path(__file__).resolve().parent
@@ -19,25 +20,37 @@ from container_runtime import runtime
 from verify import IMAGE, TSC, digest, run
 
 
-# The child cannot stream candidate stdout/stderr into the diagnostic channel.
-# Only this fixed parent emits process status; the reporter writes selected fields.
-VITEST_RUN = '''
-import {spawnSync} from 'node:child_process';
-const result = spawnSync(process.execPath, [
- '/node_modules/vitest/vitest.mjs', 'run',
- '--config', '/checks/vitest.config.mts', '--configLoader', 'runner',
- '--no-cache', '--fsModuleCachePath', '/implementation/.vitest-cache',
- '--reporter', '/checks/diagnostic-reporter.mjs',
-], {stdio: 'ignore', timeout: 85000});
-console.log(JSON.stringify({exitStatus: result.status, signal: result.signal,
- launchError: Boolean(result.error)}));
-'''
+class VerificationFailure(RuntimeError):
+    """Only host-authored labels and explicitly sanitized details may enter here."""
+    def __init__(self, kind, detail):
+        self.kind = kind
+        super().__init__(detail)
+
+
+@contextmanager
+def phase(label):
+    print(f'START {label}', flush=True)
+    try:
+        yield
+    except VerificationFailure as error:
+        print(f'FAIL {label} [{error.kind}]', flush=True)
+        raise
+    except subprocess.TimeoutExpired:
+        print(f'FAIL {label} [timeout]', flush=True)
+        raise VerificationFailure('timeout', f'{label} timed out; raw diagnostics withheld') from None
+    except AssertionError:
+        print(f'FAIL {label} [security/integrity]', flush=True)
+        raise VerificationFailure('security/integrity', f'{label} assertion failed; raw diagnostics withheld') from None
+    except Exception:
+        print(f'FAIL {label} [infrastructure]', flush=True)
+        raise VerificationFailure('infrastructure', f'{label} failed; raw diagnostics withheld') from None
+    else:
+        print(f'PASS {label}', flush=True)
 
 
 def sanitize(value, limit=2000):
     if not isinstance(value, str):
         return value if value is None or type(value) in (bool, int, float) else '[withheld]'
-    # Redact before truncation so a partial token cannot escape the filter.
     value = re.sub(r'\x1b\[[0-?]*[ -/]*[@-~]', '', value)
     for key, secret in os.environ.items():
         if secret and (len(secret) >= 8 or re.search(
@@ -47,86 +60,185 @@ def sanitize(value, limit=2000):
                    '[REDACTED]', value)
     value = re.sub(r'(?i)((?:token|password|secret|api[_-]?key|authorization)\s*[\"\x27]?\s*[:=]\s*)[^\n,}]+',
                    r'\1[REDACTED]', value)
-    # JSON quoting at the output boundary escapes terminal/control characters.
     return value[:limit] + (' [truncated]' if len(value) > limit else '')
 
 
-def vitest_failure(status, report_path):
-    """Return only allowlisted, bounded diagnostics; treat artifacts as untrusted."""
-    code = status.get('exitStatus')
-    if code is not None and (type(code) is not int or not -255 <= code <= 255):
-        raise RuntimeError('Offline verifier infrastructure failure: invalid Vitest exit status')
-    signal = status.get('signal')
-    signal = signal if signal in ('SIGKILL', 'SIGTERM', 'SIGSEGV', 'SIGABRT') else None
-    summary = f'Vitest exit status: {code}; signal: {signal or "none"}'
+def quoted(value, limit=2000):
+    return json.dumps(sanitize(value, limit), ensure_ascii=True)
+
+
+def read_report(path):
     try:
-        fd = os.open(report_path, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
+        fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
         with os.fdopen(fd, 'rb') as stream:
             if not stat.S_ISREG(os.fstat(stream.fileno()).st_mode):
                 raise ValueError()
-            raw = stream.read(131073)
-        if len(raw) > 131072:
+            raw = stream.read(262145)
+        if len(raw) > 262144:
             raise ValueError()
         report = json.loads(raw)
-        if (report.get('complete') is not True or type(report.get('failed')) is not list
-                or type(report.get('infrastructureErrors')) is not int
-                or report['infrastructureErrors'] < 0):
+        if not isinstance(report, dict) or report.get('complete') is not True:
             raise ValueError()
-        for test in report['failed']:
-            if (not isinstance(test, dict)
-                    or test.get('file') not in ('acceptance.test.ts', 'validators.test.ts')
-                    or not isinstance(test.get('name'), str)
-                    or not isinstance(test.get('assertions'), list)
-                    or not all(isinstance(item, dict) for item in test['assertions'])):
-                raise ValueError()
-    except (OSError, ValueError, TypeError, AttributeError, RecursionError):
-        return summary + '\nOffline verifier infrastructure failure: missing or invalid Vitest report; raw output withheld'
-    lines = [summary]
-    for test in report['failed'][:10]:
-        lines.append('FAIL ' + test['file'] + ': ' + json.dumps(sanitize(test.get('name'), 300), ensure_ascii=True))
-        assertions = test.get('assertions')
-        if not isinstance(assertions, list) or not assertions:
-            lines.append('  Test execution error; non-assertion details withheld')
-            continue
+        return report
+    except (OSError, ValueError, TypeError, RecursionError):
+        raise VerificationFailure('infrastructure', 'Missing or invalid structured report; raw output withheld') from None
+
+
+# Fixed parent process: candidate stdout/stderr never reaches the host channel.
+# Only bounded reports and process status are consumed. Not an agent capability.
+PROCESS_RUN = '''
+import {spawnSync} from 'node:child_process';
+const result = spawnSync(process.execPath, ARGS, {stdio: 'ignore', timeout: TIMEOUT});
+console.log(JSON.stringify({exitStatus: result.status, signal: result.signal,
+ launchError: Boolean(result.error), timedOut: result.error?.code === 'ETIMEDOUT'}));
+'''
+
+
+def process_status(engine, name, args, timeout):
+    source = PROCESS_RUN.replace('ARGS', json.dumps(args)).replace('TIMEOUT', str(timeout * 1000))
+    try:
+        status = json.loads(engine.exec(name, 'node', '--input-type=module', source=source, timeout=timeout + 5))
+        if (not isinstance(status, dict) or type(status.get('launchError')) is not bool
+                or type(status.get('timedOut')) is not bool
+                or (status.get('exitStatus') is not None and
+                    (type(status['exitStatus']) is not int or not -255 <= status['exitStatus'] <= 255))
+                or status.get('signal') not in (None, 'SIGKILL', 'SIGTERM', 'SIGSEGV', 'SIGABRT', 'SIGINT')):
+            raise ValueError()
+    except subprocess.TimeoutExpired:
+        raise VerificationFailure('timeout', 'Verifier transport timed out; raw output withheld') from None
+    except Exception:
+        raise VerificationFailure('infrastructure', 'Verifier transport/status unavailable; raw output withheld') from None
+    if status['timedOut'] or status['launchError'] or status.get('signal'):
+        print(f'Offline tool exit status: {status.get("exitStatus")}; signal: {status.get("signal") or "none"}', flush=True)
+        if status['timedOut']:
+            raise VerificationFailure('timeout', 'Offline tool timed out; raw output withheld')
+        raise VerificationFailure('infrastructure', 'Offline tool startup/process failure; raw output withheld')
+    return status
+
+
+def run_compiler(engine, name, scratch):
+    status = process_status(engine, name, ['/checks/compiler-diagnostics.mjs'], 30)
+    try:
+        report = read_report(scratch / 'typescript-diagnostics.json')
+    except VerificationFailure:
+        print(f'TypeScript exit status: {status["exitStatus"]}; report unavailable', flush=True)
+        raise
+    if (type(report.get('errorCount')) is not int or report['errorCount'] < 0
+            or not isinstance(report.get('diagnostics'), list)):
+        raise VerificationFailure('infrastructure', 'Invalid compiler report; raw output withheld')
+    print(f'TypeScript exit status: {status["exitStatus"]}; errors: {report["errorCount"]}', flush=True)
+    for item in report['diagnostics'][:20]:
+        if not isinstance(item, dict) or type(item.get('code')) is not int:
+            raise VerificationFailure('infrastructure', 'Invalid compiler diagnostic; raw output withheld')
+        file = item.get('file')
+        if file not in ('/checks/check-contract.ts', '/implementation/implementation.ts', '/inputs/contract.ts'):
+            file = '[tooling/other source]'
+        location = ':'.join(str(item[key]) if type(item.get(key)) is int else '?' for key in ('line', 'column'))
+        print(f'  TS{item["code"]} {file}:{location}: {quoted(item.get("message"))}', flush=True)
+    if report['errorCount']:
+        raise VerificationFailure('compilation', 'Strict TypeScript compilation failed')
+    if status['exitStatus'] != 0:
+        raise VerificationFailure('infrastructure', 'Compiler failed without compiler diagnostics')
+
+
+def vitest_failure(status, report_path):
+    """Print bounded test details; return a classified failure, never raw errors."""
+    report = read_report(report_path)
+    tests, failed = report.get('tests'), report.get('failed')
+    if (not isinstance(tests, list) or not tests or len(tests) > 100
+            or not isinstance(failed, list) or len(failed) > 10
+            or type(report.get('infrastructureErrors')) is not int or report['infrastructureErrors'] < 0):
+        raise VerificationFailure('infrastructure', 'Invalid Vitest report; raw output withheld')
+    counts = dict(passed=0, failed=0, skipped=0, pending=0)
+    for test in tests:
+        if (not isinstance(test, dict) or test.get('file') not in ('acceptance.test.ts', 'validators.test.ts')
+                or not isinstance(test.get('name'), str) or test.get('status') not in counts):
+            raise VerificationFailure('infrastructure', 'Invalid Vitest test result; raw output withheld')
+        counts[test['status']] += 1
+        if test['status'] in ('passed', 'failed'):
+            print(f'{"PASS" if test["status"] == "passed" else "FAIL"} {test["file"]}: {quoted(test["name"], 300)}', flush=True)
+    kinds = set()
+    for test in failed:
+        if not isinstance(test, dict):
+            raise VerificationFailure('infrastructure', 'Invalid Vitest failure; raw output withheld')
+        assertions, guards = test.get('assertions'), test.get('typia')
+        if not isinstance(assertions, list) or not isinstance(guards, list):
+            raise VerificationFailure('infrastructure', 'Invalid Vitest error fields; raw output withheld')
+        print(f'  Details for {quoted(test.get("name"), 300)}:', flush=True)
+        for guard in guards[:2]:
+            if not isinstance(guard, dict):
+                continue
+            actual = guard.get('actualType')
+            if actual not in ('undefined', 'null', 'array', 'object', 'string', 'number', 'boolean', 'bigint', 'symbol', 'function'):
+                actual = 'unknown'
+            # Dynamic property keys may themselves contain input values. Only
+            # expose declared contact fields, never arbitrary bracket/path text.
+            path = guard.get('path')
+            if not isinstance(path, str) or not re.fullmatch(r'\$input(?:\.(?:contact|name|email|phone|ok|errors)|\[\d{1,4}\])*', path):
+                path = '[dynamic path withheld]'
+            print(f'    Typia path={quoted(path)} expected={quoted(guard.get("expected"), 500)} actual type={actual}', flush=True)
+            kinds.add('typia')
         for assertion in assertions[:2]:
             if isinstance(assertion, dict):
                 for key in ('expected', 'actual', 'diff'):
                     if key in assertion:
-                        lines.append('  ' + key + ': ' + json.dumps(sanitize(assertion[key]), ensure_ascii=True))
-    if report['infrastructureErrors'] or status.get('launchError') or signal:
-        lines.append('Offline verifier infrastructure failure: collection, unhandled error, or process failure; details withheld')
-    elif report['failed']:
-        lines.append('Vitest test failures (not a verifier startup failure)')
-    elif code != 0:
-        lines.append('Offline verifier infrastructure failure: no failed tests reported; raw output withheld')
-    else:
-        return None
-    return '\n'.join(lines)
+                        if key == 'diff' and isinstance(assertion[key], str):
+                            print('    diff:', flush=True)
+                            for line in sanitize(assertion[key]).split('\n')[:40]:
+                                print('      | ' + json.dumps(line, ensure_ascii=True)[1:-1], flush=True)
+                        else:
+                            print(f'    {key}: {quoted(assertion[key])}', flush=True)
+                kinds.add('assertion')
+        if test.get('timedOut') is True:
+            print('    Vitest test/hook timeout; message/stack withheld', flush=True)
+            kinds.add('timeout')
+        elif not assertions and not guards:
+            print('    Runtime exception; message/stack withheld', flush=True)
+            kinds.add('runtime')
+    if counts['failed'] > len(failed):
+        print('Additional failed-test details omitted by the bounded reporter', flush=True)
+    print(f'Vitest exit status: {status["exitStatus"]}; ' + ', '.join(f'{n} {key}' for key, n in counts.items()), flush=True)
+    if report['infrastructureErrors'] or counts['pending'] or not (counts['passed'] + counts['failed']):
+        return VerificationFailure('infrastructure', 'Vitest collection/unhandled/incomplete-run failure; details withheld')
+    if counts['failed'] or failed:
+        return VerificationFailure('/'.join(sorted(kinds)) or 'runtime', 'Vitest tests failed; see sanitized results above')
+    if status['exitStatus'] != 0:
+        return VerificationFailure('infrastructure', 'Vitest failed without failed tests; raw output withheld')
+    return None
 
 
-def run_vitest(engine, name, scratch):
+def run_vitest(engine, name, scratch, group='all'):
+    args = ['/node_modules/vitest/vitest.mjs', 'run', '--config', '/checks/vitest.config.mts',
+            '--configLoader', 'runner', '--no-cache', '--fsModuleCachePath', '/implementation/.vitest-cache',
+            '--reporter', '/checks/diagnostic-reporter.mjs']
+    if group == 'typia':
+        args += ['validators.test.ts']
+    elif group == 'acceptance':
+        args += ['acceptance.test.ts', '--testNamePattern', '^matches native acceptance case ']
+    elif group == 'properties':
+        args += ['acceptance.test.ts', '--testNamePattern', '^(?!matches native acceptance case )']
+    path = scratch / 'vitest-diagnostics.json'
+    path.unlink(missing_ok=True)  # Never accept the preceding phase's report.
+    status = process_status(engine, name, args, 85)
     try:
-        status = json.loads(engine.exec(name, 'node', '--input-type=module', source=VITEST_RUN, timeout=90))
-        if (not isinstance(status, dict) or set(status) != {'exitStatus', 'signal', 'launchError'}
-                or type(status['launchError']) is not bool
-                or (status['signal'] is not None and not isinstance(status['signal'], str))):
-            raise ValueError()
-    except Exception:
-        raise RuntimeError('Offline verifier infrastructure failure: Vitest transport/status unavailable; raw output withheld') from None
-    failure = vitest_failure(status, scratch / 'vitest-diagnostics.json')
+        failure = vitest_failure(status, path)
+    except VerificationFailure:
+        print(f'Vitest exit status: {status["exitStatus"]}; report invalid/unavailable', flush=True)
+        raise
     if failure:
-        raise RuntimeError(failure)
+        raise failure
 
 
 def check(submission):
-    if not __debug__:
-        raise RuntimeError('Assertions must be enabled')
-    if submission.is_symlink() or not submission.is_file() or submission.stat().st_size > 16384:
-        raise RuntimeError('Expected regular submission of at most 16 KiB')
-    if not (SPIKE / '.generated/validators.ts').is_file():
-        raise RuntimeError('Run npm run build:native first')
-    engine = runtime()
-    engine.image(IMAGE)
+    with phase('Verifier preflight'):
+        if not __debug__:
+            raise VerificationFailure('infrastructure', 'Assertions must be enabled')
+        if submission.is_symlink() or not submission.is_file() or submission.stat().st_size > 16384:
+            raise VerificationFailure('infrastructure', 'Expected regular submission of at most 16 KiB')
+        if not (SPIKE / '.generated/validators.ts').is_file():
+            raise VerificationFailure('infrastructure', 'Run npm run build:native first')
+        engine = runtime()
+        engine.image(IMAGE)
     uid, gid = (os.getuid(), os.getgid()) if os.getuid() else (65534, 65534)
     name = 'boundscript-native-check-' + uuid.uuid4().hex[:12]
     with tempfile.TemporaryDirectory(prefix='boundscript-native-check-') as tmp:
@@ -134,7 +246,7 @@ def check(submission):
         checks = root / 'checks'
         checks.mkdir()
         for filename in ('acceptance.test.ts', 'validators.test.ts', 'vitest.config.mts', 'check-contract.ts',
-                         'diagnostic-reporter.mjs', 'cases.json'):
+                         'diagnostic-reporter.mjs', 'compiler-diagnostics.mjs', 'cases.json'):
             shutil.copyfile(SPIKE / filename, checks / filename)
         shutil.copytree(SPIKE / '.generated', checks / '.generated')
         shutil.copytree(SPIKE / 'src', checks / 'src')
@@ -144,20 +256,16 @@ def check(submission):
             os.chown(scratch, uid, gid)
         protected = [submission, *[p for p in checks.rglob('*') if p.is_file()], SPIKE / 'src/contract.ts']
         before = {p: digest(p) for p in protected}
-        bindings = {
-            checks: '/checks',
-            submission.resolve(): '/implementation/implementation.ts',
-            SPIKE / 'src/contract.ts': '/inputs/contract.ts',
-            TSC.parents[2]: '/node_modules',
-        }
+        bindings = {checks: '/checks', submission.resolve(): '/implementation/implementation.ts',
+                    SPIKE / 'src/contract.ts': '/inputs/contract.ts', TSC.parents[2]: '/node_modules'}
         mounts = ['--mount', f'type=bind,src={scratch},dst=/implementation']
         for source, destination in bindings.items():
             mounts += ['--mount', f'type=bind,src={source},dst={destination},readonly']
         try:
-            engine.create(name, IMAGE, mounts, uid, gid, workdir='/implementation')
-            engine.start(name, uid, gid)
-            # Fixed probes before loading any candidate or test code.
-            observed = json.loads(engine.exec(name, 'node', '--input-type=module', source='''
+            with phase('Sandbox/security checks'):
+                engine.create(name, IMAGE, mounts, uid, gid, workdir='/implementation')
+                engine.start(name, uid, gid)
+                observed = json.loads(engine.exec(name, 'node', '--input-type=module', source='''
 import {readFileSync, writeFileSync, symlinkSync, unlinkSync} from 'node:fs';
 const result = [];
 for (const action of [
@@ -174,8 +282,8 @@ for (const action of [
 ]) { try { action(); result.push('SUCCEEDED'); } catch (e) { result.push(e.code); } }
 console.log(JSON.stringify(result));
 '''))
-            assert observed == ['ENOENT'] * 3 + ['EROFS'] * 5, observed
-            network = json.loads(engine.exec(name, 'node', '--input-type=module', source='''
+                assert observed == ['ENOENT'] * 3 + ['EROFS'] * 5
+                network = json.loads(engine.exec(name, 'node', '--input-type=module', source='''
 import net from 'node:net';
 const result = await new Promise(resolve => {
  const s = net.createConnection({host: '1.1.1.1', port: 443});
@@ -186,55 +294,52 @@ const result = await new Promise(resolve => {
 });
 console.log(JSON.stringify(result));
 '''))
-            assert network in ('ENETUNREACH', 'EHOSTUNREACH'), network
-            # TODO: TEMPORAL VERBOSE ADDED | engine.exec(name, 'node', '/node_modules/typescript/lib/tsc.js',
-            # TODO: TEMPORAL VERBOSE ADDED |             '--noEmit', '--strict', '--target', 'es2022', '--module', 'nodenext',
-            # TODO: TEMPORAL VERBOSE ADDED |             '--allowImportingTsExtensions', '/checks/check-contract.ts')
-
-
-            result = subprocess.run(
-                [
-                    engine.executable, 'exec', name,
-                    'node', '/node_modules/typescript/lib/tsc.js',
-                    '--noEmit', '--strict', '--target', 'es2022',
-                    '--module', 'nodenext',
-                    '--allowImportingTsExtensions',
-                    '/checks/check-contract.ts'
-                ],
-                capture_output=True,
-                text=True,
-                timeout=30
-            )
-            
-            if result.returncode:
-                print("TYPESCRIPT FAILED:")
-                print(result.stdout)
-                print(result.stderr)
-                raise RuntimeError("TypeScript compilation failed")
-
-            # Generated validators are trusted, read-only inputs; no Typia calls
-            # requiring transformation are handed directly to Vite's transpiler.
-            run_vitest(engine, name, scratch)
-            assert all(digest(p) == old for p, old in before.items())
-            print('PASS native: strict contract, Typia, 20 native acceptance examples, 5 properties, protected/offline probes')
+                assert network in ('ENETUNREACH', 'EHOSTUNREACH')
+            with phase('TypeScript compilation'):
+                run_compiler(engine, name, scratch)
+            for label, group in [('Typia runtime validation (validator suite)', 'typia'),
+                                 ('Vitest acceptance tests (with runtime input/output guards)', 'acceptance'),
+                                 ('fast-check properties', 'properties')]:
+                with phase(label):
+                    run_vitest(engine, name, scratch, group)
+            with phase('Protected input integrity'):
+                assert all(digest(p) == old for p, old in before.items())
         finally:
-            engine.remove(name)
+            with phase('Sandbox cleanup'):
+                engine.remove(name)
+    print('PASS independent native verification; no promotion performed by verifier', flush=True)
 
 
 def main():
     if not __debug__ or run('git', 'branch', '--show-current') not in (
         'experiment/boundscript-next', 'experiment/typescript-contracts'
     ):
-        raise RuntimeError('Use the baseline or dedicated TypeScript experiment branch with assertions enabled')
+        raise VerificationFailure('infrastructure', 'Use an authorized experiment branch with assertions enabled')
     args = sys.argv[1:]
     if args == ['--baseline']:
         submission = BASE / 'two-boxes/accepted/normalize-contact.ts'
     elif len(args) <= 1:
-        submission = Path(args[0]).resolve() if args else SPIKE / 'accepted/normalize-contact.ts'
+        submission = Path(args[0]).absolute() if args else SPIKE / 'accepted/normalize-contact.ts'
     else:
-        raise RuntimeError('Expected optional candidate path or --baseline')
-    check(submission)
+        raise VerificationFailure('infrastructure', 'Expected optional candidate path or --baseline')
+    try:
+        check(submission)
+    except Exception:
+        print('Candidate retained in place (not promoted): ' + quoted(str(submission)), flush=True)
+        raise
+
+
+def cli():
+    try:
+        main()
+    except VerificationFailure as error:
+        print(f'FAIL [{error.kind}] {error}', flush=True)
+        return 1
+    except Exception:
+        print('FAIL [infrastructure] Verifier failed; raw diagnostics withheld', flush=True)
+        return 1
+    return 0
 
 
 if __name__ == '__main__':
-    main()
+    sys.exit(cli())

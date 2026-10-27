@@ -1,4 +1,6 @@
-"""Offline diagnostics and quarantine regressions; no credentials or model calls."""
+"""Credential-free diagnostics regressions. Optional tests execute only offline."""
+from contextlib import redirect_stdout
+import io
 import json
 import os
 from pathlib import Path
@@ -9,15 +11,31 @@ from unittest.mock import MagicMock, patch
 
 from test_spike import HERE, generator, verifier
 
+STATUS = {'exitStatus': 0, 'signal': None, 'launchError': False, 'timedOut': False}
+
+
+def test_result(status='passed', **extra):
+    return dict(file='acceptance.test.ts', name='known case', status=status, **extra)
+
 
 class DiagnosticTests(unittest.TestCase):
-    def test_reporter_selects_assertion_fields_and_fast_check_causes(self):
+    def report(self, path, **overrides):
+        report = {'complete': True, 'infrastructureErrors': 0,
+                  'tests': [test_result()], 'failed': []}
+        report.update(overrides)
+        path.write_text(json.dumps(report))
+
+    def test_reporter_selects_assertion_and_typia_fields_not_values_or_messages(self):
         source = '''
 import {collectDiagnostics} from REPORTER;
-const assertion = {name:'AssertionError', expected:'expected contact', actual:'wrong contact',
- diff:'- expected contact\\n+ wrong contact', message:'PRIVATE MESSAGE', stack:'PRIVATE STACK'};
-const test = {fullName:'known property', result:() => ({errors:[{name:'Error',
- message:'PRIVATE COUNTEREXAMPLE', cause:assertion}]})};
+const errors = [{name:'Error', message:'PRIVATE COUNTEREXAMPLE', cause:{
+ name:'AssertionError', expected:'expected contact', actual:'wrong contact',
+ diff:'- expected contact\\n+ wrong contact', stack:'PRIVATE STACK'}},
+ {method:'typia.assertEquals', path:'$input.contact.name', expected:'string',
+ value:123, message:'PRIVATE MESSAGE'},
+ {method:'typia.assertEquals', path:'$input.phone', expected:'string', value:{secret:'PRIVATE VALUE'}},
+ {message:'Test timed out in 10ms PRIVATE TIMEOUT DETAILS'}];
+const test = {fullName:'known property', result:() => ({state:'failed', errors})};
 const module = {moduleId:'/checks/acceptance.test.ts', errors:() => [],
  children:{allTests:() => [test]}};
 console.log(JSON.stringify(collectDiagnostics([module], [{message:'PRIVATE UNHANDLED'}])));
@@ -26,94 +44,186 @@ console.log(JSON.stringify(collectDiagnostics([module], [{message:'PRIVATE UNHAN
                                 capture_output=True, check=True)
         report = json.loads(result.stdout)
         self.assertEqual(report['infrastructureErrors'], 1)
+        self.assertEqual(report['tests'][0]['status'], 'failed')
         self.assertEqual(report['failed'][0]['assertions'][0]['actual'], 'wrong contact')
+        self.assertEqual(report['failed'][0]['typia'][0]['actualType'], 'number')
+        self.assertEqual(report['failed'][0]['typia'][1]['actualType'], 'object')
+        self.assertTrue(report['failed'][0]['timedOut'])
         self.assertNotIn('PRIVATE', result.stdout)
 
-    def report(self, path, **overrides):
-        report = {'complete': True, 'infrastructureErrors': 0, 'failed': []}
-        report.update(overrides)
-        path.write_text(json.dumps(report))
-
-    def test_sanitized_test_names_differences_and_exit_status_only(self):
+    def test_success_counts_and_assertion_differences_are_sanitized(self):
         with tempfile.TemporaryDirectory() as tmp, patch.dict(os.environ, {'EXAMPLE_API_KEY': 'private-value-123'}):
             report = Path(tmp) / 'report.json'
-            self.report(report, stdout='PRIVATE STDOUT', stderr='PRIVATE STDERR', failed=[{
-                'file': 'acceptance.test.ts', 'name': 'known case\x1b[31m\nprivate-value-123',
-                'message': 'PRIVATE ERROR', 'stack': 'PRIVATE STACK', 'assertions': [{
-                    'expected': '{ok: true}', 'actual': 'private-value-123 sk-example123',
-                    'diff': '- true\n+ false\x00', 'message': 'PRIVATE ASSERTION',
-                }],
-            }])
-            diagnostic = verifier.vitest_failure({'exitStatus': 1, 'signal': None, 'launchError': False}, report)
-            self.assertIn('Vitest exit status: 1', diagnostic)
-            self.assertIn('known case', diagnostic)
-            self.assertIn('expected: "{ok: true}"', diagnostic)
-            self.assertIn('- true\\n+ false\\u0000', diagnostic)
-            self.assertIn('[REDACTED]', diagnostic)
-            self.assertIn('Vitest test failures', diagnostic)
+            self.report(report)
+            output = io.StringIO()
+            with redirect_stdout(output):
+                self.assertIsNone(verifier.vitest_failure(STATUS, report))
+            self.assertIn('PASS acceptance.test.ts:', output.getvalue())
+            self.assertIn('1 passed, 0 failed', output.getvalue())
+            failed = test_result('failed', assertions=[{
+                'expected': '{ok: true}', 'actual': 'private-value-123 sk-example123',
+                'diff': '- true\n+ false\x00', 'message': 'PRIVATE ASSERTION',
+            }], typia=[])
+            failed['name'] = 'known case\x1b[31m\nprivate-value-123'
+            self.report(report, stdout='PRIVATE STDOUT', stderr='PRIVATE STDERR', tests=[failed], failed=[failed])
+            output = io.StringIO()
+            with redirect_stdout(output):
+                failure = verifier.vitest_failure(dict(STATUS, exitStatus=1), report)
+            text = output.getvalue()
+            self.assertEqual(failure.kind, 'assertion')
+            self.assertIn('Vitest exit status: 1', text)
+            self.assertIn('expected: "{ok: true}"', text)
+            self.assertIn('| - true', text)
+            self.assertIn('| + false\\u0000', text)
+            self.assertIn('[REDACTED]', text)
             for forbidden in ('PRIVATE', 'private-value-123', 'sk-example123', '\x1b', '\x00'):
-                self.assertNotIn(forbidden, diagnostic)
+                self.assertNotIn(forbidden, text)
 
-    def test_infrastructure_and_missing_invalid_oversized_or_symlink_reports(self):
+    def test_typia_and_runtime_failure_classification(self):
         with tempfile.TemporaryDirectory() as tmp:
             report = Path(tmp) / 'report.json'
-            status = {'exitStatus': 137, 'signal': None, 'launchError': False}
-            for contents in (None, 'not JSON PRIVATE STDERR', 'x' * 131073, '[]'):
+            failed = test_result('failed', assertions=[], typia=[{
+                'path': '$input.contact.name', 'expected': 'string', 'actualType': 'number',
+                'value': 'PRIVATE VALUE', 'message': 'PRIVATE MESSAGE',
+            }, {'path': '$input["PRIVATE KEY"]', 'expected': 'undefined', 'actualType': 'string'}])
+            self.report(report, tests=[failed], failed=[failed])
+            output = io.StringIO()
+            with redirect_stdout(output):
+                failure = verifier.vitest_failure(dict(STATUS, exitStatus=1), report)
+            self.assertEqual(failure.kind, 'typia')
+            self.assertIn('$input.contact.name', output.getvalue())
+            self.assertIn('actual type=number', output.getvalue())
+            self.assertNotIn('PRIVATE', output.getvalue())
+            failed['typia'] = []
+            self.report(report, tests=[failed], failed=[failed])
+            with redirect_stdout(io.StringIO()):
+                self.assertEqual(verifier.vitest_failure(dict(STATUS, exitStatus=1), report).kind, 'runtime')
+            failed['timedOut'] = True
+            self.report(report, tests=[failed], failed=[failed])
+            with redirect_stdout(io.StringIO()):
+                self.assertEqual(verifier.vitest_failure(dict(STATUS, exitStatus=1), report).kind, 'timeout')
+
+    def test_missing_invalid_oversized_and_symlink_reports_fail_closed(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            report = Path(tmp) / 'report.json'
+            for contents in (None, 'PRIVATE INVALID JSON', 'x' * 262145, '[]'):
                 if contents is not None:
                     report.write_text(contents)
-                message = verifier.vitest_failure(status, report)
-                self.assertIn('exit status: 137', message)
-                self.assertIn('infrastructure failure', message)
-                self.assertNotIn('PRIVATE', message)
+                with self.assertRaises(verifier.VerificationFailure) as failure:
+                    verifier.vitest_failure(STATUS, report)
+                self.assertEqual(failure.exception.kind, 'infrastructure')
+                self.assertNotIn('PRIVATE', str(failure.exception))
             report.unlink()
             target = Path(tmp) / 'secret'
             target.write_text('PRIVATE FILE')
             report.symlink_to(target)
-            self.assertIn('infrastructure failure', verifier.vitest_failure(status, report))
+            with self.assertRaises(verifier.VerificationFailure):
+                verifier.read_report(report)
             report.unlink()
             self.report(report, infrastructureErrors=1)
-            self.assertIn('infrastructure failure', verifier.vitest_failure(status, report))
-            self.report(report)
-            self.assertIsNone(verifier.vitest_failure({'exitStatus': 0}, report))
-            self.assertIn('infrastructure failure', verifier.vitest_failure(status, report))
-            engine = MagicMock()
-            engine.exec.return_value = json.dumps({'exitStatus': 0, 'signal': None, 'launchError': False})
-            report.rename(Path(tmp) / 'vitest-diagnostics.json')
-            verifier.run_vitest(engine, 'fixed-name', Path(tmp))
-            (Path(tmp) / 'vitest-diagnostics.json').unlink()
-            with self.assertRaisesRegex(RuntimeError, 'missing or invalid Vitest report'):
-                verifier.run_vitest(engine, 'fixed-name', Path(tmp))
+            with redirect_stdout(io.StringIO()):
+                self.assertEqual(verifier.vitest_failure(STATUS, report).kind, 'infrastructure')
+            self.report(report, tests=[])
+            with self.assertRaises(verifier.VerificationFailure):
+                verifier.vitest_failure(STATUS, report)
 
-    def test_transport_failures_never_echo_raw_diagnostics(self):
+    def test_process_startup_timeout_and_transport_errors_withhold_raw_output(self):
         engine = MagicMock()
-        for result in ('PRIVATE STDOUT', json.dumps({'exitStatus': 'PRIVATE STATUS'})):
-            engine.exec.return_value = result
-            with self.assertRaisesRegex(RuntimeError, 'transport/status unavailable') as error:
-                verifier.run_vitest(engine, 'fixed-name', Path('/unused'))
+        for result, kind in [(dict(STATUS, launchError=True), 'infrastructure'),
+                             (dict(STATUS, timedOut=True), 'timeout'),
+                             (dict(STATUS, signal='SIGKILL'), 'infrastructure'),
+                             ({'exitStatus': 'PRIVATE STATUS'}, 'infrastructure')]:
+            engine.exec.return_value = json.dumps(result)
+            with self.assertRaises(verifier.VerificationFailure) as error:
+                verifier.process_status(engine, 'fixed-name', [], 1)
+            self.assertEqual(error.exception.kind, kind)
             self.assertNotIn('PRIVATE', str(error.exception))
+        engine.exec.return_value = 'PRIVATE STDOUT'
+        with self.assertRaises(verifier.VerificationFailure):
+            verifier.process_status(engine, 'fixed-name', [], 1)
         engine.exec.side_effect = subprocess.TimeoutExpired('PRIVATE COMMAND', 1, output='PRIVATE OUTPUT')
-        with self.assertRaisesRegex(RuntimeError, 'transport/status unavailable') as error:
-            verifier.run_vitest(engine, 'fixed-name', Path('/unused'))
+        with self.assertRaises(verifier.VerificationFailure) as error:
+            verifier.process_status(engine, 'fixed-name', [], 1)
+        self.assertEqual(error.exception.kind, 'timeout')
         self.assertNotIn('PRIVATE', str(error.exception))
-        self.assertIn("stdio: 'ignore'", verifier.VITEST_RUN)
+        self.assertIn("stdio: 'ignore'", verifier.PROCESS_RUN)
 
-    @unittest.skipUnless(os.environ.get('BOUNDSCRIPT_NATIVE_ENGINE_TEST') == '1', 'opt-in offline engine check')
-    def test_engine_assertion_diagnostics_do_not_echo_candidate_console(self):
+    def test_compiler_structured_diagnostics_and_startup_failure(self):
         with tempfile.TemporaryDirectory() as tmp:
-            candidate = Path(tmp) / 'candidate.ts'
-            candidate.write_text('''export const normalizeContact = () => {
- console.log('PRIVATE CANDIDATE STDOUT');
- console.error('PRIVATE CANDIDATE STDERR');
- return {ok:false as const, errors:[]};
-};''')
-            with self.assertRaises(RuntimeError) as failure:
-                verifier.check(candidate)
-            diagnostic = str(failure.exception)
-            self.assertIn('Vitest exit status: 1', diagnostic)
-            self.assertIn('FAIL acceptance.test.ts:', diagnostic)
-            self.assertIn('expected:', diagnostic)
-            self.assertIn('actual:', diagnostic)
-            self.assertNotIn('PRIVATE CANDIDATE', diagnostic)
+            root = Path(tmp)
+            (root / 'typescript-diagnostics.json').write_text(json.dumps({
+                'complete': True, 'errorCount': 1, 'diagnostics': [{
+                    'code': 2322, 'file': '/implementation/implementation.ts', 'line': 2, 'column': 3,
+                    'message': 'Type mismatch sk-private-token', 'stack': 'PRIVATE STACK',
+                }], 'stdout': 'PRIVATE STDOUT',
+            }))
+            output = io.StringIO()
+            with patch.object(verifier, 'process_status', return_value=dict(STATUS, exitStatus=1)), redirect_stdout(output):
+                with self.assertRaises(verifier.VerificationFailure) as failure:
+                    verifier.run_compiler(MagicMock(), 'fixed-name', root)
+            self.assertEqual(failure.exception.kind, 'compilation')
+            self.assertIn('TS2322 /implementation/implementation.ts:2:3:', output.getvalue())
+            self.assertNotIn('sk-private-token', output.getvalue())
+            self.assertNotIn('PRIVATE', output.getvalue())
+            (root / 'typescript-diagnostics.json').unlink()
+            with patch.object(verifier, 'process_status', return_value=dict(STATUS, exitStatus=1)):
+                with self.assertRaises(verifier.VerificationFailure) as failure:
+                    verifier.run_compiler(MagicMock(), 'fixed-name', root)
+            self.assertEqual(failure.exception.kind, 'infrastructure')
+
+    def test_phase_updates_are_flushed_and_cli_never_prints_tracebacks(self):
+        with patch('builtins.print') as output:
+            with verifier.phase('fixed phase'):
+                pass
+            self.assertEqual([call.args[0] for call in output.call_args_list], ['START fixed phase', 'PASS fixed phase'])
+            self.assertTrue(all(call.kwargs.get('flush') for call in output.call_args_list))
+        for error in (verifier.VerificationFailure('assertion', 'Safe assertion summary'),
+                      RuntimeError('PRIVATE EXCEPTION')):
+            output = io.StringIO()
+            with patch.object(verifier, 'main', side_effect=error), redirect_stdout(output):
+                self.assertEqual(verifier.cli(), 1)
+            self.assertNotIn('PRIVATE', output.getvalue())
+            self.assertNotIn('Traceback', output.getvalue())
+        with patch.object(verifier, 'main'):
+            self.assertEqual(verifier.cli(), 0)
+
+    def test_phase_reports_group_selection_and_rejects_stale_reports(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            report = root / 'vitest-diagnostics.json'
+            self.report(report)
+            with patch.object(verifier, 'process_status', return_value=STATUS) as run:
+                with self.assertRaises(verifier.VerificationFailure):
+                    verifier.run_vitest(MagicMock(), 'fixed-name', root, 'properties')
+            self.assertIn('^(?!matches native acceptance case )', run.call_args.args[2])
+            self.assertFalse(report.exists())
+
+    @unittest.skipUnless(os.environ.get('BOUNDSCRIPT_NATIVE_ENGINE_TEST') == '1', 'opt-in offline engine checks')
+    def test_engine_failures_are_readable_and_never_echo_candidate_output(self):
+        sources = {
+            'compilation': 'export const normalizeContact = () => 0;',
+            'assertion': 'export const normalizeContact = () => ({ok:false as const, errors:[]});',
+            'typia': '''export const normalizeContact = () => {
+console.log('PRIVATE CANDIDATE STDOUT'); console.error('PRIVATE CANDIDATE STDERR');
+return {ok:true,contact:{name:3,email:'a@b.c',phone:'PRIVATE VALUE'}} as any; };''',
+            'runtime': "export const normalizeContact = () => { throw new Error('PRIVATE EXCEPTION'); };",
+        }
+        with tempfile.TemporaryDirectory() as tmp:
+            for kind, source in sources.items():
+                with self.subTest(kind=kind):
+                    candidate = Path(tmp) / (kind + '.ts')
+                    candidate.write_text(source)
+                    result = subprocess.run(['python3', '-B', str(HERE / 'verify.py'), str(candidate)],
+                                            capture_output=True, text=True, timeout=180)
+                    self.assertEqual(result.returncode, 1)
+                    self.assertIn(f'FAIL [{kind}]', result.stdout)
+                    self.assertIn('Candidate retained in place', result.stdout)
+                    if kind == 'typia':
+                        self.assertIn('Typia path="$input.contact.name"', result.stdout)
+                        self.assertIn('actual type=number', result.stdout)
+                    self.assertNotIn('PRIVATE', result.stdout + result.stderr)
+                    self.assertNotIn('Traceback', result.stdout + result.stderr)
+                    self.assertTrue(candidate.is_file())
 
     def test_quarantine_is_private_unique_exact_and_rejects_changed_or_symlink_bytes(self):
         with tempfile.TemporaryDirectory() as tmp:

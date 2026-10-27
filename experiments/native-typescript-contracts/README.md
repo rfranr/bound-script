@@ -93,8 +93,10 @@ BOUNDSCRIPT_NATIVE_ENGINE_TEST=1 BOUNDSCRIPT_RUNTIME=podman \
 
 Use `BOUNDSCRIPT_RUNTIME=docker` for a genuine Docker engine. No automatic image
 pulls or package installation occur inside either container. Set a command
-budget of at least 450 seconds for live generation and 300 seconds for the
-opt-in negative suite (including container cleanup). The original Pi 1.4.0
+budget of 900 seconds for live generation and 300 seconds for the
+opt-in negative suite (including container cleanup). Independent verification
+has a bounded 360-second generation-side deadline for its separated phases;
+container resource limits are unchanged. The original Pi 1.4.0
 installation path, model and auth-file exception are retained in `generate.py`.
 
 To check another standalone candidate, without promotion:
@@ -104,19 +106,45 @@ npm run build:native
 BOUNDSCRIPT_RUNTIME=podman python3 -B experiments/native-typescript-contracts/verify.py /absolute/path/candidate.ts
 ```
 
-## Offline failure diagnostics and quarantine
+## Live verification diagnostics and quarantine
 
-Offline Vitest failures report exit status, failed test names and bounded assertion
-expected/actual/diff fields, including fast-check assertion causes. Collection,
-unhandled/process errors, missing reports and transport failures are identified
-as verifier infrastructure failures without raw error text. The dedicated reporter
-never exports console output, error messages/stacks, counterexamples or environment
-dumps. A fixed parent process discards candidate stdout/stderr; host-side filtering
-redacts sensitive environment values and common credential forms and JSON-escapes
-control characters. This is bounded, best-effort diagnostic sanitization, not
-attestation against hostile code forging reporter artifacts. Pi/provider logs and
-generation-container diagnostics remain withheld; the shared container adapter and
-all sandbox restrictions are unchanged.
+Every phase prints flushed `START` and `PASS`/`FAIL` updates: preflight,
+sandbox/security, strict TypeScript compilation, Typia validator tests, Vitest
+acceptance tests (including full runtime guards), fast-check properties, input
+integrity and cleanup. Vitest still executes the **unchanged** test suites, in
+three filtered runs: 3 validator tests, 20 acceptance cases and 5 properties.
+Each run reports pass/fail test names, counts, exit status and bounded assertion
+differences. Filtered-out tests appear in skipped counts, not as executed passes.
+Acceptance test names identify the existing acceptance/property split; a missing
+or empty selection fails closed.
+
+**Streaming limitation:** phase updates are live, but test details are emitted at
+the end of each phase, not per test. The existing narrow reporter uses Vitest's
+structured TestCase API; no custom test runner is introduced. Its adapter is
+needed because the standard JSON reporter omits structured Typia fields and
+assertion causes. Raw text reporters are not forwarded because they can include
+candidate console output, stacks and values. Separate runs add startup overhead
+and fail fast: later phases are not attempted after a failing phase.
+
+Compiler diagnostics come from TypeScript's standard compiler API with the same
+strict/no-emit options, not raw CLI stdout/stderr. Output includes bounded TS
+codes, approved source locations and sanitized messages. Typia failures include
+known contract property paths, expected types and **actual value types only**;
+values and arbitrary dynamic property keys are withheld. Error causes from
+fast-check are traversed without exposing its counterexample messages.
+
+Compilation, assertion, Typia, runtime, timeout, security/integrity and verifier
+infrastructure failures have distinct labels. Expected failures exit nonzero
+without Python tracebacks. Collection/unhandled errors, tool startup/process
+failures and missing/invalid reports fail closed without arbitrary error text.
+A fixed parent process discards child stdout/stderr; reports are size-bounded,
+regular-file/no-symlink checked and cannot reuse stale preceding-phase results.
+Host filtering redacts sensitive environment values/common credential forms and
+escapes terminal controls; diff lines have a fixed output prefix. This remains
+best-effort sanitization, not hostile-program attestation. Pi/provider events,
+credentials and generation-container diagnostics are never forwarded. The shared
+container policy and all sandbox restrictions are unchanged.
+See [diagnostics verification results](DIAGNOSTICS-REPORT.md).
 
 When generation succeeds and the credential scan passes but independent verification
 fails (including timeout/launch failure), only the unchanged scanned source is saved
@@ -125,7 +153,9 @@ under `quarantine/failed-*/implementation.ts`. Each local entry is unique, with 
 credential scans are never quarantined. Verification failure never promotes or
 replaces the accepted source. Quarantine retention is local and manual; remove an
 entry when no longer needed. Existing failures whose temporary workspace has already
-been deleted cannot be recovered retroactively.
+been deleted cannot be recovered retroactively. Standalone verification leaves its
+input source in place, reports that location on failure and never promotes it;
+it does not copy an unscanned standalone source into generation quarantine.
 
 Rerun a quarantined source without credentials or another model call:
 

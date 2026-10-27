@@ -61,7 +61,7 @@ class SpikeTests(unittest.TestCase):
             engine.exec.side_effect = [json.dumps(['ENOENT'] * 3 + ['EROFS'] * 5),
                                        json.dumps('ENETUNREACH')]
 
-            def inspect_checks(_engine, _name, _scratch):
+            def inspect_checks(_engine, _name, _scratch, _group):
                 specs = engine.create.call_args.args[2][1::2]
                 checks_spec = next(s for s in specs if 'dst=/checks,' in s)
                 checks = Path(checks_spec.split('src=', 1)[1].split(',')[0])
@@ -72,12 +72,12 @@ class SpikeTests(unittest.TestCase):
 
             with patch.object(verifier, 'runtime', return_value=engine), \
                  patch.object(verifier, 'run_vitest', side_effect=inspect_checks) as vitest, \
-                 patch.object(verifier.subprocess, 'run', return_value=subprocess.CompletedProcess([], 0, '', '')) as compiler, \
+                 patch.object(verifier, 'run_compiler') as compiler, \
                  patch.dict(sys.modules, {'verify_pair': None}):
                 verifier.check(candidate)
-            vitest.assert_called_once()
+            self.assertEqual([call.args[3] for call in vitest.call_args_list], ['typia', 'acceptance', 'properties'])
             self.assertEqual(engine.exec.call_count, 2)
-            self.assertIn('/checks/check-contract.ts', compiler.call_args.args[0])
+            compiler.assert_called_once()
             engine.remove.assert_called_once()
 
     @unittest.skipUnless(os.environ.get('BOUNDSCRIPT_NATIVE_ENGINE_TEST') == '1', 'opt-in offline engine checks')
@@ -155,6 +155,7 @@ class SpikeTests(unittest.TestCase):
                     with self.subTest(failure=type(failure).__name__), self.assertRaises(type(failure)):
                         generator.main()
                     self.assertEqual(accepted.read_text(), 'previously accepted bytes')
+                    self.assertEqual(verification.call_args.kwargs['timeout'], 360)
                 retained = list((root / 'quarantine').glob('*/implementation.ts'))
                 self.assertEqual(len(retained), 3)
                 for candidate in retained:
