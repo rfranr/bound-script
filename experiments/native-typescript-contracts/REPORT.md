@@ -5,7 +5,11 @@ State: **InReview**; ready for independent review, not final acceptance.
 All files under `experiments/minimal-box` remain unchanged, as do the original
 npm test/generation commands. No RenderWelcome migration or architecture change.
 
-## Current verification update
+## Verification update (before fixture decoupling)
+
+For the subsequent independently owned fixtures and phone-input adaptation, see
+[Acceptance fixture decoupling](ACCEPTANCE-REPORT.md). The following describes
+the earlier verifier change, not the current fixture dependency.
 
 The native pipeline no longer invokes the legacy `verify_pair.check` after Vitest.
 That redundant verifier recompiled submissions against the frozen baseline contract,

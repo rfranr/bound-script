@@ -15,8 +15,6 @@ sys.dont_write_bytecode = True
 SPIKE = Path(__file__).resolve().parent
 BASE = SPIKE.parent / 'minimal-box'
 sys.path.insert(0, str(BASE))
-# Avoid importing this file again under its baseline sibling's module name.
-from verify_pair import CASES, PAIR
 from container_runtime import runtime
 from verify import IMAGE, TSC, digest, run
 
@@ -136,13 +134,10 @@ def check(submission):
         checks = root / 'checks'
         checks.mkdir()
         for filename in ('acceptance.test.ts', 'validators.test.ts', 'vitest.config.mts', 'check-contract.ts',
-                         'diagnostic-reporter.mjs'):
+                         'diagnostic-reporter.mjs', 'cases.json'):
             shutil.copyfile(SPIKE / filename, checks / filename)
         shutil.copytree(SPIKE / '.generated', checks / '.generated')
         shutil.copytree(SPIKE / 'src', checks / 'src')
-        (checks / 'cases.json').write_text(json.dumps([
-            {'input': raw, 'expected': expected} for raw, expected in CASES
-        ]))
         scratch = root / 'scratch'
         scratch.mkdir()
         if os.getuid() == 0:
@@ -221,7 +216,7 @@ console.log(JSON.stringify(result));
             # requiring transformation are handed directly to Vite's transpiler.
             run_vitest(engine, name, scratch)
             assert all(digest(p) == old for p, old in before.items())
-            print('PASS native: strict contract, Typia, 20 baseline examples, 5 properties, protected/offline probes')
+            print('PASS native: strict contract, Typia, 20 native acceptance examples, 5 properties, protected/offline probes')
         finally:
             engine.remove(name)
 
@@ -233,7 +228,7 @@ def main():
         raise RuntimeError('Use the baseline or dedicated TypeScript experiment branch with assertions enabled')
     args = sys.argv[1:]
     if args == ['--baseline']:
-        submission = PAIR / 'accepted/normalize-contact.ts'
+        submission = BASE / 'two-boxes/accepted/normalize-contact.ts'
     elif len(args) <= 1:
         submission = Path(args[0]).resolve() if args else SPIKE / 'accepted/normalize-contact.ts'
     else:

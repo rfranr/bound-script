@@ -7,8 +7,7 @@ See [observed results and limitations](REPORT.md).
 
 ## Authority and configuration
 
-- `task.md`: independent, natural-language functional intent, copied unchanged
-  from the baseline NormalizeContact task.
+- `task.md`: independent, human-owned natural-language functional intent.
 - `src/contract.ts`: authoritative native `Contact`, discriminated result union,
   error literals and function signature. Initially copied from the baseline,
   this is the experiment's evolving authority, not the frozen original contract.
@@ -23,9 +22,14 @@ See [observed results and limitations](REPORT.md).
 - `.generated/`: disposable Typia-expanded TypeScript, built from `src/` before
   every npm entry point. Vitest/Vite can transpile it normally; directly loading
   unexpanded Typia calls would not perform runtime validation.
-- `check-contract.ts`: unchanged strict native consumer from the baseline.
-- `acceptance.test.ts`: Vitest 5.0.5; baseline examples are materialized from the
-  original verifier's `CASES`, not redefined here. Five fast-check 4.10.2
+- `check-contract.ts`: strict native consumer of the current contract.
+- `cases.json`: human-owned acceptance data local to this experiment. The 20
+  historical name/email inputs and expected outcomes are retained, with
+  `phone: "+34600111222"` added to every input. Expected successes specify only
+  name/email: no normalized phone value is prescribed. Fixtures are copied
+  byte-for-byte into the read-only verifier checks, never generated from Python
+  or mounted into the agent container.
+- `acceptance.test.ts`: Vitest 5.0.5 consumes the local fixtures. Five fast-check 4.10.2
   properties use seed 30 and 300 runs each: deterministic/non-mutating results
   with normalized successes/idempotence, Unicode/whitespace preservation,
   email casing/punctuation, ordered required errors, and malformed-email error
@@ -41,12 +45,18 @@ unmodified Docker/Podman adapter, pinned image, nonroot identity, dropped
 capabilities, read-only root, and effective CPU/memory/PID checks. Runtime input
 and output validation happens at the test boundary, not inside agent code.
 Strict TypeScript checking uses `/inputs/contract.ts` mounted from the experiment's
-`src/contract.ts`. The independent Vitest suite executes all 20 unchanged original
-acceptance cases, Typia validation and fast-check properties. The legacy
-`verify_pair.check` is not invoked: it recompiles against the frozen original
-contract and would prevent this experiment's contract from evolving. Only its
-case fixtures and baseline artifact path are reused. No candidate executes on
-the host.
+`src/contract.ts`. The independent Vitest suite executes the 20 locally owned
+acceptance cases, Typia validation and fast-check properties. It validates the
+complete result before projecting name/email for exact behavioral comparisons.
+The success key check includes the contract's required `phone` field; phone
+formatting/normalization is not specified by these tests. Existing determinism,
+immutability, fresh-object, error-order and idempotence checks remain.
+
+Neither `verify_pair.CASES` nor `verify_pair.check` is imported or invoked.
+The frozen baseline source path remains available only for the explicit
+`--baseline` comparison; an old baseline implementation may fail the evolved
+phone contract. No candidate executes on the host. See the
+[fixture decoupling report](ACCEPTANCE-REPORT.md) for results and open assumptions.
 
 `generate.py` is a fixed NormalizeContact adaptation of the existing generator,
 not a generic runner. Its generation/credential/probe/event-sanitization path is
@@ -129,8 +139,10 @@ BOUNDSCRIPT_NATIVE_ENGINE_TEST=1 BOUNDSCRIPT_RUNTIME=podman \
 ```
 
 `.generated/`, `accepted/` and `quarantine/` are ignored and must not be committed. A clean
-checkout has no accepted spike implementation: use `test:native:baseline` for a
-credential-free comparison, or generate independently before `test:native`.
+checkout has no accepted spike implementation: verify an existing quarantined
+candidate by path without model calls, or generate independently before
+`test:native`. `test:native:baseline` is a credential-free historical comparison,
+not a guarantee that the frozen implementation meets the evolved contract.
 No generated implementation was manually repaired. No automatic commit occurs.
 
 The baseline `npm test` deliberately retains its original branch guard and

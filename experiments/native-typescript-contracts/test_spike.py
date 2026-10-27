@@ -4,6 +4,7 @@ import json
 import os
 from pathlib import Path
 import subprocess
+import sys
 import tempfile
 import unittest
 from unittest.mock import MagicMock, patch
@@ -23,12 +24,17 @@ generator = load('native_generator', 'generate.py')
 
 
 class SpikeTests(unittest.TestCase):
-    def test_baseline_task_and_consumer_are_preserved(self):
-        pair = HERE.parent / 'minimal-box/two-boxes'
-        self.assertEqual((HERE / 'task.md').read_bytes(),
-                         (pair / 'tasks/normalize-contact.md').read_bytes())
-        self.assertEqual((HERE / 'check-contract.ts').read_bytes(),
-                         (pair / 'check-normalize.ts').read_bytes())
+    def test_native_fixtures_have_phone_without_an_invented_phone_oracle(self):
+        cases = json.loads((HERE / 'cases.json').read_text())
+        self.assertEqual(len(cases), 20)
+        for case in cases:
+            self.assertEqual(set(case['input']), {'name', 'email', 'phone'})
+            self.assertEqual(case['input']['phone'], '+34600111222')
+            if case['expected']['ok']:
+                self.assertEqual(set(case['expected']['contact']), {'name', 'email'})
+        # Importing the native verifier must not import the frozen fixture module.
+        with patch.dict(sys.modules, {'verify_pair': None}):
+            load('independent_native_verifier', 'verify.py')
 
     def test_verifier_failures_cleanup(self):
         for stage in ('create', 'start', 'exec'):
@@ -47,37 +53,37 @@ class SpikeTests(unittest.TestCase):
                 self.assertIn('dst=/implementation', specs[0])
                 self.assertTrue(all('readonly' in spec for spec in specs[1:]))
 
-    def test_native_verification_uses_current_contract_and_original_cases_without_legacy_check(self):
+    def test_native_verification_stages_its_own_human_owned_fixtures(self):
         with tempfile.TemporaryDirectory() as tmp:
             candidate = Path(tmp) / 'candidate.ts'
             candidate.write_text('// synthetic candidate; never executed on host')
             engine = MagicMock()
             engine.exec.side_effect = [json.dumps(['ENOENT'] * 3 + ['EROFS'] * 5),
-                                       json.dumps('ENETUNREACH'), '']
+                                       json.dumps('ENETUNREACH')]
 
             def inspect_checks(_engine, _name, _scratch):
                 specs = engine.create.call_args.args[2][1::2]
                 checks_spec = next(s for s in specs if 'dst=/checks,' in s)
                 checks = Path(checks_spec.split('src=', 1)[1].split(',')[0])
-                self.assertEqual(json.loads((checks / 'cases.json').read_text()),
-                                 [{'input': raw, 'expected': expected} for raw, expected in verifier.CASES])
-                self.assertEqual(len(verifier.CASES), 20)
+                self.assertEqual((checks / 'cases.json').read_bytes(), (HERE / 'cases.json').read_bytes())
+                self.assertEqual(len(json.loads((checks / 'cases.json').read_text())), 20)
                 self.assertIn(f'src={HERE / "src/contract.ts"},dst=/inputs/contract.ts,readonly',
                               ','.join(specs))
 
             with patch.object(verifier, 'runtime', return_value=engine), \
                  patch.object(verifier, 'run_vitest', side_effect=inspect_checks) as vitest, \
-                 patch('verify_pair.check', side_effect=AssertionError('Legacy verifier must not run')):
+                 patch.object(verifier.subprocess, 'run', return_value=subprocess.CompletedProcess([], 0, '', '')) as compiler, \
+                 patch.dict(sys.modules, {'verify_pair': None}):
                 verifier.check(candidate)
             vitest.assert_called_once()
-            self.assertEqual(engine.exec.call_count, 3)
-            self.assertIn('/checks/check-contract.ts', engine.exec.call_args.args)
+            self.assertEqual(engine.exec.call_count, 2)
+            self.assertIn('/checks/check-contract.ts', compiler.call_args.args[0])
             engine.remove.assert_called_once()
 
     @unittest.skipUnless(os.environ.get('BOUNDSCRIPT_NATIVE_ENGINE_TEST') == '1', 'opt-in offline engine checks')
     def test_engine_rejects_negative_submissions(self):
         # Establish that this engine actually supports the positive path first.
-        verifier.check(verifier.PAIR / 'accepted/normalize-contact.ts')
+        verifier.check(HERE / 'accepted/normalize-contact.ts')
         accepted = HERE / 'accepted/normalize-contact.ts'
         before = accepted.read_bytes() if accepted.exists() else None
         negatives = {

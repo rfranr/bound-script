@@ -1,0 +1,82 @@
+[
+  {
+    "input": { "name": "  Ada Lovelace  ", "email": " ADA@EXAMPLE.TEST ", "phone": "+34600111222" },
+    "expected": { "ok": true, "contact": { "name": "Ada Lovelace", "email": "ada@example.test" } }
+  },
+  {
+    "input": { "name": " Grace  Hopper ", "email": "Grace@Example.Test", "phone": "+34600111222" },
+    "expected": { "ok": true, "contact": { "name": "Grace Hopper", "email": "grace@example.test" } }
+  },
+  {
+    "input": { "name": "", "email": "", "phone": "+34600111222" },
+    "expected": { "ok": false, "errors": ["name.required", "email.required"] }
+  },
+  {
+    "input": { "name": " \t\r\n\u00a0\u2003", "email": "\t\n ", "phone": "+34600111222" },
+    "expected": { "ok": false, "errors": ["name.required", "email.required"] }
+  },
+  {
+    "input": { "name": " Zoë\t\n李\u00a0\u2003雷 ", "email": "\tÉ@例子.测试\n", "phone": "+34600111222" },
+    "expected": { "ok": true, "contact": { "name": "Zoë 李 雷", "email": "é@例子.测试" } }
+  },
+  {
+    "input": { "name": " e\u0301  👩🏽‍💻 ", "email": "A+B@X.Y", "phone": "+34600111222" },
+    "expected": { "ok": true, "contact": { "name": "e\u0301 👩🏽‍💻", "email": "a+b@x.y" } }
+  },
+  {
+    "input": { "name": "\u200b", "email": "a@b.c", "phone": "+34600111222" },
+    "expected": { "ok": true, "contact": { "name": "\u200b", "email": "a@b.c" } }
+  },
+  {
+    "input": { "name": "", "email": "bad", "phone": "+34600111222" },
+    "expected": { "ok": false, "errors": ["name.required", "email.invalid"] }
+  },
+  {
+    "input": { "name": "Ada", "email": " ", "phone": "+34600111222" },
+    "expected": { "ok": false, "errors": ["email.required"] }
+  },
+  {
+    "input": { "name": "\t", "email": "A@B.C", "phone": "+34600111222" },
+    "expected": { "ok": false, "errors": ["name.required"] }
+  },
+  {
+    "input": { "name": "Ada", "email": "a@b", "phone": "+34600111222" },
+    "expected": { "ok": false, "errors": ["email.invalid"] }
+  },
+  {
+    "input": { "name": "Ada", "email": "@b.c", "phone": "+34600111222" },
+    "expected": { "ok": false, "errors": ["email.invalid"] }
+  },
+  {
+    "input": { "name": "Ada", "email": "a@.c", "phone": "+34600111222" },
+    "expected": { "ok": false, "errors": ["email.invalid"] }
+  },
+  {
+    "input": { "name": "Ada", "email": "a@b.", "phone": "+34600111222" },
+    "expected": { "ok": false, "errors": ["email.invalid"] }
+  },
+  {
+    "input": { "name": "Ada", "email": "a@@b.c", "phone": "+34600111222" },
+    "expected": { "ok": false, "errors": ["email.invalid"] }
+  },
+  {
+    "input": { "name": "Ada", "email": "a b@c.d", "phone": "+34600111222" },
+    "expected": { "ok": false, "errors": ["email.invalid"] }
+  },
+  {
+    "input": { "name": "Ada", "email": "a@b\u00a0.c", "phone": "+34600111222" },
+    "expected": { "ok": false, "errors": ["email.invalid"] }
+  },
+  {
+    "input": { "name": "Ada", "email": "a@b.\nc", "phone": "+34600111222" },
+    "expected": { "ok": false, "errors": ["email.invalid"] }
+  },
+  {
+    "input": { "name": "Ada", "email": " A..B@C..D ", "phone": "+34600111222" },
+    "expected": { "ok": true, "contact": { "name": "Ada", "email": "a..b@c..d" } }
+  },
+  {
+    "input": { "name": "Ada", "email": "A@B.\u200b", "phone": "+34600111222" },
+    "expected": { "ok": true, "contact": { "name": "Ada", "email": "a@b.\u200b" } }
+  }
+]
