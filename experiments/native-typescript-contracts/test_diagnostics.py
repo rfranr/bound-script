@@ -9,7 +9,7 @@ import tempfile
 import unittest
 from unittest.mock import MagicMock, patch
 
-from test_spike import HERE, generator, verifier
+from test_spike import HERE, generator, verifier, entrypoint
 from boundscript_internal.box_definition import VerificationSuite
 
 STATUS = {'exitStatus': 0, 'signal': None, 'launchError': False, 'timedOut': False}
@@ -40,7 +40,7 @@ const test = {fullName:'known property', result:() => ({state:'failed', errors})
 const module = {moduleId:'/checks/acceptance.test.ts', errors:() => [],
  children:{allTests:() => [test]}};
 console.log(JSON.stringify(collectDiagnostics([module], [{message:'PRIVATE UNHANDLED'}])));
-'''.replace('REPORTER', json.dumps((HERE / 'diagnostic-reporter.mjs').as_uri()))
+'''.replace('REPORTER', json.dumps((verifier.RUNNER / 'diagnostic-reporter.mjs').as_uri()))
         result = subprocess.run(['node', '--input-type=module'], input=source, text=True,
                                 capture_output=True, check=True)
         report = json.loads(result.stdout)
@@ -181,12 +181,12 @@ console.log(JSON.stringify(collectDiagnostics([module], [{message:'PRIVATE UNHAN
         for error in (verifier.VerificationFailure('assertion', 'Safe assertion summary'),
                       RuntimeError('PRIVATE EXCEPTION')):
             output = io.StringIO()
-            with patch.object(verifier, 'main', side_effect=error), redirect_stdout(output):
-                self.assertEqual(verifier.cli(), 1)
+            with patch.object(entrypoint, 'main', side_effect=error), redirect_stdout(output):
+                self.assertEqual(entrypoint.cli(), 1)
             self.assertNotIn('PRIVATE', output.getvalue())
             self.assertNotIn('Traceback', output.getvalue())
-        with patch.object(verifier, 'main'):
-            self.assertEqual(verifier.cli(), 0)
+        with patch.object(entrypoint, 'main'):
+            self.assertEqual(entrypoint.cli(), 0)
 
     def test_phase_reports_group_selection_and_rejects_stale_reports(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -241,7 +241,7 @@ const report = collectDiagnostics([
 const overflow = collectDiagnostics([{moduleId:'/checks/huge.test.ts', errors:() => [],
  children:{allTests:() => Array(101).fill(test)}}], []);
 console.log(JSON.stringify({report, overflow}));
-'''.replace('REPORTER', json.dumps((HERE / 'diagnostic-reporter.mjs').as_uri()))
+'''.replace('REPORTER', json.dumps((verifier.RUNNER / 'diagnostic-reporter.mjs').as_uri()))
         result = subprocess.run(['node', '--input-type=module'], input=source, text=True,
                                 capture_output=True, check=True)
         reports = json.loads(result.stdout)

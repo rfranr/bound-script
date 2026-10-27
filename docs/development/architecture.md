@@ -2,6 +2,9 @@
 
 Current implementation, consolidated under assignment [0031](../assignments/0031-consolidate-native-contracts-foundation.md).
 This records the existing approach, not approval of a new framework architecture.
+Assignment [0036](../assignments/0036-design-render-welcome-specification.md)
+adds independent native RenderWelcome and extracts existing verification mechanics
+into the private shared package; the Product Owner reviewed and accepted its delivery.
 Historical experiment reports describe earlier states; proposed integration in
 `docs/proposals/0018c-architectural-integration.md` is not implemented.
 
@@ -81,9 +84,13 @@ yet implement the planned versioned lifecycle or a human-acceptance gate.
    generated signature check and per-suite Vitest configs are hashed and mounted
    read-only alongside independently owned tests/fixtures, not retained as source
    artifacts. No business-specific test filename or description selects tests.
-   Native verification performs strict TypeScript compilation, Typia
-   validator tests, 20 independent examples with runtime input/output guards,
-   five seeded fast-check properties, protected-file hashes and cleanup.
+   Native verification mechanics and the unchanged trusted Vitest/compiler adapters
+   now live in `boundscript_internal/`, not in a business Box directory. Thin fixed
+   entry points pass their own root and definition; no discovery or registry is
+   involved. Native verification performs strict TypeScript compilation, Typia
+   validator tests, guarded examples/properties, protected-file hashes and cleanup.
+   NormalizeContact retains its 20 examples and five seeded properties. Independent
+   RenderWelcome owns six examples and one combined property (seed 36, 100 runs).
    Baseline oracles retain Greeting, dependency-injected RenderWelcome and
    ordinary TypeScript integration checks. They intentionally remain separate:
    sharing task oracles would compromise independent contract evolution.
@@ -172,11 +179,22 @@ boundscript_internal/          # shared host-side mechanics; no experiment impor
 tests/internal/               # shared lifecycle/security/resource regressions
 experiments/minimal-box/      # baseline authority, workflows and policy tests
 experiments/native-typescript-contracts/
-                              # native authority, diagnostics, workflows and policy tests
+                              # NormalizeContact authority, workflows and policy tests
+experiments/render-welcome-native/
+                              # independent consumer contract, formatter tests and workflow
+tests/integration/            # application-owned public-contract compile check
 docs/                         # assignments, current docs and historical proposals
 ```
 
 The dependency direction is experiments → internal mechanics, never the reverse.
+RenderWelcome's root/definition, local Typia build, fixed generator and verifier
+have no dependency on NormalizeContact's directory. Neither Box receives peer
+source, tasks or tests during generation; neither standalone verifier invokes its
+peer. Application-owned composition can narrow the normalization result and pass
+its public success contact structurally to the consumer-owned welcome contract.
+The compile-only check in `tests/integration/` imports only public contracts and
+is not either Box's standalone oracle or generation input.
+
 Experiment paths remain independent except native verification's explicit
 `--baseline` historical candidate selection. Prompts/model/auth paths, acceptance
 rules, quarantine and promotion remain experiment-owned. Both generators may
@@ -198,9 +216,10 @@ validation wrapper.
 
 Credential brokerage, egress restrictions, robust hostile-program verification,
 artifact distribution/provenance, reusable orchestration, other languages and
-repair loops remain deferred. No accepted sources are manually repaired, no
-RenderWelcome Typia migration occurs, and no architectural proposal is promoted
-to implemented capability by this document.
+repair loops remain deferred. No accepted sources are manually repaired. Native RenderWelcome is a separate
+formatter Box, not a migration of the historical dependency-injected baseline.
+No broader architectural proposal is promoted to implemented capability by this
+document; versioning, registry and application orchestration remain absent.
 
 Reproduction commands: [root README](../../README.md),
 [native workflow](../../experiments/native-typescript-contracts/README.md),

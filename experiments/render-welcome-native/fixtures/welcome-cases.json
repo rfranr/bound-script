@@ -1,0 +1,26 @@
+[
+  {
+    "input": {"name": "Ada Lovelace", "email": "ada@example.com", "phone": "+34600111222"},
+    "expected": "Welcome, Ada Lovelace! <ada@example.com>"
+  },
+  {
+    "input": {"name": "李 e\u0301🙂\t雷", "email": "li@example.cn", "phone": "+8613800000000"},
+    "expected": "Welcome, 李 e\u0301🙂\t雷! <li@example.cn>"
+  },
+  {
+    "input": {"name": "  Ana  María ", "email": "ANA+News@Example.COM", "phone": "x"},
+    "expected": "Welcome,   Ana  María ! <ANA+News@Example.COM>"
+  },
+  {
+    "input": {"name": "<Sam & Co>", "email": "sam+news@example.com", "phone": "1"},
+    "expected": "Welcome, <Sam & Co>! <sam+news@example.com>"
+  },
+  {
+    "input": {"name": " ", "email": "x", "phone": "?"},
+    "expected": "Welcome,  ! <x>"
+  },
+  {
+    "input": {"name": "A\nB", "email": "a@example.com", "phone": "1"},
+    "expected": "Welcome, A\nB! <a@example.com>"
+  }
+]

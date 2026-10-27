@@ -12,13 +12,18 @@
     "generate": "python3 experiments/minimal-box/generate.py",
     "generate:pair": "python3 experiments/minimal-box/generate.py --pair",
     "test:pair": "python3 experiments/minimal-box/verify_pair.py",
-    "test:unit": "python3 -B -m unittest discover -s tests/internal -v && python3 -B -m unittest discover -s experiments/minimal-box -v && python3 -B -m unittest discover -s experiments/native-typescript-contracts -v",
-    "check": "npm run test:unit && npm run test:native:tooling && npm test",
+    "test:unit": "npm run build:native && npm run build:welcome && python3 -B -m unittest discover -s tests/internal -v && python3 -B -m unittest discover -s experiments/minimal-box -v && python3 -B -m unittest discover -s experiments/native-typescript-contracts -v && python3 -B -m unittest discover -s experiments/render-welcome-native -v",
+    "check": "npm run test:unit && npm run test:native:tooling && npm run test:welcome:tooling && npm run test:contact:contracts && npm test",
     "build:native": "typia generate --input experiments/native-typescript-contracts/src --output experiments/native-typescript-contracts/.generated --project experiments/native-typescript-contracts/tsconfig.json",
     "test:native:tooling": "npm run build:native && vitest run --config experiments/native-typescript-contracts/vitest.tooling.config.mts",
     "test:native": "npm run build:native && python3 -B experiments/native-typescript-contracts/verify.py",
     "test:native:baseline": "npm run build:native && python3 -B experiments/native-typescript-contracts/verify.py --baseline",
-    "generate:native": "npm run build:native && python3 -B experiments/native-typescript-contracts/generate.py"
+    "generate:native": "npm run build:native && python3 -B experiments/native-typescript-contracts/generate.py",
+    "build:welcome": "typia generate --input experiments/render-welcome-native/src --output experiments/render-welcome-native/.generated --project experiments/render-welcome-native/tsconfig.json",
+    "test:welcome:tooling": "npm run build:welcome && vitest run --config experiments/render-welcome-native/vitest.tooling.config.mts",
+    "test:welcome": "npm run build:welcome && python3 -B experiments/render-welcome-native/verify.py",
+    "generate:welcome": "npm run build:welcome && python3 -B experiments/render-welcome-native/generate.py",
+    "test:contact:contracts": "tsc --strict --noEmit --target ES2022 --module NodeNext --allowImportingTsExtensions tests/integration/check-contact-composition.ts"
   },
   "devDependencies": {
     "fast-check": "4.10.2",

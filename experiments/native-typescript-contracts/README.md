@@ -1,7 +1,9 @@
 # Native TypeScript contracts — working foundation
 
-NormalizeContact only. Baseline behaviors, RenderWelcome, application wiring and
-container policy are retained. All workflows run independently of Git branch names.
+This root owns NormalizeContact only. Native RenderWelcome has its own
+[independent sibling root](../render-welcome-native/README.md); neither Box's
+standalone workflow depends on the other. Historical baseline behaviors,
+application wiring and container policy are retained. All workflows run independently of Git branch names.
 See [current architecture](../../docs/development/architecture.md) and
 [consolidation inventory/results](../../docs/development/consolidation-report.md).
 The [0030 findings](REPORT.md), [fixture report](ACCEPTANCE-REPORT.md) and
@@ -60,7 +62,11 @@ branch restrictions or guarantees that old candidates meet today's contract.
   200 randomized Contact checks, plus explicit examples of what shapes cannot
   establish about behavior.
 
-`verify.py` mounts trusted checks, native contract, generated validators and
+`verify.py` is a thin fixed entry point selecting this root and its unchanged
+definition. The extracted `boundscript_internal/native_verifier.py` and shared
+trusted Vitest/compiler adapters contain the existing verification mechanics,
+with explicit Box-root/definition arguments and no experiment imports. They mount
+trusted checks, native contract, generated validators and
 installed npm tooling read-only in a fresh **offline** verifier. The submission
 is also read-only; only a disposable cache directory is writable. It reuses the
 unmodified Docker/Podman adapter, pinned image, nonroot identity, dropped
@@ -81,8 +87,8 @@ The frozen baseline source path remains available only for the explicit
 phone contract. No candidate executes on the host. See the
 [fixture decoupling report](ACCEPTANCE-REPORT.md) for results and open assumptions.
 
-`generate.py` is a fixed NormalizeContact runner, not a generic orchestrator.
-Both generators use `../../boundscript_internal/agent_workspace.py` for the shared
+`generate.py` remains a fixed NormalizeContact runner, not a generic orchestrator.
+All fixed generators use `../../boundscript_internal/agent_workspace.py` for the shared
 Pi workspace, credential/probe/event-summary/scan lifecycle and
 `../../boundscript_internal/container_runtime.py` for engine policy. This private
 package imports no experiment code; shared regressions live in `../../tests/internal/`.
@@ -96,8 +102,9 @@ and the explicitly authorized auth file, plus an initially empty writable
 code. Generation ends before verification starts. Only a regular, size-limited,
 credential-scanned source that passes the independent native verification pipeline
 is copied unchanged to `accepted/normalize-contact.ts`. Failed verification
-leaves the previous accepted source untouched. No integration promotion or
-RenderWelcome migration is performed.
+leaves the previous accepted source untouched. No integration promotion or peer generation is performed by this root.
+The new native RenderWelcome workflow is separate, not a migration of the
+historical dependency-injected baseline Box.
 
 ## Run
 
@@ -233,7 +240,8 @@ native required phone field. The positive baseline regression is `npm test`.
 No generated implementation was manually repaired. No automatic commit occurs.
 
 `npm test` runs the unchanged baseline behaviors on any branch. `npm run check`
-combines credential-free Python unit tests, trusted native tooling tests and the
-baseline container regressions. It does not require an ignored native accepted
+builds both native validator bundles and combines credential-free Python unit
+tests, both trusted tooling suites, application-owned public-contract compatibility
+and baseline container regressions. It does not require an ignored native accepted
 artifact. `npm run test:native` is the separate full native candidate check.
 Assertion preflights, effective sandbox/resource checks and cleanup remain mandatory.

@@ -21,8 +21,9 @@ def load(name, filename):
     return module
 
 
-verifier = load('native_verifier', 'verify.py')
+entrypoint = load('normalize_entrypoint', 'verify.py')
 generator = load('native_generator', 'generate.py')
+from boundscript_internal import native_verifier as verifier
 
 
 class SpikeTests(unittest.TestCase):
@@ -47,7 +48,7 @@ class SpikeTests(unittest.TestCase):
                 getattr(engine, stage).side_effect = RuntimeError('synthetic failure')
                 with patch.object(verifier, 'runtime', return_value=engine):
                     with self.assertRaises(RuntimeError):
-                        verifier.check(candidate)
+                        verifier.check(candidate, box_root=HERE, box=generator.BOX)
                 engine.remove.assert_called_once()
                 mounts = engine.create.call_args.args[2]
                 specs = mounts[1::2]
@@ -71,7 +72,7 @@ class SpikeTests(unittest.TestCase):
                 self.assertEqual(len(json.loads((checks / 'cases.json').read_text())), 20)
                 self.assertFalse((HERE / 'check-contract.ts').exists())
                 self.assertEqual((checks / 'check-contract.ts').read_text(),
-                                 verifier.BOX.contract_check('/implementation/implementation.ts'))
+                                 generator.BOX.contract_check('/implementation/implementation.ts'))
                 self.assertIn(f'src={HERE / "src/contract.ts"},dst=/inputs/contract.ts,readonly',
                               ','.join(specs))
 
@@ -79,8 +80,8 @@ class SpikeTests(unittest.TestCase):
                  patch.object(verifier, 'run_vitest', side_effect=inspect_checks) as vitest, \
                  patch.object(verifier, 'run_compiler') as compiler, \
                  patch.dict(sys.modules, {'verify_pair': None}):
-                verifier.check(candidate)
-            self.assertEqual([call.args[3] for call in vitest.call_args_list], list(verifier.BOX.suites))
+                verifier.check(candidate, box_root=HERE, box=generator.BOX)
+            self.assertEqual([call.args[3] for call in vitest.call_args_list], list(generator.BOX.suites))
             self.assertEqual(engine.exec.call_count, 2)
             compiler.assert_called_once()
             engine.remove.assert_called_once()
@@ -88,7 +89,7 @@ class SpikeTests(unittest.TestCase):
     @unittest.skipUnless(os.environ.get('BOUNDSCRIPT_NATIVE_ENGINE_TEST') == '1', 'opt-in offline engine checks')
     def test_engine_rejects_negative_submissions(self):
         # Establish that this engine actually supports the positive path first.
-        verifier.check(HERE / 'accepted/normalize-contact.ts')
+        entrypoint.check(HERE / 'accepted/normalize-contact.ts')
         accepted = HERE / 'accepted/normalize-contact.ts'
         before = accepted.read_bytes() if accepted.exists() else None
         negatives = {
@@ -102,7 +103,7 @@ class SpikeTests(unittest.TestCase):
                     candidate = Path(tmp) / (name + '.ts')
                     candidate.write_text(source)
                     with self.assertRaises(RuntimeError):
-                        verifier.check(candidate)
+                        entrypoint.check(candidate)
         self.assertEqual(accepted.read_bytes() if accepted.exists() else None, before)
 
     def test_failed_independent_verification_never_promotes(self):

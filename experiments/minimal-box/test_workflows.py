@@ -68,8 +68,10 @@ class WorkflowTests(unittest.TestCase):
 
     def test_assertions_required_for_all_entry_points_on_any_branch(self):
         native = HERE.parent / 'native-typescript-contracts'
+        welcome = HERE.parent / 'render-welcome-native'
         for path in (HERE / 'generate.py', HERE / 'verify.py', HERE / 'verify_pair.py',
-                     native / 'generate.py', native / 'verify.py'):
+                     native / 'generate.py', native / 'verify.py',
+                     welcome / 'generate.py', welcome / 'verify.py'):
             with self.subTest(path=path), tempfile.TemporaryDirectory() as cwd:
                 # Absolute entry points must resolve internal imports even outside
                 # the repository, including the independent verifier subprocess.
@@ -94,7 +96,8 @@ class WorkflowTests(unittest.TestCase):
     def test_entry_points_resolve_one_internal_package_without_peer_imports(self):
         root = HERE.parents[1]
         paths = [HERE / name for name in ('generate.py', 'verify.py', 'verify_pair.py')]
-        paths += [HERE.parent / 'native-typescript-contracts' / name
+        paths += [HERE.parent / box / name
+                  for box in ('native-typescript-contracts', 'render-welcome-native')
                   for name in ('generate.py', 'verify.py')]
         source = '''
 import runpy, sys
@@ -103,7 +106,12 @@ paths = PATHS
 for path in paths:
     loaded = runpy.run_path(path, run_name='import_check')
     from boundscript_internal import container_runtime, agent_workspace
-    assert loaded['runtime'] is container_runtime.runtime
+    if 'verify_candidate' in loaded:
+        from boundscript_internal import native_verifier
+        assert loaded['verify_candidate'] is native_verifier.check
+        assert native_verifier.runtime is container_runtime.runtime
+    else:
+        assert loaded['runtime'] is container_runtime.runtime
     if path.endswith('generate.py'):
         assert loaded['agent_submission'] is agent_workspace.agent_submission
     assert Path(path).parent.as_posix() not in sys.path

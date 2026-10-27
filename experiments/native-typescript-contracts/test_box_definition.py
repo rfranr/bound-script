@@ -10,7 +10,7 @@ import tempfile
 import unittest
 from unittest.mock import MagicMock, patch
 
-from test_spike import HERE, generator, verifier
+from test_spike import HERE, generator, verifier, entrypoint
 from boundscript_internal.box_definition import VerificationSuite
 
 
@@ -89,7 +89,7 @@ def build_synthetic_validators(root, box):
 
 class BoxDefinitionTests(unittest.TestCase):
     def test_entry_points_share_definition_and_reject_mismatch_before_verification(self):
-        self.assertIs(generator.BOX, verifier.BOX)
+        self.assertIs(generator.BOX, entrypoint.BOX)
         box = generator.BOX
         for field, value in (
             ('name', 'synthetic'), ('task_path', 'other-task.md'),
@@ -101,15 +101,15 @@ class BoxDefinitionTests(unittest.TestCase):
         ):
             changed = replace(box, **{field: value})
             self.assertNotEqual(box.fingerprint(), changed.fingerprint())
-            with self.subTest(field=field), patch.object(verifier, 'BOX', changed), \
-                 patch.object(verifier.sys, 'argv', ['verify.py', '--box-definition', box.fingerprint(), '/unused.ts']), \
-                 patch.object(verifier, 'check') as check:
+            with self.subTest(field=field), patch.object(entrypoint, 'BOX', changed), \
+                 patch.object(entrypoint.sys, 'argv', ['verify.py', '--box-definition', box.fingerprint(), '/unused.ts']), \
+                 patch.object(entrypoint, 'check') as check:
                 with self.assertRaisesRegex(verifier.VerificationFailure, 'definition mismatch'):
-                    verifier.main()
+                    entrypoint.main()
                 check.assert_not_called()
-        with patch.object(verifier.sys, 'argv', ['verify.py', '--box-definition', box.fingerprint(), '/unused.ts']), \
-             patch.object(verifier, 'check') as check:
-            verifier.main()
+        with patch.object(entrypoint.sys, 'argv', ['verify.py', '--box-definition', box.fingerprint(), '/unused.ts']), \
+             patch.object(entrypoint, 'check') as check:
+            entrypoint.main()
             check.assert_called_once_with(Path('/unused.ts'))
 
     def test_two_definitions_select_own_inputs_checks_and_exports(self):
@@ -138,10 +138,10 @@ class BoxDefinitionTests(unittest.TestCase):
                         self.assertIn(json.dumps(suite.files), config)
                         self.assertNotIn('testNamePattern', config)
 
-                with patch.object(verifier, 'SPIKE', root), patch.object(verifier, 'runtime', return_value=engine), \
+                with patch.object(verifier, 'runtime', return_value=engine), \
                      patch.object(verifier, 'run_compiler', side_effect=inspect_checks), \
                      patch.object(verifier, 'run_vitest') as vitest:
-                    verifier.check(candidate, box)
+                    verifier.check(candidate, box_root=root, box=box)
                 self.assertEqual([call.args[3] for call in vitest.call_args_list], list(box.suites))
                 engine.remove.assert_called_once()
                 probe = engine.exec.call_args_list[0].kwargs['source']
@@ -182,10 +182,9 @@ class BoxDefinitionTests(unittest.TestCase):
                 replace(box, optional_categories=('properties',)),  # Cannot both run and omit a category.
             ]
             for changed in invalid:
-                with self.subTest(box=changed), patch.object(verifier, 'SPIKE', root), \
-                     patch.object(verifier, 'runtime') as runtime:
+                with self.subTest(box=changed), patch.object(verifier, 'runtime') as runtime:
                     with self.assertRaises(verifier.VerificationFailure):
-                        verifier.check(candidate, changed)
+                        verifier.check(candidate, box_root=root, box=changed)
                     runtime.assert_not_called()
             extra = suite_root / 'unassigned.spec.ts'
             extra.write_text('// must not silently disappear')
@@ -210,10 +209,10 @@ class BoxDefinitionTests(unittest.TestCase):
             box.verification_files(root / box.verification_path)
             engine = MagicMock()
             engine.exec.side_effect = [json.dumps(['ENOENT'] * 3 + ['EROFS'] * 5), json.dumps('ENETUNREACH')]
-            with patch.object(verifier, 'SPIKE', root), patch.object(verifier, 'runtime', return_value=engine), \
+            with patch.object(verifier, 'runtime', return_value=engine), \
                  patch.object(verifier, 'run_compiler'), patch.object(verifier, 'run_vitest') as vitest, \
                  redirect_stdout(io.StringIO()) as output:
-                verifier.check(candidate, box)
+                verifier.check(candidate, box_root=root, box=box)
             self.assertIn('NOT APPLICABLE fast-check properties (explicit Box declaration)', output.getvalue())
             self.assertEqual(len(vitest.call_args_list), 2)
 
@@ -225,8 +224,8 @@ class BoxDefinitionTests(unittest.TestCase):
                 root = Path(tmp)
                 box, candidate = synthetic_box(root, label)
                 build_synthetic_validators(root, box)
-                with patch.object(verifier, 'SPIKE', root), redirect_stdout(io.StringIO()) as output:
-                    verifier.check(candidate, box)
+                with redirect_stdout(io.StringIO()) as output:
+                    verifier.check(candidate, box_root=root, box=box)
                     positive = output.getvalue()
                     self.assertIn('PASS TypeScript compilation', positive)
                     self.assertIn('PASS Typia runtime validation', positive)
@@ -239,7 +238,7 @@ class BoxDefinitionTests(unittest.TestCase):
                                         ('assertion', '999' if label == 'first' else '"BROKEN"')]:
                         candidate.write_text(f'export const {box.implementation_export} = (value: {scalar}) => {value};')
                         with self.subTest(failure=kind), self.assertRaises(verifier.VerificationFailure) as failure:
-                            verifier.check(candidate, box)
+                            verifier.check(candidate, box_root=root, box=box)
                         self.assertIn(kind, failure.exception.kind)
                         if kind != 'compilation':
                             self.assertIn('uses its own data file', output.getvalue())
@@ -259,11 +258,10 @@ class BoxDefinitionTests(unittest.TestCase):
                 ('pending', original.replace("it('accepts", "it.todo('accepts")),
                 ('focused', original.replace("it('accepts", "it.only('accepts")),
             ):
-                with self.subTest(case=case), patch.object(verifier, 'SPIKE', root), \
-                     redirect_stdout(io.StringIO()) as output:
+                with self.subTest(case=case), redirect_stdout(io.StringIO()) as output:
                     test.write_text(source)
                     with self.assertRaises(verifier.VerificationFailure):
-                        verifier.check(candidate, box)
+                        verifier.check(candidate, box_root=root, box=box)
                     self.assertIn('FAIL Typia runtime validation', output.getvalue())
                     self.assertIn('PASS Sandbox cleanup', output.getvalue())
 
