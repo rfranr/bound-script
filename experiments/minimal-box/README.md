@@ -9,8 +9,8 @@ This is the existing Greeting Box experiment, relocated from
 | Responsibility | Working code / authority |
 | --- | --- |
 | Box definition | Human-owned `task.md`, native `contract.ts`, authorized dependency interface `slugger.ts` |
-| Agent execution | `generate.py`: fresh, restricted container workspace; Pi with read/write/edit/bash tools |
-| Container mechanism/policy | `container_runtime.py`: Docker/Podman CLI adapters, shared fail-closed checks |
+| Agent execution | `generate.py`: fixed tasks/promotion; shared `../../boundscript_internal/agent_workspace.py`: fresh restricted Pi lifecycle and credential scan |
+| Container mechanism/policy | `../../boundscript_internal/container_runtime.py`: Docker/Podman CLI adapters, shared fail-closed checks |
 | Independent verification | `verify.py`: separate offline, credential-free container; assertions and expected results outside it |
 | Controlled promotion | `generate.py` saves only a regular, size-bounded `greet.ts` after verification succeeds |
 
@@ -19,11 +19,17 @@ manual repair. The dependency is injected by the consumer; only its interface is
 exposed to the agent. The two-Box version uses ordinary `application.ts` to compose
 accepted NormalizeContact and RenderWelcome sources. There is no artifact registry.
 Other languages could use their own native contracts/checks; only TypeScript
-is implemented. No custom type system or application orchestration is needed.
+is implemented. Current architecture and native workflow:
+[architecture](../../docs/development/architecture.md),
+[native contracts](../native-typescript-contracts/README.md). No custom type system or application orchestration is needed.
+
+Shared mechanics are owned by the private [internal package](../../boundscript_internal/README.md),
+not this experiment. Contracts, tasks, assertions and promotion choices stay here.
+No compatibility shims or copied infrastructure remain in this directory.
 
 ## Run
 
-From the repository root, on `experiment/boundscript-next`:
+From the repository root, on any branch (Python assertions must be enabled):
 
 ```bash
 npm ci
@@ -53,9 +59,10 @@ verifiers, without changing their arguments, contracts or acceptance cases:
 ```bash
 BOUNDSCRIPT_RUNTIME=podman npm test
 BOUNDSCRIPT_RUNTIME=podman npm run generate:pair # billable; explicitly authorized auth mount
-python3 -B -m unittest discover -s experiments/minimal-box -v
+python3 -B -m unittest discover -s experiments/minimal-box -v # baseline policies
+python3 -B -m unittest discover -s tests/internal -v # shared mechanics
 # Optional real-engine lifecycle/security smoke test, no Pi/auth/model calls:
-BOUNDSCRIPT_ENGINE_TEST=1 BOUNDSCRIPT_RUNTIME=podman python3 -B -m unittest discover -s experiments/minimal-box -v
+BOUNDSCRIPT_ENGINE_TEST=1 BOUNDSCRIPT_RUNTIME=podman python3 -B -m unittest discover -s tests/internal -v
 ```
 
 Run the same commands with `BOUNDSCRIPT_RUNTIME=docker` to check Docker. Each
@@ -83,7 +90,7 @@ were enforced. Existing external filesystem/network/behavior checks are retained
 All create/start/probe/agent failures still pass through container cleanup, and
 container CLI diagnostics are withheld.
 
-**Validation on this development host:** eight credential-free unit tests pass
+**Historical adapter-only validation (not current host status):** eight credential-free unit tests passed
 (the optional engine test is skipped by default). Real Podman creation and tmpfs
 ownership/mode/size/flags were observed, and containers were removed after failed
 security checks. Full engine smoke tests (generation and verifier profiles) fail
@@ -93,8 +100,10 @@ therefore stops at the resource check. Plain `npm test` also fails:
 `docker` here is a Podman wrapper and injects `container=podman`, rejected by the
 Docker adapter. No genuine Docker engine, successful end-to-end Podman acceptance
 run, or real Pi generation was verified for this change. No credentials or model
-calls were used. Engine acceptance remains to be run on correctly configured
-Docker/Podman hosts; these failures have not been bypassed.
+calls were used. These failures were not bypassed. Later successful Podman baseline runs are
+recorded in the [0030 report](../native-typescript-contracts/REPORT.md); current
+consolidation results are in [0031](../../docs/development/consolidation-report.md).
+Genuine Docker validation remains a separate requirement.
 
 ## Actual authority
 

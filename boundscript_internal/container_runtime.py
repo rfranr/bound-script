@@ -1,8 +1,18 @@
 """Small local CLI adapters; one fail-closed security policy for both engines."""
+import hashlib
 import json
 import os
 from pathlib import Path
 import subprocess
+
+
+ROOT = Path(__file__).resolve().parents[1]
+IMAGE = 'node@sha256:55fb5f5a527ea2c5c4a95f963e48ef90aa38c7b346054fdc8ee9957a2b55d205'
+TSC = ROOT / 'node_modules/typescript/lib/tsc.js'
+
+
+def digest(path):
+    return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
 def command(*args, source=None, timeout=30):

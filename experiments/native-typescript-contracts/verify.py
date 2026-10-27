@@ -15,9 +15,8 @@ import uuid
 sys.dont_write_bytecode = True
 SPIKE = Path(__file__).resolve().parent
 BASE = SPIKE.parent / 'minimal-box'
-sys.path.insert(0, str(BASE))
-from container_runtime import runtime
-from verify import IMAGE, TSC, digest, run
+sys.path.insert(0, str(SPIKE.parents[1]))
+from boundscript_internal.container_runtime import IMAGE, TSC, digest, runtime
 
 
 class VerificationFailure(RuntimeError):
@@ -311,10 +310,6 @@ console.log(JSON.stringify(result));
 
 
 def main():
-    if not __debug__ or run('git', 'branch', '--show-current') not in (
-        'experiment/boundscript-next', 'experiment/typescript-contracts'
-    ):
-        raise VerificationFailure('infrastructure', 'Use an authorized experiment branch with assertions enabled')
     args = sys.argv[1:]
     if args == ['--baseline']:
         submission = BASE / 'two-boxes/accepted/normalize-contact.ts'

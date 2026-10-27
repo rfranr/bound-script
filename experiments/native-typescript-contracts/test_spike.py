@@ -1,5 +1,7 @@
 """Credential-free wiring regressions; mocks do not establish engine security."""
+from contextlib import redirect_stderr
 import importlib.util
+import io
 import json
 import os
 from pathlib import Path
@@ -33,7 +35,7 @@ class SpikeTests(unittest.TestCase):
             if case['expected']['ok']:
                 self.assertEqual(set(case['expected']['contact']), {'name', 'email'})
         # Importing the native verifier must not import the frozen fixture module.
-        with patch.dict(sys.modules, {'verify_pair': None}):
+        with patch.dict(sys.modules, {'verify': None, 'verify_pair': None}):
             load('independent_native_verifier', 'verify.py')
 
     def test_verifier_failures_cleanup(self):
@@ -145,7 +147,6 @@ class SpikeTests(unittest.TestCase):
             with patch.object(generator, 'SPIKE', root), \
                  patch.object(generator, 'AUTH', auth), \
                  patch.object(generator, 'PI', pi), \
-                 patch.object(generator, 'run', return_value='experiment/typescript-contracts'), \
                  patch.object(generator, 'runtime', return_value=engine), \
                  patch.object(generator.sys, 'argv', ['generate.py']), \
                  patch.object(generator.subprocess, 'run') as verification:
@@ -169,11 +170,30 @@ class SpikeTests(unittest.TestCase):
                     generator.main()
                 verification.assert_not_called()
                 self.assertEqual(len(list((root / 'quarantine').glob('*/implementation.ts'))), 3)
+                # The same fixed runner promotes only on independent success.
+                scan_failure = False
+                verification.side_effect = None
+                generator.main()
+                self.assertEqual(accepted.read_text(), '// unverified candidate')
+                # A verifier-side source change must never be promoted.
+                accepted.write_text('previously accepted bytes')
+                def change_source(command, **kwargs):
+                    Path(command[-1]).write_text('// changed after scan')
+                verification.side_effect = change_source
+                with self.assertRaises(AssertionError):
+                    generator.main()
             self.assertEqual(accepted.read_text(), 'previously accepted bytes')
-            self.assertEqual(engine.remove.call_count, 4)
+            self.assertEqual(engine.remove.call_count, 6)
             specs = engine.create.call_args.args[2][1::2]
             self.assertFalse(any('/checks' in s or '/tests' in s or '/repo' in s for s in specs))
             self.assertEqual(sum('/inputs/' in s for s in specs), 2)
+
+    def test_generation_cli_does_not_serialize_arbitrary_errors(self):
+        with patch.object(generator, 'main', side_effect=RuntimeError('PRIVATE PROVIDER OUTPUT')), \
+             redirect_stderr(io.StringIO()) as output:
+            self.assertEqual(generator.cli(), 1)
+        self.assertNotIn('PRIVATE', output.getvalue())
+        self.assertNotIn('Traceback', output.getvalue())
 
 
 if __name__ == '__main__':

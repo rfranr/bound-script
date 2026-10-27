@@ -1,9 +1,12 @@
-# 0030 — Native TypeScript contracts feasibility spike
+# Native TypeScript contracts — working foundation
 
-NormalizeContact only. The frozen `../minimal-box` experiment, RenderWelcome,
-application wiring and container policy are unchanged. Work is on the dedicated
-`experiment/typescript-contracts` branch, based on `experiment/boundscript-next`.
-See [observed results and limitations](REPORT.md).
+NormalizeContact only. Baseline behaviors, RenderWelcome, application wiring and
+container policy are retained. All workflows run independently of Git branch names.
+See [current architecture](../../docs/development/architecture.md) and
+[consolidation inventory/results](../../docs/development/consolidation-report.md).
+The [0030 findings](REPORT.md), [fixture report](ACCEPTANCE-REPORT.md) and
+[diagnostics report](DIAGNOSTICS-REPORT.md) retain historical evidence, not current
+branch restrictions or guarantees that old candidates meet today's contract.
 
 ## Authority and configuration
 
@@ -58,11 +61,14 @@ The frozen baseline source path remains available only for the explicit
 phone contract. No candidate executes on the host. See the
 [fixture decoupling report](ACCEPTANCE-REPORT.md) for results and open assumptions.
 
-`generate.py` is a fixed NormalizeContact adaptation of the existing generator,
-not a generic runner. Its generation/credential/probe/event-sanitization path is
-retained locally rather than refactoring frozen baseline files. Both generators
-share the original container adapter. Future baseline policy changes must be
-reviewed against this small duplicated path.
+`generate.py` is a fixed NormalizeContact runner, not a generic orchestrator.
+Both generators use `../../boundscript_internal/agent_workspace.py` for the shared
+Pi workspace, credential/probe/event-summary/scan lifecycle and
+`../../boundscript_internal/container_runtime.py` for engine policy. This private
+package imports no experiment code; shared regressions live in `../../tests/internal/`.
+The native runners no longer add the baseline experiment directory to `sys.path`. The helper removes the generation container before yielding a source and
+scanned digest; each generator independently selects verification and promotion.
+Native verification imports only shared infrastructure, not a baseline verifier.
 
 The agent receives only `/inputs/task.md`, `/inputs/contract.ts`, read-only Pi
 and the explicitly authorized auth file, plus an initially empty writable
@@ -96,8 +102,9 @@ pulls or package installation occur inside either container. Set a command
 budget of 900 seconds for live generation and 300 seconds for the
 opt-in negative suite (including container cleanup). Independent verification
 has a bounded 360-second generation-side deadline for its separated phases;
-container resource limits are unchanged. The original Pi 1.4.0
-installation path, model and auth-file exception are retained in `generate.py`.
+container resource limits are unchanged. The existing Pi 1.4.0
+installation path and auth-file exception are retained in `generate.py`. Its current
+model is `openai-codex/gpt-5.6-luna`, low reasoning; historical runs may differ.
 
 To check another standalone candidate, without promotion:
 
@@ -169,12 +176,15 @@ BOUNDSCRIPT_NATIVE_ENGINE_TEST=1 BOUNDSCRIPT_RUNTIME=podman \
 ```
 
 `.generated/`, `accepted/` and `quarantine/` are ignored and must not be committed. A clean
-checkout has no accepted spike implementation: verify an existing quarantined
-candidate by path without model calls, or generate independently before
-`test:native`. `test:native:baseline` is a credential-free historical comparison,
-not a guarantee that the frozen implementation meets the evolved contract.
+checkout has no accepted native implementation or quarantined candidates: supply
+an existing candidate by path without model calls, or generate independently before
+`test:native`. `test:native:baseline` is a credential-free historical comparison
+expected to fail strict compilation because the original implementation lacks the
+native required phone field. The positive baseline regression is `npm test`.
 No generated implementation was manually repaired. No automatic commit occurs.
 
-The baseline `npm test` deliberately retains its original branch guard and
-must run on `experiment/boundscript-next` (or in a temporary worktree for that
-branch). Do not weaken it just to run on this dedicated experiment branch.
+`npm test` runs the unchanged baseline behaviors on any branch. `npm run check`
+combines credential-free Python unit tests, trusted native tooling tests and the
+baseline container regressions. It does not require an ignored native accepted
+artifact. `npm run test:native` is the separate full native candidate check.
+Assertion preflights, effective sandbox/resource checks and cleanup remain mandatory.

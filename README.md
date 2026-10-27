@@ -1,70 +1,134 @@
-# BoundScript Next
+# BoundScript
 
-**BoundScript controls boundaries, not business logic.** It is not a programming
-language or an application orchestrator. Humans define Boxes; agents implement
-them with ordinary languages and tooling. A Box can be a function, library,
-service, component, or application. Application logic and wiring remain ordinary
-application code.
+**Human-owned native contracts and tasks; independently verified AI implementations.**
+BoundScript controls development boundaries, not business logic. The working
+foundation uses TypeScript, Typia, Vitest, fast-check, Pi and Podman/Docker.
+There is no BoundScript DSL, custom compiler or application orchestrator.
 
-Work happens on `experiment/boundscript-next`. The original DSL implementation,
-including its historical pilot, remains on `feature/agent-driven-architecture`.
+## What exists
 
-## The working skeleton
-
-The TypeScript Greeting reference and its fixed two-Box contact experiment
-demonstrate four responsibilities without four packages:
-
-- **Define:** human-owned task, native public contract, authorized dependency
-  interface, and capabilities expressed by the task and concrete sandbox policy.
-- **Implement:** Pi and its tools run in a disposable Docker workspace. Only
-  authorized Box inputs, runtime tooling, credentials explicitly accepted for this
-  prototype, and the writable implementation are exposed—not the repository.
-- **Verify:** a separate credential-free, offline environment runs type, behavior,
-  dependency-call and negative-access checks. The agent cannot modify the tests.
-- **Promote:** only a passing source file is copied back as the accepted artifact.
-  The two-Box example composes accepted artifacts in ordinary TypeScript
-  `application.ts`, not a BoundScript orchestrator.
-
-## Run
-
-Requires Linux, Docker, Python 3, Node 24.16+, and the digest-pinned Node image
-listed in `experiments/minimal-box/verify.py` already cached locally.
-
-```bash
-npm ci
-npm test              # Saved Greeting + both contact Boxes + integration; no model calls
-npm run generate      # Original Greeting: real Pi generation, verification, promotion
-npm run generate:pair # Two fresh Pi agents, independent checks, then integration
+```text
+Human-owned task.md + TypeScript contract
+                 |
+        disposable Pi generation container
+        (empty candidate workspace; no tests or peer source)
+                 |
+        credential scan; destroy generation container
+                 |
+        separate offline, credential-free verifier
+        TypeScript → Typia → Vitest examples → fast-check
+                 |
+        passing source only → accepted artifact
+        verification failure → private local quarantine (native runner)
 ```
 
-Generation additionally requires the existing Pi 1.4.0 installation and
-`~/.pi/agent/auth.json` at the paths in `generate.py`; it makes billable provider
-calls. See the [experiment](experiments/minimal-box/README.md) for the
-exact environment, commands and observed results.
+The native workflow currently implements **NormalizeContact only**. Greeting,
+NormalizeContact/RenderWelcome and ordinary TypeScript composition remain runnable
+baseline regressions. Baseline verification uses native TypeScript and external
+behavior/dependency checks; the native workflow adds derived runtime validators
+and independent property tests. No accepted implementation or business requirement
+is changed by consolidation.
 
-**Prototype limitations:** generation has unrestricted bridge networking and
-agent-readable credentials, explicitly authorized for this experiment. Docker
-shares the host kernel. Tests establish observations, not general correctness or
-security attestation. Dependency imports are not comprehensively enforced. The
-verifier is outside the agent's environment; hostile candidate output is not
-inherently trustworthy.
+## Repository responsibilities
 
-## Removed, retained, deferred
+| Path | Responsibility |
+| --- | --- |
+| `experiments/native-typescript-contracts/src/contract.ts` | Current native structural authority; `src/validators.ts` derives Typia validators, not a second schema. |
+| `experiments/native-typescript-contracts/task.md` | Human-owned functional intent, separate from types and tests. |
+| Native `cases.json`, `*.test.ts`, `check-contract.ts` | Independent acceptance data, shape/property tests and strict signature consumer. |
+| Native `verify.py`, diagnostic adapters | Offline phased verification and bounded, sanitized failure classification; never promote. |
+| Both `generate.py` runners | Fixed task selection, independent verification and verify-before-promotion; native failure quarantine. |
+| `boundscript_internal/agent_workspace.py` | Shared Pi container/credential/probe/scan lifecycle; no verifier or acceptance oracle. |
+| `boundscript_internal/container_runtime.py` | Shared pinned image/tooling paths, Docker/Podman adapters and fail-closed effective security/resource checks. |
+| `experiments/minimal-box/` | Greeting and two-Box baseline contracts, tasks, accepted evidence and regression verifiers. |
+| Native `.generated/`, `accepted/`, `quarantine/` | Ignored generated validators, locally accepted source and failed scanned candidates. Never commit these artifacts. |
+| `tests/internal/` | Shared infrastructure regressions and opt-in credential-free engine profiles; experiment policy tests remain local. |
+| `docs/assignments/`, `docs/proposals/` | Requirements/history and proposals, not implicit authorization or implemented features. |
+| Experiment `REPORT*.md`, `*-REPORT.md` | Retained historical findings; current instructions are in README files and architecture below. |
 
-- **Removed:** Langium, the DSL/compiler/interpreter/director, executable artifact
-  transforms, old demos/tests, ContactOnboarding tooling, monorepo build setup, and
-  superseded DSL documentation/assignments/roadmaps (available in Git history).
-- **Retained/extended:** the Docker/Pi reference, native TypeScript contracts,
-  explicit dependency injection, independent checks, per-Box promotion and a fixed
-  two-Box application with contact normalization and ordered validation results.
-  See the [0018 run report](experiments/minimal-box/two-boxes/REPORT.md) and
-  [0018b two-generation comparison](experiments/minimal-box/two-boxes/REPORT-0018b.md).
-- **Deferred:** artifact registry, transitive dependency
-  enforcement, credential brokerage, egress hardening, other languages, generic
-  runners/plugins, and production security. No new runtime or DSL replaces the old
-  one.
+Shared host-side mechanics now live in the private
+[`boundscript_internal/`](boundscript_internal/README.md) package, outside both
+experiments. It imports no experiment code and exposes no new public framework API.
+Each experiment retains its own tasks, contracts, tests, verifier and promotion
+policy; only native `--baseline` explicitly selects a historical baseline source.
+Direct Python entry points resolve the package from the checkout, without an
+editable install or `PYTHONPATH` setup. See [architecture](docs/development/architecture.md),
+[developer workflow](docs/development/developer-workflow.md) and
+[consolidation inventory/results](docs/development/consolidation-report.md).
 
-Scope: [foundation](assignments/0017-boundscript-next-foundation.md) and
-[two independent Boxes](assignments/0018-two-independent-boxes.md), and
-[richer contact domain](assignments/0018b-Richer-Contact-Domain.md).
-Assignments 0019 and 0020 are not implemented.
+## Reproduce
+
+Requires Linux, working cgroup-v2 delegation, Python 3, Node **24.16+**, and
+Podman or genuine Docker. Install dependencies and cache the exact image explicitly:
+
+```sh
+npm ci
+podman pull node@sha256:55fb5f5a527ea2c5c4a95f963e48ef90aa38c7b346054fdc8ee9957a2b55d205
+export BOUNDSCRIPT_RUNTIME=podman # docker is the default; never auto-detect wrappers
+npm run check                   # Python units + Typia tooling + complete baseline
+```
+
+No branch name is required. Python assertions must be enabled (do not use `-O`).
+Runners never implicitly pull images or install packages in containers. For Docker,
+use `docker pull` and `BOUNDSCRIPT_RUNTIME=docker`. Missing effective isolation or
+resource evidence is a failure, not permission to ignore limits.
+
+```sh
+npm test                         # Greeting, both contact Boxes, integration; no model/auth
+npm run test:unit                # mocked lifecycle/diagnostics/security regressions
+npm run test:native:tooling      # trusted validator suite only; no container/model/auth
+npm run build:native
+BOUNDSCRIPT_RUNTIME=podman python3 -B experiments/native-typescript-contracts/verify.py /absolute/path/candidate.ts
+npm run test:native             # same verifier, local accepted/normalize-contact.ts
+```
+
+A clean checkout has **no native accepted implementation**. Supply an existing
+candidate explicitly, or generate one. Do not copy/repair the baseline to satisfy
+the evolved native contract. `npm run test:native:baseline` is a historical
+comparison: the original name/email contract lacks the native required `phone`,
+so that comparison is expected to fail compilation. `npm test` is the positive
+baseline regression. Phone normalization semantics remain unspecified; types
+and tests must not silently invent them.
+
+### Autonomous generation (billable)
+
+Requires the existing **Pi 1.4.0** installation at the fixed path in `generate.py`
+and `~/.pi/agent/auth.json`. Models/reasoning are explicit runner constants:
+native `openai-codex/gpt-5.6-luna` / low; baseline
+`openai-codex/gpt-6.1-sol` / medium. No credentials are needed for verification.
+
+```sh
+BOUNDSCRIPT_RUNTIME=podman npm run generate:native # build, fresh Pi, verify, promote
+# Baseline references, also billable and replace accepted sources on success:
+BOUNDSCRIPT_RUNTIME=podman npm run generate
+BOUNDSCRIPT_RUNTIME=podman npm run generate:pair
+```
+
+Allow at least 900 seconds for a native generation invocation. It has a 300-second
+agent deadline and a separate 360-second verification deadline; outer termination
+can interrupt cleanup. See the [native guide](experiments/native-typescript-contracts/README.md)
+for quarantine replay and opt-in negative/diagnostic engine tests, and the
+[baseline guide](experiments/minimal-box/README.md) for both sandbox profiles.
+
+## Security boundaries and limitations
+
+Generation and verification are separate processes/containers. Shared lifecycle
+code does **not** expose verifier files to Pi. Both profiles enforce nonroot identity,
+read-only root, exact mounts/environment, zero capabilities, no-new-privileges,
+one CPU, no swap and bounded memory/PIDs, checked through procfs/cgroup evidence.
+Generation has 512 MiB/64 PIDs plus private 64 MiB auth-state tmpfs; verification
+has 256 MiB/32 PIDs and no network or credentials. Ordinary failures clean up;
+SIGKILL can require manual container cleanup.
+
+**Accepted prototype exceptions remain:** agent-readable auth and unrestricted
+generation bridge networking. Literal scanning is not an exfiltration defense.
+Containers share the host kernel. Candidate code can see read-only tests in the
+verifier and may fabricate observations; passing tests are not hostile-program
+attestation or proof of correctness. Import/transitive dependency enforcement is
+incomplete. Diagnostics are bounded and sanitized, not universally safe against
+an adversarial program.
+
+**Deferred, not implemented:** credential brokerage/egress hardening, universal
+import enforcement, artifact registry/provenance, reusable job runner/plugins,
+other languages, production boundary wrappers and automatic repair/retries.
+Assignments 0019/0020 and the architectural integration proposal are not deliveries.

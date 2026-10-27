@@ -7,9 +7,10 @@ import sys
 import uuid
 
 sys.dont_write_bytecode = True
-from verify import HERE, IMAGE, TSC, digest, run
-from container_runtime import runtime
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+from boundscript_internal.container_runtime import IMAGE, TSC, digest, runtime
 
+HERE = Path(__file__).resolve().parent
 PAIR = HERE / 'two-boxes'
 BOXES = ('normalize-contact', 'render-welcome')
 def success(name, email):
@@ -173,8 +174,8 @@ console.log(JSON.stringify(inputs.map(input => {
 
 
 def main():
-    if not __debug__ or run('git', 'branch', '--show-current') != 'experiment/boundscript-next':
-        raise RuntimeError('Use experiment/boundscript-next with assertions enabled')
+    if not __debug__:
+        raise RuntimeError('Assertions must be enabled')
     assert TSC.is_file(), 'Install existing dependencies first'
     runtime().image(IMAGE)
     if len(sys.argv) == 3 and sys.argv[1] in BOXES:

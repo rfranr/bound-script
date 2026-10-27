@@ -1,4 +1,4 @@
-"""Credential-free adapter checks: python3 -m unittest discover -s experiments/minimal-box."""
+"""Credential-free adapter checks: python3 -B -m unittest discover -s tests/internal."""
 import copy
 import json
 import os
@@ -10,7 +10,8 @@ import unittest
 from unittest.mock import patch
 
 sys.dont_write_bytecode = True
-import container_runtime as cr
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+from boundscript_internal import container_runtime as cr
 
 
 def evidence(generation=False):
@@ -166,16 +167,15 @@ class RuntimeTests(unittest.TestCase):
 
     @unittest.skipUnless(os.environ.get('BOUNDSCRIPT_ENGINE_TEST') == '1', 'opt-in real engine check')
     def test_real_engine_without_credentials(self):
-        from verify import IMAGE
         engine = cr.runtime()
-        engine.image(IMAGE)
+        engine.image(cr.IMAGE)
         for generation in (False, True):
             with self.subTest(generation=generation), tempfile.TemporaryDirectory() as tmp:
                 candidate = Path(tmp) / 'implementation'
                 candidate.mkdir()
                 name = 'boundscript-runtime-test-' + uuid.uuid4().hex[:12]
                 try:
-                    engine.create(name, IMAGE, ['--mount',
+                    engine.create(name, cr.IMAGE, ['--mount',
                                   f'type=bind,src={candidate},dst=/implementation'],
                                   os.getuid(), os.getgid(), generation=generation)
                     engine.start(name, os.getuid(), os.getgid(), generation=generation)
@@ -185,16 +185,11 @@ class RuntimeTests(unittest.TestCase):
                 finally:
                     engine.remove(name)
 
-    def test_pair_cleanup_on_create_start_or_exec_failure(self):
-        import verify_pair
-        for method in ('create', 'start', 'exec'):
-            with patch.object(verify_pair, 'runtime') as factory:
-                engine = factory.return_value
-                getattr(engine, method).side_effect = RuntimeError('synthetic failure')
-                with self.assertRaises(RuntimeError):
-                    verify_pair.check('normalize-contact', verify_pair.PAIR / 'accepted/normalize-contact.ts')
-                engine.remove.assert_called_once()
-                self.assertEqual(engine.remove.call_args.args[0], engine.create.call_args.args[0])
+    def test_tooling_path_remains_repository_relative(self):
+        root = Path(__file__).resolve().parents[2]
+        self.assertEqual(cr.ROOT, root)
+        self.assertEqual(cr.TSC, root / 'node_modules/typescript/lib/tsc.js')
+        self.assertEqual(Path(cr.__file__).resolve().parent, root / 'boundscript_internal')
 
     def test_cli_diagnostics_are_withheld(self):
         with patch.object(cr.subprocess, 'run', return_value=cr.subprocess.CompletedProcess(

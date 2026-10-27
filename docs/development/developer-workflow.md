@@ -172,6 +172,43 @@ If implementation reveals a missing requirement or material ambiguity, the Devel
 
 The Developer must not weaken tests or verification boundaries solely to obtain a successful result.
 
+### Current native-contract development checks
+
+The implemented architecture is described in [architecture.md](architecture.md);
+proposals and historical assignments are not implemented requirements. Current
+commands are in the [root README](../../README.md).
+
+- Shared host-side mechanics belong in `boundscript_internal/`, with their tests
+  in `tests/internal/`. Experiments import that private package, never each
+  other's infrastructure. Keep verification rules, quarantine and promotion
+  policy in the owning experiment; do not turn relocation into a generic API.
+- Keep `task.md` (intent), native contract types (shape), independent tests
+  (observed semantics) and candidate source separate. Requirement/acceptance
+  changes need Product Owner authorization; never repair them to fit a candidate.
+- Run `npm ci`, select `BOUNDSCRIPT_RUNTIME=podman` or `docker` explicitly, and
+  cache the pinned image before container checks. `npm run check` runs Python
+  units, Typia tooling and the complete saved baseline without model calls/auth.
+  No Git branch name is a prerequisite; assertions and effective sandbox checks are.
+- Build validators with `npm run build:native` before direct Python verification.
+  Use `verify.py /absolute/path/candidate.ts` for a supplied native candidate;
+  `npm run test:native` requires a local ignored accepted artifact. A clean
+  checkout does not contain one. Never execute untrusted candidates on the host.
+- `test:native:baseline` is an intentionally incompatible historical comparison
+  after the required-phone contract evolution; report its failure separately
+  from positive `npm test` regressions. Do not change baseline evidence to fit it.
+- Generation is billable, mounts the explicitly authorized prototype auth file,
+  and promotes on success. Use it intentionally, not as a prerequisite for unit
+  tests. Mocked lifecycle tests do not establish real engine security. Run opt-in
+  offline engine/negative tests as documented in the experiment guides.
+- Preserve verify-before-promotion and native scanned-source quarantine. Standalone
+  verification never promotes. Do not commit native generated validators, accepted
+  sources, quarantine, auth, provider events or transcripts. Do not manually repair
+  accepted generated sources; justify any strictly necessary baseline change.
+- Before cleanup, inventory removals and retained behavioral/security evidence.
+  Stop for human decisions if cleanup would lose baseline evidence or change
+  architecture. Report exact test outcomes, skipped/unavailable checks, limitations
+  and final diff; passing checks do not authorize acceptance or commits.
+
 ## 4. Code Review Workflow
 
 The Reviewer evaluates the delivery against the assignment, its acceptance criteria and repository conventions.

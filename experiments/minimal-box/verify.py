@@ -1,40 +1,24 @@
 #!/usr/bin/env python3
 """Fixed external checks for this one Box. No candidate code executes on the host."""
-import hashlib
 import json
 import os
 from pathlib import Path
 import shutil
 import socket
-import subprocess
 import sys
 import tempfile
 import uuid
 
 sys.dont_write_bytecode = True
-from container_runtime import runtime
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+from boundscript_internal.container_runtime import IMAGE, TSC, digest, runtime
 
 HERE = Path(__file__).resolve().parent
-IMAGE = 'node@sha256:55fb5f5a527ea2c5c4a95f963e48ef90aa38c7b346054fdc8ee9957a2b55d205'
-TSC = HERE.parents[1] / 'node_modules/typescript/lib/tsc.js'
-
-
-def run(*args, source=None):
-    result = subprocess.run(args, input=source, text=True, capture_output=True, timeout=30)
-    if result.returncode:
-        raise RuntimeError(f'{args[0]} failed ({result.returncode}): {result.stderr}{result.stdout}')
-    return result.stdout.strip()
-
-
-def digest(path):
-    return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
 def main():
     if not __debug__:
         raise RuntimeError('Assertions must be enabled; do not use python -O')
-    if run('git', 'branch', '--show-current') != 'experiment/boundscript-next':
-        raise RuntimeError('Run only on experiment/boundscript-next')
     if not TSC.is_file():
         raise RuntimeError('Install existing repository dependencies first')
     # Optional fresh agent submission; the acceptance checks below are unchanged.
