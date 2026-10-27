@@ -9,7 +9,8 @@ This is the existing Greeting Box experiment, relocated from
 | Responsibility | Working code / authority |
 | --- | --- |
 | Box definition | Human-owned `task.md`, native `contract.ts`, authorized dependency interface `slugger.ts` |
-| Agent execution | `generate.py`: fresh, restricted Docker workspace; Pi with read/write/edit/bash tools |
+| Agent execution | `generate.py`: fresh, restricted container workspace; Pi with read/write/edit/bash tools |
+| Container mechanism/policy | `container_runtime.py`: Docker/Podman CLI adapters, shared fail-closed checks |
 | Independent verification | `verify.py`: separate offline, credential-free container; assertions and expected results outside it |
 | Controlled promotion | `generate.py` saves only a regular, size-bounded `greet.ts` after verification succeeds |
 
@@ -32,14 +33,68 @@ npm run generate:pair # Fresh independent contact agents, verify each, then inte
 npm run test:pair     # Contact pair and integration only, no model calls
 ```
 
-Requires Linux, Python 3, Docker, Node 24.16+ and locally cached image
+Requires Linux with verifiable cgroup v2 limits, Python 3, Docker or Podman,
+Node 24.16+ and locally cached image
 `node@sha256:55fb5f5a527ea2c5c4a95f963e48ef90aa38c7b346054fdc8ee9957a2b55d205`.
 Generation uses the existing Pi **1.4.0** installation and `~/.pi/agent/auth.json`;
 its explicit installation path, model (`openai-codex/gpt-6.1-sol`), prompt and
 commands are in `generate.py`. This is an environment-specific reference, not a
 portable provider integration. Generation incurs provider usage. Do not use
 Python `-O`; checks require assertions. Neither script pulls images or installs
-packages. The host invokes Docker, but all model-directed tools run inside it.
+packages. The host invokes the selected container CLI, but all model-directed
+tools run inside the container.
+
+### Runtime selection and security checks
+
+Docker remains the default. Set `BOUNDSCRIPT_RUNTIME=podman` explicitly for Podman;
+unknown values fail. Selection is inherited by fresh pair agents and independent
+verifiers, without changing their arguments, contracts or acceptance cases:
+
+```bash
+BOUNDSCRIPT_RUNTIME=podman npm test
+BOUNDSCRIPT_RUNTIME=podman npm run generate:pair # billable; explicitly authorized auth mount
+python3 -B -m unittest discover -s experiments/minimal-box -v
+# Optional real-engine lifecycle/security smoke test, no Pi/auth/model calls:
+BOUNDSCRIPT_ENGINE_TEST=1 BOUNDSCRIPT_RUNTIME=podman python3 -B -m unittest discover -s experiments/minimal-box -v
+```
+
+Run the same commands with `BOUNDSCRIPT_RUNTIME=docker` to check Docker. Each
+engine needs the pinned image locally. Rootless engines need working cgroup
+controller delegation (usually a systemd user session); warnings about ignored
+limits are not considered success. Cgroup v1 or inaccessible/missing cgroup-v2
+files are currently unsupported and fail closed. Python assertions must remain
+enabled. SIGKILL still requires manual cleanup.
+
+Docker uses `--tmpfs` with explicit `uid/gid`; Podman uses `--mount type=tmpfs`
+with `U=true` to assign ownership to the configured nonroot user. Both require
+64 MiB, mode 0700, nosuid/nodev/noexec. Podman's expanded `CapDrop` list is not
+compared to Docker's literal `ALL`: all five actual process capability sets must
+be zero, and `/proc/self/status` must report `NoNewPrivs=1`. Podman's extra
+`container=podman` environment entry is allowed only by its adapter and must have
+that exact value; arbitrary host environment entries remain forbidden.
+
+Before credentials or candidate code are used, both adapters check exact bind
+sources/destinations and read/write access, nonroot identity, read-only root,
+nonprivileged mode and the requested network mode. A fixed Node probe then checks
+actual identity, capability sets, no-new-privileges, root and bind mount flags,
+cgroup memory/swap/CPU/PID limits, and (for generation) tmpfs ownership, mode,
+size and mount flags. CLI inspection metadata alone is not evidence that limits
+were enforced. Existing external filesystem/network/behavior checks are retained.
+All create/start/probe/agent failures still pass through container cleanup, and
+container CLI diagnostics are withheld.
+
+**Validation on this development host:** eight credential-free unit tests pass
+(the optional engine test is skipped by default). Real Podman creation and tmpfs
+ownership/mode/size/flags were observed, and containers were removed after failed
+security checks. Full engine smoke tests (generation and verifier profiles) fail
+closed because this host exposes unlimited memory/swap/CPU and the wrong PID
+limit, rather than enforcing the requested limits. The Podman `npm test` run
+therefore stops at the resource check. Plain `npm test` also fails:
+`docker` here is a Podman wrapper and injects `container=podman`, rejected by the
+Docker adapter. No genuine Docker engine, successful end-to-end Podman acceptance
+run, or real Pi generation was verified for this change. No credentials or model
+calls were used. Engine acceptance remains to be run on correctly configured
+Docker/Podman hosts; these failures have not been bypassed.
 
 ## Actual authority
 
