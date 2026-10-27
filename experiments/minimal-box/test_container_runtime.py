@@ -75,6 +75,9 @@ class RuntimeTests(unittest.TestCase):
                         engine.remove('box')
                         create_args = call.call_args_list[0].args
                         self.assertEqual(create_args[0], cls.executable)
+                        self.assertEqual('--userns=keep-id' in create_args, cls is cr.Podman)
+                        self.assertIn('--user', create_args)
+                        self.assertEqual(create_args[create_args.index('--user') + 1], '1000:1000')
                         if generation:
                             flag = '--mount' if cls is cr.Podman else '--tmpfs'
                             spec = create_args[create_args.index(flag) + 1]

@@ -61,6 +61,7 @@ def verify_effective(data, uid, gid, generation):
 class Docker:
     executable = 'docker'
     extra_env = {}
+    create_options = ()
 
     def image(self, image):
         command(self.executable, 'image', 'inspect', image)
@@ -84,7 +85,7 @@ class Docker:
             env = {'HOME': '/implementation'}
         for key, value in env.items():
             args += ['--env', f'{key}={value}']
-        command(self.executable, 'create', *args, *mounts, image, 'sleep', '600')
+        command(self.executable, 'create', *self.create_options, *args, *mounts, image, 'sleep', '600')
         config = self.inspect(name)
         h = config['HostConfig']
         assert h['NetworkMode'] == ('bridge' if generation else 'none')
@@ -130,6 +131,8 @@ class Docker:
 class Podman(Docker):
     executable = 'podman'
     extra_env = {'container': 'podman'}
+    # Map the invoking user's UID/GID unchanged so owned bind mounts stay writable.
+    create_options = ('--userns=keep-id',)
 
     def tmpfs(self, uid, gid):
         # Podman assigns ownership to the configured container user.
