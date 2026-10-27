@@ -1,47 +1,48 @@
 # Agent Guidelines
 
-## Project context
+## Project Context
 
-- Work on BoundScript Next only on `experiment/boundscript-next`.
-- The original implementation is preserved on `feature/agent-driven-architecture`.
-- Architecture and current limitations are documented in `README.md` and
-  `experiments/minimal-box/README.md`.
-- Requirements are defined in `assignments/`.
-- Historical AI conversations are local reference material, excluded from Git. Do not read them unless necessary, and retrieve only relevant sections.
-- Treat historical conversations as exploratory context, not authoritative requirements.
+- BoundScript uses native TypeScript contracts, natural-language tasks and independently verified AI-generated implementations.
+- The current architecture, supported workflows and limitations are documented in `README.md`.
+- Development assignments are stored in `docs/assignments/`.
+- Historical AI conversations are reference material, not authoritative requirements. Read only relevant sections when necessary.
+- Do not assume a particular Git branch is required unless explicitly specified by the current task.
 
+## Development Workflow
 
-## Assignment workflow
+Follow `docs/development/developer-workflow.md` for assignment registration, implementation, review, authorization and acceptance.
 
-- Assignments are owned by the Product Owner; reviews are owned by the Reviewer. Do not modify them without explicit authorization.
-- Read and implement the specified assignment in `assignments/`.
-- Stay within scope. Ask only when a decision materially affects requirements.
-- Address review corrections under the original assignment unless the scope changes.
-- An assignment may require multiple commits.
-- Include uncommitted assignment or review files in the corresponding implementation or correction commit.
-- Report deviations, unresolved questions and verification results.
-- Run `npm test` for the credential-free saved Box and integration checks.
-  `npm run generate` and `npm run generate:pair` make real provider calls and expose
-  the explicitly authorized auth file to Pi tools.
-- Keep acceptance checks external; do not add a DSL, custom runtime, generic runner
-  or new packages without a concrete requirement.
+Before implementing a development request:
 
+1. Use the referenced assignment if one exists.
+2. Otherwise, register the human instructions under `docs/assignments/` before modifying implementation code.
+3. Preserve the original requirements; do not invent or approve requirements.
+4. Implement only within the authorized scope.
+5. Never mark your own implementation as accepted.
 
-## Git workflow
+Explicit task restrictions, such as `Do not modify files` or `Do not commit`, must be respected.
 
-- Follow Conventional Commits: `<type>(<scope>): <description>` (max. 72 characters).
-- Write a meaningful commit body explaining what changed and why, including important technical decisions when relevant.
-- Avoid trivial details, command logs and redundant descriptions.
+## Git Workflow
+
+- Follow Conventional Commits: `<type>(<scope>): <description>` (maximum 72 characters).
+- Write a meaningful commit body explaining what changed and why.
 - Keep commits focused and run relevant checks before committing.
-- Append Git trailers separated from the body by a blank line:
-
-  `Assignment: <id>`  
-  `AI-Tool: <tool-name>`  
-  `AI-Model: <model-id>`  
-  `AI-Reasoning: <effort-level>`
-
-- Report actual model usage. If multiple models contributed materially, identify them in the body. Use `unknown` when metadata cannot be determined.
-- Never include secrets, transcripts, generated artifacts or temporary files in commits.
+- Create local commits only when authorized.
 - Never amend, reset, rebase or rewrite history without explicit authorization.
 - Never push without explicit authorization.
-- Report the commit hash and summary after completing the work.
+- Never commit secrets, transcripts, temporary files or generated artifacts that should remain excluded from version control.
+
+Include traceability metadata in commits:
+
+```text
+Assignment: <id>
+AI-Tool: <tool-name>
+AI-Model: <model-id>
+AI-Reasoning: <effort-level>
+```
+
+- Report actual AI tool and model usage; never fabricate metadata.
+- If multiple models contributed materially, identify them in the commit body.
+- Use `unknown` when metadata cannot be determined.
+- After an authorized commit, report its hash and a brief summary.
+- When commits are not authorized, leave changes uncommitted and report the results.

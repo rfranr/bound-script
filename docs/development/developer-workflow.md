@@ -1,6 +1,6 @@
 # Development Workflow — BoundScript
 
-This document defines the development workflow, roles, responsibilities and traceability practices for BoundScript.
+This document defines the development workflow, roles, responsibilities, authorization rules and traceability practices for BoundScript.
 
 Agent-specific operational instructions are defined in `AGENTS.md`.
 
@@ -8,22 +8,24 @@ Agent-specific operational instructions are defined in `AGENTS.md`.
 
 ### Product Owner
 
-- Defines assignments, scope, constraints and acceptance criteria.
-- Owns requirements and architectural decisions.
+- Defines requirements, scope, constraints and acceptance criteria.
+- Owns product requirements and architectural decisions.
+- Authorizes development work.
 - Reviews and accepts or rejects deliveries.
 - Authorizes publishing changes to remote repositories.
 
 ### Developer
 
-- Implements assigned work.
-- Makes technical implementation decisions within the approved scope.
+- Registers development assignments when necessary.
+- Implements authorized work.
+- Makes technical implementation decisions within the authorized scope.
 - Runs relevant checks and tests.
-- Produces focused commits following the repository conventions.
+- Prepares or creates focused commits when authorized.
 - Reports implementation results, deviations and limitations.
 
 ### Reviewer
 
-- Inspects implementation, architecture and tests.
+- Inspects implementations, architecture and tests.
 - Evaluates deliveries against the original assignment.
 - Records actionable feedback.
 - Verifies whether acceptance criteria have been satisfied.
@@ -31,46 +33,150 @@ Agent-specific operational instructions are defined in `AGENTS.md`.
 
 Roles may be performed by different contributors, including automated development tools.
 
+A contributor may perform multiple roles, but performing the Developer role does not implicitly grant Product Owner approval authority.
+
 ## 2. Assignment Workflow
 
-The Product Owner creates an assignment:
+The Product Owner defines and owns the assignment's requirements, scope, constraints and acceptance criteria.
+
+An assignment may be created directly by the Product Owner or registered administratively by the Developer on their behalf.
+
+Assignment documents are stored at:
 
 `docs/assignments/NNNN-description.md`
 
-An assignment should define:
+Each assignment should contain:
 
-- Goals
-- Requirements
-- Constraints
-- Acceptance criteria
+- Identifier and title.
+- Status.
+- Goals.
+- Requirements.
+- Constraints.
+- Acceptance criteria.
+- Relevant implementation and verification references, when available.
 
-The assignment is owned by the Product Owner and must not be modified by the Developer without explicit authorization.
+The Product Owner owns the requirements. Developers must not silently introduce, remove or modify requirements or acceptance criteria.
 
-### Implementation
+### Automatic Assignment Registration
 
-The Developer receives the assignment using a reference to its file.
+Every authorized development task must have a persistent assignment before implementation begins.
 
-Example:
+When a Developer receives a development request through chat or another direct instruction:
+
+1. Check whether the request references an existing assignment.
+2. If an existing assignment applies, use it rather than creating a duplicate.
+3. Otherwise, create a new document under `docs/assignments/`, using the next available identifier.
+4. Preserve the human-provided objectives, requirements, constraints and acceptance criteria.
+5. Clearly distinguish explicit requirements from assumptions or unresolved questions.
+6. Record the appropriate assignment status.
+7. Persist the assignment before modifying implementation code.
+8. Reference its identifier in subsequent implementation reports and associated commits.
+
+Creating an assignment document is an administrative action and does not require separate approval when development has already been explicitly authorized.
+
+An agent must not invent requirements or treat its own interpretation as an approved Product Owner decision.
+
+If an instruction contains unresolved decisions that materially affect scope, architecture or acceptance criteria, register the assignment as `Proposed` and request clarification before implementing the affected work.
+
+If the Product Owner explicitly requests analysis without file modifications, no automatic assignment file should be created unless separately authorized.
+
+Direct chat instructions are valid development instructions. Once registered, the assignment becomes the persistent record of their authorized scope.
+
+Historical conversations may provide context but do not independently authorize new work.
+
+### Assignment States
+
+Assignments use the following states:
+
+| Status | Meaning |
+|---|---|
+| `Proposed` | Requirements or authorization are incomplete; implementation has not been authorized. |
+| `In Progress` | The Product Owner has explicitly authorized implementation within the recorded scope. |
+| `In Review` | An implementation has been delivered for review or acceptance. |
+| `Completed` | The Product Owner has explicitly accepted the implementation. |
+
+An explicit instruction to implement constitutes authorization to begin work within the stated scope.
+
+It does not constitute acceptance of the resulting implementation.
+
+A Developer may update an assignment's administrative status to reflect an authorized action or an observable workflow transition.
+
+Only the Product Owner may approve requirements, authorize scope changes or accept a delivery.
+
+### Assignment Ownership and Updates
+
+The assignment's requirements and acceptance criteria belong to the Product Owner.
+
+Developers may update administrative information without separate approval when required by this workflow, including:
+
+- Initial registration of an explicitly authorized request.
+- Implementation status.
+- References to commits, tests and verification evidence.
+- Delivery reports and unresolved issues.
+
+Developers must not change the authoritative requirements, constraints or acceptance criteria without Product Owner authorization.
+
+Corrections that materially change an assignment's meaning require approval.
+
+Historical requirements should remain traceable when an authorized change is made.
+
+## 3. Implementation Workflow
+
+The Developer may receive either:
+
+- A reference to an existing assignment.
+- An explicit development request that must first be registered.
+
+For example:
 
 ```text
 Implement docs/assignments/0005-expand-boundscript-execution-tests.md
 ```
 
+Or:
+
+```text
+Improve the independent verifier's diagnostic reporting.
+Preserve sandbox security and do not commit.
+```
+
+In the second case, the Developer first registers the request as an assignment.
+
+### Implementation Steps
+
 The Developer:
 
-1. Reads the assignment and relevant project documentation.
-2. Implements the requested functionality within scope.
-3. Runs the relevant tests and checks.
-4. Creates a focused commit containing the implementation and the assignment file, if not already committed.
-5. Reports the outcome, verification results and any unresolved issues.
+1. Identifies or registers the assignment.
+2. Reads the assignment and relevant project documentation.
+3. Confirms that implementation is authorized.
+4. Implements the requested functionality within scope.
+5. Runs the relevant tests and checks.
+6. Reviews the changes for unintended modifications or scope expansion.
+7. Creates a focused local commit only when authorized.
+8. Reports the outcome, verification results and unresolved issues.
+9. Marks the assignment `In Review` when the implementation is ready for evaluation.
 
-Every implementation commit must reference the assignment identifier.
+If commits are not authorized, the Developer leaves changes uncommitted and may propose a commit message.
 
-## 3. Code Review Workflow
+Every implementation commit associated with an assignment must reference its identifier.
 
-The Reviewer evaluates the delivery against the assignment and repository conventions.
+A successful implementation or passing test suite does not authorize the Developer to mark the assignment `Completed`.
 
-When corrections need to be documented, the Reviewer creates:
+### Scope and Technical Decisions
+
+The Developer may independently choose implementation details within the approved scope.
+
+Changes to architectural direction, product requirements or acceptance criteria require Product Owner approval.
+
+If implementation reveals a missing requirement or material ambiguity, the Developer must report it rather than silently establishing a new requirement.
+
+The Developer must not weaken tests or verification boundaries solely to obtain a successful result.
+
+## 4. Code Review Workflow
+
+The Reviewer evaluates the delivery against the assignment, its acceptance criteria and repository conventions.
+
+When significant corrections or decisions need to be documented, the Reviewer creates:
 
 `docs/reviews/NNNN-review-XX.md`
 
@@ -78,13 +184,17 @@ A review document should contain:
 
 - Assignment identifier.
 - Commit or implementation being reviewed.
-- Required corrections.
+- Findings and required corrections.
 - Constraints on the corrections.
 - Review status.
 
+Not every minor review comment requires a separate document.
+
+Reviews should be preserved when they contain significant corrections, architectural findings or decisions relevant to future work.
+
 ### Addressing Review Feedback
 
-The Developer receives the review through a reference to its file.
+The Developer receives review feedback through a document reference or direct instruction.
 
 Example:
 
@@ -94,18 +204,21 @@ Resolve docs/reviews/0005-review-01.md
 
 The Developer:
 
-1. Reads the review feedback.
-2. Applies the required corrections without expanding the original scope.
-3. Runs the relevant tests and checks.
-4. Creates a separate fix commit referencing the original assignment.
-5. Includes the review document in the commit if not already committed.
-6. Reports the corrections and verification results.
+1. Reads the review feedback and original assignment.
+2. Applies corrections within the existing authorized scope.
+3. Registers a new assignment if the requested changes introduce new requirements or independent scope.
+4. Runs relevant tests and checks.
+5. Creates a separate correction commit when authorized.
+6. Includes the review document in the commit when applicable.
+7. Reports corrections and verification results.
+
+Corrections remain associated with the original assignment when they do not introduce new requirements.
 
 Review corrections must not rewrite previous commits without explicit authorization.
 
-Not every minor review comment requires a separate document. Reviews should be preserved when they contain significant corrections or decisions.
+Review findings and recommendations do not constitute Product Owner acceptance.
 
-## 4. Git Workflow
+## 5. Git Workflow
 
 An assignment may generate multiple commits, including implementation and subsequent review corrections.
 
@@ -125,15 +238,27 @@ Assignment 0005
 
 Each artifact has a distinct responsibility:
 
-- **Assignment:** Describes what was requested.
-- **Commit:** Describes what was implemented and why.
-- **Review:** Describes what must be corrected or verified.
+- **Assignment:** Records what was requested and authorized.
+- **Commit:** Records what was implemented and why.
+- **Review:** Records findings and required corrections.
+- **Acceptance record:** Records the Product Owner's decision.
+
+### Commit Authorization
+
+Local commits and remote publication are separate actions.
+
+- Developers may create local commits when explicitly authorized by the Product Owner or the active task instructions.
+- When the task specifies `Do not commit`, all changes must remain uncommitted.
+- Developers must not amend, squash, rebase or otherwise rewrite existing commits without authorization.
+- Pushing changes to remote repositories always requires explicit Product Owner authorization.
+
+Authorization to implement does not automatically authorize committing or pushing.
 
 ### Commit Conventions
 
 Commits follow Conventional Commits and include a descriptive body explaining meaningful changes and their rationale.
 
-Commits associated with an assignment must include traceability metadata.
+Commits associated with assignments must contain traceability metadata.
 
 Example:
 
@@ -153,49 +278,88 @@ AI-Model: gpt-5.6-luna
 AI-Reasoning: low
 ```
 
-AI-specific metadata applies when AI tooling contributes to an implementation. Metadata must reflect actual usage and must not be fabricated.
+AI-specific metadata applies when AI tooling contributes to an implementation.
 
-The detailed commit rules and repository safety restrictions are defined in `AGENTS.md` for AI coding agents.
+Metadata must reflect actual usage and must not be fabricated.
 
-## 5. Acceptance
+The detailed commit conventions and repository safety restrictions for AI agents are defined in `AGENTS.md`.
 
-An assignment is not automatically accepted when a commit is created.
+## 6. Acceptance Workflow
 
-The Product Owner evaluates the delivery, considering the Reviewer's findings and the original acceptance criteria.
+An assignment is not automatically accepted when implementation finishes, tests pass, a review is positive or a commit is created.
+
+The Product Owner evaluates the delivery against the original requirements and acceptance criteria, considering available review findings and verification evidence.
 
 Possible outcomes:
 
-- **Accepted:** The implementation satisfies the assignment.
+- **Accepted:** The delivery satisfies the assignment.
 - **Changes requested:** Corrections are needed within the existing scope.
-- **Rejected:** The implementation is not accepted.
-- **New assignment:** Additional requirements or scope are identified.
+- **Rejected:** The delivery is not accepted.
+- **New assignment:** Additional requirements or independent scope have been identified.
 
-Review corrections remain associated with the original assignment when they do not introduce new requirements.
-
-Rejected implementations must not be considered accepted. The Product Owner decides whether to request corrections, revert the changes or abandon the assignment.
+The Product Owner decides whether to request corrections, revert changes or abandon rejected work.
 
 ### Recording Acceptance
 
-Acceptance is an explicit Product Owner decision. A successful implementation, passing tests, or a positive review does not constitute automatic acceptance.
+Acceptance is an explicit Product Owner decision.
 
 Once the Product Owner communicates a decision:
 
-1. The Developer may record the decision in the assignment document, provided the Product Owner has authorized the update.
-2. The acceptance record must identify the decision, the approving role, the reviewed implementation commit, and the supporting verification evidence.
+1. The Developer may record that decision in the assignment document.
+2. The acceptance record must identify the decision, approving role, reviewed implementation commit when available, and supporting verification evidence.
 3. An assignment may be marked `Completed` only after explicit Product Owner acceptance.
-4. A roadmap milestone may be marked `Completed` only when its own completion criteria have been verified and the Product Owner has authorized its closure.
-5. The Developer may commit and push these documentation updates when authorized, but must not independently approve assignments or milestones.
+4. A roadmap milestone may be marked `Completed` only when its own criteria have been verified and the Product Owner has authorized closure.
+5. Documentation updates may be committed or pushed only when the applicable Git authorization has been granted.
 
-Recording an approval is an administrative action, not an approval decision.
+Recording a communicated approval is an administrative action, not an approval decision.
 
-## 6. Governance
+Developers must not independently accept their own deliveries or close milestones on behalf of the Product Owner.
 
-- The Product Owner retains authority over requirements, scope and acceptance decisions.
-- Developers must not expand assignment scope without approval.
-- Assignments and reviews must not be modified without authorization from their owners.
-- Changes must not be pushed to remote repositories without explicit authorization.
-- Historical conversations are reference material, not authoritative requirements.
-- Technical decisions within the approved scope may be delegated to the Developer.
- - Product Owner decisions may be recorded by an authorized Developer, but approval authority cannot be delegated implicitly.
-  
-The purpose of this workflow is to preserve traceability between requirements, implementation, review feedback and the resulting software history.
+## 7. Governance
+
+The following rules apply throughout the development process:
+
+- The Product Owner retains authority over requirements, scope, architectural direction and acceptance decisions.
+- Developers may register assignments administratively but do not thereby acquire ownership of requirements.
+- Explicit implementation instructions authorize work within their stated scope, not acceptance of the result.
+- Material requirement or scope changes require Product Owner authorization.
+- Administrative status updates and evidence recording must accurately reflect actual decisions and results.
+- Historical conversations are reference material, not independent authorization for new work.
+- Technical implementation decisions may be delegated within the authorized scope.
+- Reviewer recommendations do not substitute for Product Owner acceptance.
+- Local commits require authorization; remote publication always requires explicit authorization.
+- Existing security, isolation and verification guarantees must not be weakened without an explicit, informed architectural decision.
+- Traceability records must distinguish original requirements, implementation results, review findings and acceptance decisions.
+
+## 8. Traceability Principle
+
+BoundScript development follows this lifecycle:
+
+```text
+Human development request
+          |
+          v
+Assignment registration
+          |
+          v
+Authorized implementation
+          |
+          v
+Tests and verification
+          |
+          v
+Delivery / In Review
+          |
+          v
+Review and human decision
+          |
+          +-- Changes requested --> Corrections --> Review
+          |
+          +-- Rejected
+          |
+          +-- Accepted --> Completed
+```
+
+The assignment must exist before implementation, even when the original request was delivered through chat.
+
+The objective is to preserve a verifiable relationship between human intent, delegated implementation, independent review and the resulting software history, without introducing unnecessary approval steps.
