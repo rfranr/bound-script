@@ -56,12 +56,15 @@ inherently trustworthy.
   superseded DSL documentation/assignments/roadmaps (available in Git history).
 - **Retained/extended:** the Docker/Pi reference, native TypeScript contracts,
   explicit dependency injection, independent checks, per-Box promotion and a fixed
-  two-Box application. See the [0018 run report](experiments/minimal-box/two-boxes/REPORT.md).
+  two-Box application with contact normalization and ordered validation results.
+  See the [0018 run report](experiments/minimal-box/two-boxes/REPORT.md) and
+  [0018b two-generation comparison](experiments/minimal-box/two-boxes/REPORT-0018b.md).
 - **Deferred:** artifact registry, transitive dependency
   enforcement, credential brokerage, egress hardening, other languages, generic
   runners/plugins, and production security. No new runtime or DSL replaces the old
   one.
 
 Scope: [foundation](assignments/0017-boundscript-next-foundation.md) and
-[two independent Boxes](assignments/0018-two-independent-boxes.md).
+[two independent Boxes](assignments/0018-two-independent-boxes.md), and
+[richer contact domain](assignments/0018b-Richer-Contact-Domain.md).
 Assignments 0019 and 0020 are not implemented.
