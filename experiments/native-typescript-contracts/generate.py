@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
 """Fixed 0030 Pi spike, retaining the baseline generation security/promotion path."""
+import hashlib
 import json
 import os
 from pathlib import Path
 import shutil
+import stat
 import subprocess
 import sys
 import tempfile
@@ -17,7 +19,9 @@ from container_runtime import runtime
 
 PI = Path.home() / '.nvm/versions/node/v24.16.0/lib/node_modules/@earendil-works/pi-coding-agent'
 AUTH = Path.home() / '.pi/agent/auth.json'
-MODEL = 'openai-codex/gpt-6.1-sol'
+#MODEL = 'openai-codex/gpt-6.1-sol'
+MODEL = 'openai-codex/gpt-5.6-luna'
+MODEL_THINKING = 'low'
 PROMPT = '''Read /inputs/task.md and /inputs/contract.ts using the read tool.
 Implement NormalizeContact in /implementation/implementation.ts and export the
 normalizeContact function. Use tools to write the file. Only the task and native
@@ -26,6 +30,26 @@ available. Do not install packages, inspect or disclose credentials, or write
 any other submission file. Use type-only contract imports. Do not change the
 contract or task. The container, not this prompt, enforces the filesystem boundary.
 '''
+
+
+def quarantine(submission, expected_digest):
+    """Retain only the same bounded, credential-scanned bytes, never agent logs."""
+    fd = os.open(submission, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
+    with os.fdopen(fd, 'rb') as stream:
+        if not stat.S_ISREG(os.fstat(stream.fileno()).st_mode):
+            raise RuntimeError('Unsafe quarantine submission')
+        source = stream.read(16385)
+    if len(source) > 16384 or hashlib.sha256(source).hexdigest() != expected_digest:
+        raise RuntimeError('Quarantine submission differs from credential-scanned source')
+    directory = SPIKE / 'quarantine'
+    directory.mkdir(mode=0o700, exist_ok=True)
+    if directory.is_symlink() or not directory.is_dir():
+        raise RuntimeError('Unsafe quarantine directory')
+    saved = Path(tempfile.mkdtemp(prefix='failed-', dir=directory)) / 'implementation.ts'
+    fd = os.open(saved, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+    with os.fdopen(fd, 'wb') as stream:
+        stream.write(source)
+    return saved
 
 
 def main():
@@ -98,9 +122,9 @@ console.log(JSON.stringify(observed));
             assert observed == ['ENOENT', 'EROFS', 'ENOENT', 'ENOENT', 'ENOENT', 'EROFS', 'ENOENT',
                                 'ENOENT', 'ERR_MODULE_NOT_FOUND'], observed
             print(f'PASS {box} generation filesystem probes; forbidden peer read/import rejected because file is absent', flush=True)
-            print(f'Generating {box}: {MODEL}, medium reasoning, fresh empty workspace', flush=True)
+            print(f'Generating {box}: {MODEL}, {MODEL_THINKING} reasoning, fresh empty workspace', flush=True)
             command = ['node', '/opt/pi/dist/bundle/cli.js',
-                       '--mode', 'json', '--no-session', '--model', MODEL, '--thinking', 'medium',
+                       '--mode', 'json', '--no-session', '--model', MODEL, '--thinking', MODEL_THINKING,
                        '--tools', 'read,write,edit,bash', '--no-extensions', '--no-mcp',
                        '--no-skills', '--no-prompt-templates', '--no-themes',
                        '--no-context-files', '--no-approve', '--offline', prompt]
@@ -128,22 +152,35 @@ console.log(JSON.stringify(observed));
             assert submission.is_file() and submission.stat().st_size <= 16384
             # Check both original and refreshed credential string values IN the
             # container before importing any submission bytes to the repository.
-            engine.exec(name, 'node', '--input-type=module', source='''
+            scanned_digest = engine.exec(name, 'node', '--input-type=module', source='''
 import {readFileSync} from 'node:fs';
-const source = readFileSync('/implementation/FILENAME', 'utf8');
+import {createHash} from 'node:crypto';
+const bytes = readFileSync('/implementation/FILENAME');
+const source = bytes.toString('utf8');
 function check(v) {
  if (typeof v === 'string' && v.length >= 8 && source.includes(v)) process.exit(42);
  if (v && typeof v === 'object') for (const x of Object.values(v)) check(x);
 }
 for (const path of ['/run/host-auth.json', '/pi-state/auth.json']) check(JSON.parse(readFileSync(path, 'utf8')));
+console.log(createHash('sha256').update(bytes).digest('hex'));
 '''.replace('FILENAME', filename))
+            assert len(scanned_digest) == 64 and all(c in '0123456789abcdef' for c in scanned_digest)
+            assert digest(submission) == scanned_digest, 'Submission changed after credential scan'
             assert all(digest(p) == old for p, old in protected.items())
             assert digest(AUTH) == auth_before, 'Host authentication changed'
         finally:
             engine.remove(name)
         # Generation has ended; independent offline verification receives only the submission.
         verification = [sys.executable, str(SPIKE / 'verify.py'), str(submission)]
-        subprocess.run(verification, check=True, timeout=120)
+        try:
+            subprocess.run(verification, check=True, timeout=120)
+        except (subprocess.SubprocessError, OSError):
+            # Generation has ended and the literal credential scan has passed.
+            # Never retain failed generation output or a credential-scan failure.
+            saved = quarantine(submission, scanned_digest)
+            print(f'Verification failed; candidate quarantined: {saved.relative_to(SPIKE)}; '
+                  f'sha256={scanned_digest}; not promoted', flush=True)
+            raise
         destination.parent.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(submission, destination)
         print(f'PASS {box} independently verified and promoted unchanged; sha256={digest(destination)}', flush=True)

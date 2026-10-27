@@ -1,6 +1,7 @@
 node_modules/
 experiments/native-typescript-contracts/.generated/
 experiments/native-typescript-contracts/accepted/
+experiments/native-typescript-contracts/quarantine/
 __pycache__/
 *.py[cod]
 .DS_Store

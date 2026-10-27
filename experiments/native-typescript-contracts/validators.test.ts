@@ -35,10 +35,10 @@ describe('Typia validators derived only from native TypeScript', () => {
     }
   });
 
-  it('does not pretend native shape validation enforces business rules', () => {
-    // These are structurally valid. Independent behavioral tests must reject
-    // an implementation returning these for the wrong input.
-    expect(isResult({ ok: true, contact: { name: '', email: 'bad' } })).toBe(true);
-    expect(isResult({ ok: false, errors: [] })).toBe(true);
+  it('rejects invalid normalized contact data', () => {
+    expect(isResult({
+      ok: true,
+      contact: { name: '', email: 'bad' }
+    })).toBe(false);
   });
 });

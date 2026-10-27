@@ -10,7 +10,8 @@ See [observed results and limitations](REPORT.md).
 - `task.md`: independent, natural-language functional intent, copied unchanged
   from the baseline NormalizeContact task.
 - `src/contract.ts`: authoritative native `Contact`, discriminated result union,
-  error literals and function signature, copied unchanged from the baseline.
+  error literals and function signature. Initially copied from the baseline,
+  this is the experiment's evolving authority, not the frozen original contract.
   The baseline already used native types; this spike adds derived runtime
   validation and independent property tests, not another contract language.
 - `src/validators.ts`: Typia `createEquals` / `createAssertEquals` calls for input
@@ -39,8 +40,13 @@ is also read-only; only a disposable cache directory is writable. It reuses the
 unmodified Docker/Podman adapter, pinned image, nonroot identity, dropped
 capabilities, read-only root, and effective CPU/memory/PID checks. Runtime input
 and output validation happens at the test boundary, not inside agent code.
-The original external `verify_pair.check` then runs all original assertions on
-that same submission. No candidate executes on the host.
+Strict TypeScript checking uses `/inputs/contract.ts` mounted from the experiment's
+`src/contract.ts`. The independent Vitest suite executes all 20 unchanged original
+acceptance cases, Typia validation and fast-check properties. The legacy
+`verify_pair.check` is not invoked: it recompiles against the frozen original
+contract and would prevent this experiment's contract from evolving. Only its
+case fixtures and baseline artifact path are reused. No candidate executes on
+the host.
 
 `generate.py` is a fixed NormalizeContact adaptation of the existing generator,
 not a generic runner. Its generation/credential/probe/event-sanitization path is
@@ -52,7 +58,7 @@ The agent receives only `/inputs/task.md`, `/inputs/contract.ts`, read-only Pi
 and the explicitly authorized auth file, plus an initially empty writable
 `/implementation`. It receives neither Typia/Vitest tooling nor tests nor peer
 code. Generation ends before verification starts. Only a regular, size-limited,
-credential-scanned source that passes **both** independent verification stages
+credential-scanned source that passes the independent native verification pipeline
 is copied unchanged to `accepted/normalize-contact.ts`. Failed verification
 leaves the previous accepted source untouched. No integration promotion or
 RenderWelcome migration is performed.
@@ -88,7 +94,41 @@ npm run build:native
 BOUNDSCRIPT_RUNTIME=podman python3 -B experiments/native-typescript-contracts/verify.py /absolute/path/candidate.ts
 ```
 
-`.generated/` and `accepted/` are ignored and must not be committed. A clean
+## Offline failure diagnostics and quarantine
+
+Offline Vitest failures report exit status, failed test names and bounded assertion
+expected/actual/diff fields, including fast-check assertion causes. Collection,
+unhandled/process errors, missing reports and transport failures are identified
+as verifier infrastructure failures without raw error text. The dedicated reporter
+never exports console output, error messages/stacks, counterexamples or environment
+dumps. A fixed parent process discards candidate stdout/stderr; host-side filtering
+redacts sensitive environment values and common credential forms and JSON-escapes
+control characters. This is bounded, best-effort diagnostic sanitization, not
+attestation against hostile code forging reporter artifacts. Pi/provider logs and
+generation-container diagnostics remain withheld; the shared container adapter and
+all sandbox restrictions are unchanged.
+
+When generation succeeds and the credential scan passes but independent verification
+fails (including timeout/launch failure), only the unchanged scanned source is saved
+under `quarantine/failed-*/implementation.ts`. Each local entry is unique, with a
+0700 directory and 0600 file. No logs, auth or runtime state are retained. Failed
+credential scans are never quarantined. Verification failure never promotes or
+replaces the accepted source. Quarantine retention is local and manual; remove an
+entry when no longer needed. Existing failures whose temporary workspace has already
+been deleted cannot be recovered retroactively.
+
+Rerun a quarantined source without credentials or another model call:
+
+```sh
+npm run build:native
+BOUNDSCRIPT_RUNTIME=podman python3 -B experiments/native-typescript-contracts/verify.py \
+  experiments/native-typescript-contracts/quarantine/failed-<id>/implementation.ts
+python3 -B -m unittest discover -s experiments/native-typescript-contracts -p test_diagnostics.py -v
+BOUNDSCRIPT_NATIVE_ENGINE_TEST=1 BOUNDSCRIPT_RUNTIME=podman \
+  python3 -B -m unittest discover -s experiments/native-typescript-contracts -p test_diagnostics.py -v
+```
+
+`.generated/`, `accepted/` and `quarantine/` are ignored and must not be committed. A clean
 checkout has no accepted spike implementation: use `test:native:baseline` for a
 credential-free comparison, or generate independently before `test:native`.
 No generated implementation was manually repaired. No automatic commit occurs.

@@ -5,6 +5,18 @@ State: **InReview**; ready for independent review, not final acceptance.
 All files under `experiments/minimal-box` remain unchanged, as do the original
 npm test/generation commands. No RenderWelcome migration or architecture change.
 
+## Current verification update
+
+The native pipeline no longer invokes the legacy `verify_pair.check` after Vitest.
+That redundant verifier recompiled submissions against the frozen baseline contract,
+blocking evolution of the experiment's authoritative `src/contract.ts`. Strict
+TypeScript checking now uses only the experiment contract. Vitest still consumes
+all 20 unchanged original `CASES`, with Typia validation and fast-check properties.
+Sandbox probes, independent offline verification, failure quarantine and
+verify-before-promotion are unchanged; no frozen minimal-box files were modified.
+The results below describe the initial feasibility run, which included the legacy
+second stage, not a requirement to retain that stage.
+
 ## Outcome
 
 **Feasible for this TypeScript Box.** A fresh Pi implementation was generated
