@@ -11,6 +11,9 @@ import sys
 import tempfile
 import uuid
 
+sys.dont_write_bytecode = True
+from container_runtime import runtime
+
 HERE = Path(__file__).resolve().parent
 IMAGE = 'node@sha256:55fb5f5a527ea2c5c4a95f963e48ef90aa38c7b346054fdc8ee9957a2b55d205'
 TSC = HERE.parents[1] / 'node_modules/typescript/lib/tsc.js'
@@ -41,7 +44,8 @@ def main():
     if submission.stat().st_size > 16384:
         raise RuntimeError('Submission exceeds 16 KiB')
     # Do not pull images or implicitly access the network.
-    run('docker', 'image', 'inspect', IMAGE)
+    engine = runtime()
+    engine.image(IMAGE)
     name = 'boundscript-minimal-' + uuid.uuid4().hex[:12]
     with tempfile.TemporaryDirectory(prefix='boundscript-boundary-') as tmp:
         root = Path(tmp)
@@ -73,34 +77,12 @@ def main():
             mounts += ['--mount', f'type=bind,src={candidate},dst=/implementation',
                        '--mount', f'type=bind,src={TSC.parents[1]},dst=/tools/typescript,readonly']
             try:
-                run('docker', 'create', '--name', name, '--pull', 'never',
-                    '--network', 'none', '--user', f'{uid}:{gid}', '--read-only',
-                    '--cap-drop', 'ALL', '--security-opt', 'no-new-privileges',
-                    '--memory', '256m', '--memory-swap', '256m', '--cpus', '1',
-                    '--pids-limit', '32', '--log-driver', 'none',
-                    '--workdir', '/implementation', '--env', 'HOME=/implementation',
-                    *mounts, IMAGE, 'sleep', '300')
-                config = json.loads(run('docker', 'inspect', name))[0]
-                h = config['HostConfig']
-                assert h['NetworkMode'] == 'none' and h['ReadonlyRootfs']
-                assert not h['Privileged'] and h['CapDrop'] == ['ALL']
-                assert 'no-new-privileges' in h['SecurityOpt']
-                assert config['Config']['User'] == f'{uid}:{gid}' and uid != 0
-                assert h['Memory'] == h['MemorySwap'] == 268435456
-                assert h['PidsLimit'] == 32 and h['NanoCpus'] == 1000000000
-                assert len(config['Mounts']) == 5
-                assert {m['Destination'] for m in config['Mounts']} == {
-                    '/inputs/task.md', '/inputs/contract.ts', '/inputs/slugger.ts',
-                    '/implementation', '/tools/typescript'}
-                assert all(m['RW'] == (m['Destination'] == '/implementation') for m in config['Mounts'])
-                # No host environment is forwarded; only image defaults and fixed HOME.
-                assert set(e.split('=', 1)[0] for e in config['Config']['Env']) <= {
-                    'PATH', 'NODE_VERSION', 'YARN_VERSION', 'HOME'}
+                engine.create(name, IMAGE, mounts, uid, gid, workdir='/implementation')
+                engine.start(name, uid, gid)
                 print('PASS effective configuration: four Box mounts plus read-only TypeScript tooling, nonroot, offline, limits')
-                run('docker', 'start', name)
 
                 def probe(label, source):
-                    output = run('docker', 'exec', '-i', name, 'node', '--input-type=module', source=source)
+                    output = engine.exec(name, 'node', '--input-type=module', source=source)
                     return json.loads(output)
 
                 observed = probe('authorized access', '''
@@ -182,7 +164,7 @@ console.log(JSON.stringify(observed));
                     raise AssertionError('Sandbox reached host listener')
                 # Use the actual contract paths, including absolute /inputs imports.
                 # The trusted compiler and all candidate execution remain offline in Docker.
-                run('docker', 'exec', name, 'node', '/tools/typescript/lib/tsc.js',
+                engine.exec(name, 'node', '/tools/typescript/lib/tsc.js',
                     '--noEmit', '--strict', '--target', 'es2022', '--module', 'nodenext',
                     '--allowImportingTsExtensions', '/implementation/greet.ts')
                 print('PASS native TypeScript contract: strict tsc --noEmit')
@@ -204,7 +186,7 @@ console.log(JSON.stringify(observed));
                 assert not (root / 'outside.txt').exists()
                 print('PASS external authority: input/sentinel hashes unchanged; host listener untouched')
             finally:
-                run('docker', 'rm', '-f', name)
+                engine.remove(name)
     print('PASS all checks; disposable container and workspace removed')
 
 

@@ -8,6 +8,7 @@ import uuid
 
 sys.dont_write_bytecode = True
 from verify import HERE, IMAGE, TSC, digest, run
+from container_runtime import runtime
 
 PAIR = HERE / 'two-boxes'
 BOXES = ('normalize-contact', 'render-welcome')
@@ -60,6 +61,7 @@ DEPENDENCY_MESSAGES = [
 
 
 def check(mode, submission=None):
+    engine = runtime()
     integration = mode == 'integrate'
     if integration:
         files = {PAIR / 'application.ts': '/app/application.ts'}
@@ -83,20 +85,11 @@ def check(mode, submission=None):
     name = 'boundscript-contact-check-' + uuid.uuid4().hex[:12]
     uid, gid = (os.getuid(), os.getgid()) if os.getuid() else (65534, 65534)
     try:
-        run('docker', 'create', '--name', name, '--pull', 'never', '--network', 'none',
-            '--user', f'{uid}:{gid}', '--read-only', '--cap-drop', 'ALL',
-            '--security-opt', 'no-new-privileges', '--memory', '256m', '--memory-swap', '256m',
-            '--cpus', '1', '--pids-limit', '32', '--log-driver', 'none',
-            *mounts, IMAGE, 'sleep', '300')
-        config = json.loads(run('docker', 'inspect', name))[0]
-        assert config['HostConfig']['NetworkMode'] == 'none'
-        assert config['HostConfig']['ReadonlyRootfs'] and config['Config']['User'] == f'{uid}:{gid}'
-        assert len(config['Mounts']) == len(files) + 1 and all(not m['RW'] for m in config['Mounts'])
-        assert {m['Destination'] for m in config['Mounts']} == {*files.values(), '/tools/typescript'}
-        run('docker', 'start', name)
+        engine.create(name, IMAGE, mounts, uid, gid)
+        engine.start(name, uid, gid)
 
         def observe(source):
-            return json.loads(run('docker', 'exec', '-i', name, 'node', '--input-type=module', source=source))
+            return json.loads(engine.exec(name, 'node', '--input-type=module', source=source))
 
         # Deliberate unauthorized implementation access. This is missing-file/module
         # denial, NOT a source-import allowlist or a universal dependency checker.
@@ -112,7 +105,7 @@ console.log(JSON.stringify(errors));
         if not integration:
             # A human-owned native consumer checks the actual exported signature,
             # not just whether the candidate happens to annotate its own code.
-            run('docker', 'exec', name, 'node', '/tools/typescript/lib/tsc.js', '--noEmit',
+            engine.exec(name, 'node', '/tools/typescript/lib/tsc.js', '--noEmit',
                 '--strict', '--target', 'es2022', '--module', 'nodenext',
                 '--allowImportingTsExtensions', '/checks/contract.ts')
             print(f'PASS {mode}: strict native contract consumer', flush=True)
@@ -176,14 +169,14 @@ console.log(JSON.stringify(inputs.map(input => {
         count = len(INPUTS) * len(DEPENDENCY_RESULTS) + 1 if mode == BOXES[1] else len(INPUTS)
         print(f'PASS {mode}: {count} cases; frozen inputs and artifacts unchanged', flush=True)
     finally:
-        run('docker', 'rm', '-f', name)
+        engine.remove(name)
 
 
 def main():
     if not __debug__ or run('git', 'branch', '--show-current') != 'experiment/boundscript-next':
         raise RuntimeError('Use experiment/boundscript-next with assertions enabled')
     assert TSC.is_file(), 'Install existing dependencies first'
-    run('docker', 'image', 'inspect', IMAGE)
+    runtime().image(IMAGE)
     if len(sys.argv) == 3 and sys.argv[1] in BOXES:
         check(sys.argv[1], Path(sys.argv[2]))
     elif sys.argv[1:] == ['integrate']:
