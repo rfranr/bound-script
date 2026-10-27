@@ -19,7 +19,13 @@ Historical experiment reports describe earlier states; proposed integration in
 3. **Verify:** separate Python processes create fresh offline, credential-free
    containers. The native verifier stages a temporary signature consumer using
    `boundscript_internal/typescript_contract.py`, deterministically from module
-   paths and export names, without agent involvement. The generated check is
+   paths and export names, without agent involvement. Both native entry points
+   import the same explicit `native_box.py` definition: public task/contract,
+   function type/export, destination and independent verification bundle. A
+   generation-side definition fingerprint is required to match in its verifier
+   subprocess before candidate verification. No registry or export inference is
+   involved; implementation mounts and verification bundle layout remain runner
+   conventions. The generated check is
    hashed and mounted read-only, not retained as a source artifact.
    Native verification performs strict TypeScript compilation, Typia
    validator tests, 20 independent examples with runtime input/output guards,
@@ -100,6 +106,7 @@ boundscript_internal/          # shared host-side mechanics; no experiment impor
   container_runtime.py        # engine policy, probes, image/tooling/hash utilities
   agent_workspace.py          # Pi lifecycle, credential scan, generation cleanup
   typescript_contract.py      # deterministic temporary TypeScript signature consumer
+  box_definition.py           # immutable explicit inputs and definition fingerprint
 tests/internal/               # shared lifecycle/security/resource regressions
 experiments/minimal-box/      # baseline authority, workflows and policy tests
 experiments/native-typescript-contracts/

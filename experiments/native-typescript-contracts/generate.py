@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
-"""Fixed native NormalizeContact generation, independent verification and promotion."""
+"""Fixed native Box generation, independent verification and promotion."""
 import hashlib
+from importlib import import_module
 import os
 from pathlib import Path
 import shutil
@@ -14,14 +15,18 @@ SPIKE = Path(__file__).resolve().parent
 sys.path.insert(0, str(SPIKE.parents[1]))
 from boundscript_internal.agent_workspace import agent_submission
 from boundscript_internal.container_runtime import digest, runtime
+BOX = import_module('experiments.native-typescript-contracts.native_box').BOX
 
 PI = Path.home() / '.nvm/versions/node/v24.16.0/lib/node_modules/@earendil-works/pi-coding-agent'
 AUTH = Path.home() / '.pi/agent/auth.json'
 MODEL = 'openai-codex/gpt-5.6-luna'
 MODEL_THINKING = 'low'
-PROMPT = '''Read /inputs/task.md and /inputs/contract.ts using the read tool.
-Implement NormalizeContact in /implementation/implementation.ts and export the
-normalizeContact function. Use tools to write the file. Only the task and native
+
+
+def generation_prompt(box):
+    return f'''Read /inputs/task.md and {box.contract_module} using the read tool.
+Implement {box.function_type} in /implementation/implementation.ts and export the
+{box.implementation_export} function. Use tools to write the file. Only the task and native
 TypeScript contract are authorized inputs. No peer code, tests or repository are
 available. Do not install packages, inspect or disclose credentials, or write
 any other submission file. Use type-only contract imports. Do not change the
@@ -53,17 +58,18 @@ def main():
     if not __debug__:
         raise RuntimeError('Assertions must be enabled')
     if sys.argv[1:]:
-        raise RuntimeError('This runner generates only NormalizeContact; no arguments expected')
-    if not (SPIKE / '.generated/validators.ts').is_file():
+        raise RuntimeError('This fixed Box runner expects no arguments')
+    if not (SPIKE / BOX.verification_path / '.generated/validators.ts').is_file():
         raise RuntimeError('Run npm run build:native first')
-    box = 'normalize-contact-native'
-    input_sources = {'task.md': SPIKE / 'task.md', 'contract.ts': SPIKE / 'src/contract.ts'}
-    destination = SPIKE / 'accepted/normalize-contact.ts'
-    with agent_submission(runtime(), input_sources, pi=PI, auth=AUTH, box=box,
-                          filename='implementation.ts', prompt=PROMPT,
+    input_sources = {'task.md': SPIKE / BOX.task_path,
+                     BOX.contract_module.removeprefix('/inputs/'): SPIKE / BOX.contract_path}
+    destination = SPIKE / BOX.accepted_path
+    with agent_submission(runtime(), input_sources, pi=PI, auth=AUTH, box=BOX.name,
+                          filename='implementation.ts', prompt=generation_prompt(BOX),
                           model=MODEL, thinking=MODEL_THINKING) as (submission, scanned_digest):
         # Generation has ended; only the source enters independent offline verification.
-        verification = [sys.executable, str(SPIKE / 'verify.py'), str(submission)]
+        verification = [sys.executable, str(SPIKE / 'verify.py'),
+                        '--box-definition', BOX.fingerprint(), str(submission)]
         try:
             subprocess.run(verification, check=True, timeout=360)
         except (subprocess.SubprocessError, OSError):
@@ -74,7 +80,7 @@ def main():
         assert digest(submission) == scanned_digest, 'Submission changed during verification'
         destination.parent.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(submission, destination)
-        print(f'PASS {box} independently verified and promoted unchanged; sha256={digest(destination)}', flush=True)
+        print(f'PASS {BOX.name} independently verified and promoted unchanged; sha256={digest(destination)}', flush=True)
 
 
 def cli():

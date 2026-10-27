@@ -8,6 +8,7 @@ import unittest
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 from boundscript_internal.typescript_contract import generate_contract_check
+from boundscript_internal.box_definition import BoxDefinition
 
 
 class TypeScriptContractTests(unittest.TestCase):
@@ -43,8 +44,9 @@ class TypeScriptContractTests(unittest.TestCase):
             root = Path(tmp)
             for type_name, export_name, signature, valid, bad_input, bad_output in fixtures:
                 (root / 'contract.ts').write_text(f'export type {type_name} = {signature};\n')
-                (root / 'check-contract.ts').write_text(generate_contract_check(
-                    './contract.ts', type_name, './implementation.ts', export_name))
+                box = BoxDefinition(type_name, 'task.md', 'contract.ts', './contract.ts',
+                                    type_name, export_name, 'accepted.ts', '.')
+                (root / 'check-contract.ts').write_text(box.contract_check('./implementation.ts'))
                 for case, source, diagnostic in (
                     ('valid', f'export const {export_name} = {valid};', None),
                     ('parameter', f'export const {export_name} = {bad_input};', 'TS2322'),

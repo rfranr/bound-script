@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
-"""Fixed offline NormalizeContact verification; no candidate execution on the host."""
+"""Fixed offline Box verification; no candidate execution on the host."""
 from contextlib import contextmanager
+from importlib import import_module
 import json
 import os
 from pathlib import Path
@@ -14,10 +15,11 @@ import uuid
 
 sys.dont_write_bytecode = True
 SPIKE = Path(__file__).resolve().parent
-BASE = SPIKE.parent / 'minimal-box'
 sys.path.insert(0, str(SPIKE.parents[1]))
 from boundscript_internal.container_runtime import IMAGE, TSC, digest, runtime
-from boundscript_internal.typescript_contract import generate_contract_check
+configuration = import_module('experiments.native-typescript-contracts.native_box')
+BOX = configuration.BOX
+BASELINE_SOURCE = configuration.BASELINE_SOURCE
 
 
 class VerificationFailure(RuntimeError):
@@ -229,13 +231,16 @@ def run_vitest(engine, name, scratch, group='all'):
         raise failure
 
 
-def check(submission):
+def check(submission, box=None):
+    box = BOX if box is None else box
+    verification_root = SPIKE / box.verification_path
+    contract = SPIKE / box.contract_path
     with phase('Verifier preflight'):
         if not __debug__:
             raise VerificationFailure('infrastructure', 'Assertions must be enabled')
         if submission.is_symlink() or not submission.is_file() or submission.stat().st_size > 16384:
             raise VerificationFailure('infrastructure', 'Expected regular submission of at most 16 KiB')
-        if not (SPIKE / '.generated/validators.ts').is_file():
+        if not (verification_root / '.generated/validators.ts').is_file():
             raise VerificationFailure('infrastructure', 'Run npm run build:native first')
         engine = runtime()
         engine.image(IMAGE)
@@ -247,20 +252,19 @@ def check(submission):
         checks.mkdir()
         for filename in ('acceptance.test.ts', 'validators.test.ts', 'vitest.config.mts',
                          'diagnostic-reporter.mjs', 'compiler-diagnostics.mjs', 'cases.json'):
-            shutil.copyfile(SPIKE / filename, checks / filename)
-        (checks / 'check-contract.ts').write_text(generate_contract_check(
-            '/inputs/contract.ts', 'NormalizeContact',
-            '/implementation/implementation.ts', 'normalizeContact'), encoding='utf-8')
-        shutil.copytree(SPIKE / '.generated', checks / '.generated')
-        shutil.copytree(SPIKE / 'src', checks / 'src')
+            shutil.copyfile(verification_root / filename, checks / filename)
+        (checks / 'check-contract.ts').write_text(box.contract_check(
+            '/implementation/implementation.ts'), encoding='utf-8')
+        shutil.copytree(verification_root / '.generated', checks / '.generated')
+        shutil.copytree(verification_root / 'src', checks / 'src')
         scratch = root / 'scratch'
         scratch.mkdir()
         if os.getuid() == 0:
             os.chown(scratch, uid, gid)
-        protected = [submission, *[p for p in checks.rglob('*') if p.is_file()], SPIKE / 'src/contract.ts']
+        protected = [submission, *[p for p in checks.rglob('*') if p.is_file()], contract]
         before = {p: digest(p) for p in protected}
         bindings = {checks: '/checks', submission.resolve(): '/implementation/implementation.ts',
-                    SPIKE / 'src/contract.ts': '/inputs/contract.ts', TSC.parents[2]: '/node_modules'}
+                    contract: box.contract_module, TSC.parents[2]: '/node_modules'}
         mounts = ['--mount', f'type=bind,src={scratch},dst=/implementation']
         for source, destination in bindings.items():
             mounts += ['--mount', f'type=bind,src={source},dst={destination},readonly']
@@ -275,16 +279,16 @@ for (const action of [
  () => readFileSync('/repo/package.json'),
  () => readFileSync('/run/host-auth.json'),
  () => readFileSync('/peer/implementation.ts'),
- () => writeFileSync('/inputs/contract.ts', 'changed'),
+ () => writeFileSync(CONTRACT_MODULE, 'changed'),
  () => writeFileSync('/checks/acceptance.test.ts', 'changed'),
  () => writeFileSync('/implementation/implementation.ts', 'changed'),
  () => writeFileSync('/outside.txt', 'changed'),
- () => { symlinkSync('/inputs/contract.ts', '/implementation/escape');
+ () => { symlinkSync(CONTRACT_MODULE, '/implementation/escape');
          try { writeFileSync('/implementation/escape', 'changed'); }
          finally { unlinkSync('/implementation/escape'); } },
 ]) { try { action(); result.push('SUCCEEDED'); } catch (e) { result.push(e.code); } }
 console.log(JSON.stringify(result));
-'''))
+'''.replace('CONTRACT_MODULE', json.dumps(box.contract_module))))
                 assert observed == ['ENOENT'] * 3 + ['EROFS'] * 5
                 network = json.loads(engine.exec(name, 'node', '--input-type=module', source='''
 import net from 'node:net';
@@ -315,10 +319,14 @@ console.log(JSON.stringify(result));
 
 def main():
     args = sys.argv[1:]
+    if args[:1] == ['--box-definition']:
+        if len(args) < 2 or args[1] != BOX.fingerprint():
+            raise VerificationFailure('infrastructure', 'Generation/verification Box definition mismatch')
+        args = args[2:]
     if args == ['--baseline']:
-        submission = BASE / 'two-boxes/accepted/normalize-contact.ts'
-    elif len(args) <= 1:
-        submission = Path(args[0]).absolute() if args else SPIKE / 'accepted/normalize-contact.ts'
+        submission = (SPIKE / BASELINE_SOURCE).resolve()
+    elif len(args) <= 1 and (not args or not args[0].startswith('--')):
+        submission = Path(args[0]).absolute() if args else SPIKE / BOX.accepted_path
     else:
         raise VerificationFailure('infrastructure', 'Expected optional candidate path or --baseline')
     try:

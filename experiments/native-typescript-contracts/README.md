@@ -10,6 +10,19 @@ branch restrictions or guarantees that old candidates meet today's contract.
 
 ## Authority and configuration
 
+- `native_box.py`: one explicit, immutable `BoxDefinition`, imported by both native
+  entry points. It selects task/contract paths, the mounted contract module,
+  function type/export, accepted destination and independent verification bundle.
+  `boundscript_internal/box_definition.py` only holds this data, renders the
+  signature consumer and fingerprints the definition; there is no registry or
+  source discovery. Generation passes that fingerprint to the separate verifier,
+  which rejects a mismatch before checking the candidate. Standalone verification
+  uses the same fixed definition without requiring a fingerprint argument.
+  Implementation paths and the checks/src/.generated bundle layout remain runner
+  conventions. Each future Box still needs its own human-owned tests, Typia
+  validators and explicit build configuration; synthetic unit definitions do not
+  implement or authorize a second business Box.
+
 - `task.md`: independent, human-owned natural-language functional intent.
 - `src/contract.ts`: authoritative native `Contact`, discriminated result union,
   error literals and function signature. Initially copied from the baseline,
@@ -52,7 +65,7 @@ unmodified Docker/Podman adapter, pinned image, nonroot identity, dropped
 capabilities, read-only root, and effective CPU/memory/PID checks. Runtime input
 and output validation happens at the test boundary, not inside agent code.
 Strict TypeScript checking uses `/inputs/contract.ts` mounted from the experiment's
-`src/contract.ts`. The independent Vitest suite executes the 20 locally owned
+definition's `contract_path` (`src/contract.ts` today). The independent Vitest suite executes the 20 locally owned
 acceptance cases, Typia validation and fast-check properties. It validates the
 complete result before projecting name/email for exact behavioral comparisons.
 The success key check includes the contract's required `phone` field; phone

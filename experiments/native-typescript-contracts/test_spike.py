@@ -71,9 +71,7 @@ class SpikeTests(unittest.TestCase):
                 self.assertEqual(len(json.loads((checks / 'cases.json').read_text())), 20)
                 self.assertFalse((HERE / 'check-contract.ts').exists())
                 self.assertEqual((checks / 'check-contract.ts').read_text(),
-                                 verifier.generate_contract_check(
-                                     '/inputs/contract.ts', 'NormalizeContact',
-                                     '/implementation/implementation.ts', 'normalizeContact'))
+                                 verifier.BOX.contract_check('/implementation/implementation.ts'))
                 self.assertIn(f'src={HERE / "src/contract.ts"},dst=/inputs/contract.ts,readonly',
                               ','.join(specs))
 
@@ -162,6 +160,8 @@ class SpikeTests(unittest.TestCase):
                         generator.main()
                     self.assertEqual(accepted.read_text(), 'previously accepted bytes')
                     self.assertEqual(verification.call_args.kwargs['timeout'], 360)
+                    self.assertEqual(verification.call_args.args[0][2:4],
+                                     ['--box-definition', generator.BOX.fingerprint()])
                 retained = list((root / 'quarantine').glob('*/implementation.ts'))
                 self.assertEqual(len(retained), 3)
                 for candidate in retained:
