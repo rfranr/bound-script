@@ -17,6 +17,7 @@ SPIKE = Path(__file__).resolve().parent
 BASE = SPIKE.parent / 'minimal-box'
 sys.path.insert(0, str(SPIKE.parents[1]))
 from boundscript_internal.container_runtime import IMAGE, TSC, digest, runtime
+from boundscript_internal.typescript_contract import generate_contract_check
 
 
 class VerificationFailure(RuntimeError):
@@ -244,9 +245,12 @@ def check(submission):
         root = Path(tmp)
         checks = root / 'checks'
         checks.mkdir()
-        for filename in ('acceptance.test.ts', 'validators.test.ts', 'vitest.config.mts', 'check-contract.ts',
+        for filename in ('acceptance.test.ts', 'validators.test.ts', 'vitest.config.mts',
                          'diagnostic-reporter.mjs', 'compiler-diagnostics.mjs', 'cases.json'):
             shutil.copyfile(SPIKE / filename, checks / filename)
+        (checks / 'check-contract.ts').write_text(generate_contract_check(
+            '/inputs/contract.ts', 'NormalizeContact',
+            '/implementation/implementation.ts', 'normalizeContact'), encoding='utf-8')
         shutil.copytree(SPIKE / '.generated', checks / '.generated')
         shutil.copytree(SPIKE / 'src', checks / 'src')
         scratch = root / 'scratch'

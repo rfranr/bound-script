@@ -25,7 +25,11 @@ branch restrictions or guarantees that old candidates meet today's contract.
 - `.generated/`: disposable Typia-expanded TypeScript, built from `src/` before
   every npm entry point. Vitest/Vite can transpile it normally; directly loading
   unexpanded Typia calls would not perform runtime validation.
-- `check-contract.ts`: strict native consumer of the current contract.
+- `check-contract.ts`: strict signature consumer generated deterministically by
+  `boundscript_internal/typescript_contract.py` in the verifier's temporary checks
+  directory. There is no source artifact to maintain or commit, and the agent
+  neither generates nor receives it. It is hashed and mounted read-only with the
+  other checks, then removed with the temporary directory.
 - `cases.json`: human-owned acceptance data local to this experiment. The 20
   historical name/email inputs and expected outcomes are retained, with
   `phone: "+34600111222"` added to every input. Expected successes specify only

@@ -17,7 +17,11 @@ Historical experiment reports describe earlier states; proposed integration in
    and scanned digest only after removing the credential-bearing container.
    It neither imports tests nor chooses a verifier or promotion destination.
 3. **Verify:** separate Python processes create fresh offline, credential-free
-   containers. Native verification performs strict TypeScript compilation, Typia
+   containers. The native verifier stages a temporary signature consumer using
+   `boundscript_internal/typescript_contract.py`, deterministically from module
+   paths and export names, without agent involvement. The generated check is
+   hashed and mounted read-only, not retained as a source artifact.
+   Native verification performs strict TypeScript compilation, Typia
    validator tests, 20 independent examples with runtime input/output guards,
    five seeded fast-check properties, protected-file hashes and cleanup.
    Baseline oracles retain Greeting, dependency-injected RenderWelcome and
@@ -66,8 +70,9 @@ phases; details are emitted at phase completion, not streamed per assertion.
 ## Consolidation choices
 
 - Separate shared mechanics into the private `boundscript_internal/` package,
-  outside `experiments/`. It contains only container policy and the Pi workspace
-  lifecycle, with no experiment imports or public framework API. Preserve paths
+  outside `experiments/`. It contains container policy, the Pi workspace
+  lifecycle and deterministic signature-check generation, with no experiment
+  imports or public framework API. Preserve paths
   for tasks, contracts, accepted baseline bytes and all experimental reports.
   Infrastructure tests live in `tests/internal/`; policy tests stay per experiment.
 - Extract only the duplicated credential-bearing workspace lifecycle. Fixed
@@ -94,6 +99,7 @@ boundscript_internal/          # shared host-side mechanics; no experiment impor
   __init__.py                 # private package marker; no facade/API exports
   container_runtime.py        # engine policy, probes, image/tooling/hash utilities
   agent_workspace.py          # Pi lifecycle, credential scan, generation cleanup
+  typescript_contract.py      # deterministic temporary TypeScript signature consumer
 tests/internal/               # shared lifecycle/security/resource regressions
 experiments/minimal-box/      # baseline authority, workflows and policy tests
 experiments/native-typescript-contracts/

@@ -7,6 +7,7 @@ There are no new framework APIs, plugin hooks, manifests or orchestration layers
 | Module | Responsibility |
 | --- | --- |
 | `container_runtime.py` | Docker/Podman CLI adapters; exact mounts/environment and effective procfs/cgroup-v2 checks; pinned image, repository-relative TypeScript path and file hashing. |
+| `typescript_contract.py` | Deterministic TypeScript assignability-check text from contract/implementation module paths and named exports; no model, candidate access or acceptance criteria. |
 | `agent_workspace.py` | Disposable Pi workspace, security probes, private credential state, bounded submission/literal scan, safe event summaries and cleanup before yielding a source. |
 
 Dependency direction: experiment runners → internal mechanics. This package

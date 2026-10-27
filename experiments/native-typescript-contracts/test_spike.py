@@ -69,6 +69,11 @@ class SpikeTests(unittest.TestCase):
                 checks = Path(checks_spec.split('src=', 1)[1].split(',')[0])
                 self.assertEqual((checks / 'cases.json').read_bytes(), (HERE / 'cases.json').read_bytes())
                 self.assertEqual(len(json.loads((checks / 'cases.json').read_text())), 20)
+                self.assertFalse((HERE / 'check-contract.ts').exists())
+                self.assertEqual((checks / 'check-contract.ts').read_text(),
+                                 verifier.generate_contract_check(
+                                     '/inputs/contract.ts', 'NormalizeContact',
+                                     '/implementation/implementation.ts', 'normalizeContact'))
                 self.assertIn(f'src={HERE / "src/contract.ts"},dst=/inputs/contract.ts,readonly',
                               ','.join(specs))
 
