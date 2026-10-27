@@ -5,7 +5,42 @@ This records the existing approach, not approval of a new framework architecture
 Historical experiment reports describe earlier states; proposed integration in
 `docs/proposals/0018c-architectural-integration.md` is not implemented.
 
-## Authority and trust
+## Purpose and Box lifecycle
+
+BoundScript is a **developer tool, not an AI runtime platform**. A Box is a
+generated software asset intended to become part of a consuming project.
+Developers own contracts, requirements and acceptance criteria; AI agents
+implement within those boundaries. Independent verification and explicit human
+acceptance are required before an implementation becomes a trusted project asset.
+Once accepted, a Box should be reproducible and usable without BoundScript, Pi or
+an LLM at application runtime; the development sandbox is not its deployment model.
+
+Boxes may eventually be integrated as libraries, modules, UI components, services
+or runtime-loaded components. Different integration models may need different
+execution and security guarantees. These are architectural intentions, not
+implemented integration mechanisms or guarantees supplied by current verification.
+
+### Planned versioning (not implemented)
+
+The intended lifecycle is:
+
+1. Generate a candidate Box.
+2. Verify it independently.
+3. Obtain human acceptance.
+4. Publish an immutable, identifiable Box version.
+5. Integrate that specific version into the consuming project.
+
+Regeneration must produce a new candidate, never silently overwrite an accepted
+version. Publishing a new version must not automatically update existing consumers.
+Version numbering, compatibility rules, storage and distribution mechanisms remain
+undecided. This document introduces no registry, manifest or runtime loader.
+
+Current experiments verify and promote source to local `accepted/` paths, which
+can be replaced by subsequent successful generation. That directory name does not
+establish explicit human acceptance or immutable publication. The runners do not
+yet implement the planned versioned lifecycle or a human-acceptance gate.
+
+## Authority and trust (current implementation)
 
 1. **Define:** human-owned Markdown describes intent; native TypeScript defines
    structural interfaces. Neither replaces the other. Independent fixtures,
@@ -28,7 +63,7 @@ Historical experiment reports describe earlier states; proposed integration in
    conventions. Each Box declares exact test-file suites/categories and support
    inputs relative to its own verification root. Every conventional test/spec
    JS/TS file must be assigned once; missing, undeclared, duplicate or empty
-   selections fail closed. Runtime validation and acceptance are mandatory;
+   selections fail closed. Runtime validation and acceptance tests are mandatory;
    properties can only be absent through an explicit not-applicable declaration.
    All declared tests must run, with no skipped/pending/focused tests. The
    generated signature check and per-suite Vitest configs are hashed and mounted
@@ -44,7 +79,9 @@ Historical experiment reports describe earlier states; proposed integration in
    only a successful unchanged source. Hash checks bind scanning and verification
    to promotion. Native verification failure retains only scanned bytes in
    private ignored quarantine; scan failure never enters quarantine. Standalone
-   verification never promotes and leaves its input in place.
+   verification never promotes and leaves its input in place. This automatic
+   local promotion is not the human acceptance or version publication described
+   in the planned lifecycle.
 
 Code reuse is not context reuse: Pi never receives tests, repository, peer
 implementation, host sessions/settings/extensions, container sockets or verifier

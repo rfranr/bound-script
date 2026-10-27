@@ -1,9 +1,35 @@
 # BoundScript
 
 **Human-owned native contracts and tasks; independently verified AI implementations.**
-BoundScript controls development boundaries, not business logic. The working
-foundation uses TypeScript, Typia, Vitest, fast-check, Pi and Podman/Docker.
-There is no BoundScript DSL, custom compiler or application orchestrator.
+BoundScript is a **developer tool, not an AI runtime platform**. It controls
+development boundaries, not business logic. Developers define contracts,
+requirements and acceptance criteria; AI agents implement within those boundaries.
+The working foundation uses TypeScript, Typia, Vitest, fast-check, Pi and
+Podman/Docker. There is no BoundScript DSL, custom compiler or application orchestrator.
+
+## Boxes as project assets
+
+A **Box** is a generated software asset intended to become part of a consuming
+project. Independent verification and explicit human acceptance are required
+before treating an implementation as a trusted project asset. Once accepted, a
+Box should be reproducible and usable without BoundScript, Pi or an LLM at
+application runtime.
+
+Future integrations may include libraries, modules, UI components, services or
+runtime-loaded components. These models may require different execution and
+security guarantees; they are not implemented integration capabilities today.
+
+**Box versioning is planned, not implemented.** The intended lifecycle is:
+
+1. Generate a candidate Box.
+2. Verify it independently.
+3. Obtain human acceptance.
+4. Publish an immutable, identifiable Box version.
+5. Integrate that specific version into the consuming project.
+
+Regeneration must create a new candidate, never silently overwrite an accepted
+version. A new published version must not automatically update existing consumers.
+Version numbering, compatibility rules, storage and distribution remain undecided.
 
 ## What exists
 
@@ -18,13 +44,17 @@ Human-owned task.md + TypeScript contract
         separate offline, credential-free verifier
         TypeScript → Typia → Vitest examples → fast-check
                  |
-        passing source only → accepted artifact
+        passing source only → local promoted source (accepted/)
         verification failure → private local quarantine (native runner)
 ```
 
 The native workflow currently implements **NormalizeContact only**. Greeting,
 NormalizeContact/RenderWelcome and ordinary TypeScript composition remain runnable
-baseline regressions. Baseline verification uses native TypeScript and external
+baseline regressions. Current runners automatically promote passing source to
+local `accepted/` paths and can replace earlier source; that path name is not
+explicit human acceptance or immutable version publication. These experimental
+mechanics do not yet implement the intended lifecycle above.
+Baseline verification uses native TypeScript and external
 behavior/dependency checks; the native workflow adds derived runtime validators
 and independent property tests. No accepted implementation or business requirement
 is changed by consolidation.
