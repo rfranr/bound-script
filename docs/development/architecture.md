@@ -7,16 +7,28 @@ Historical experiment reports describe earlier states; proposed integration in
 
 ## Purpose and Box lifecycle
 
-BoundScript is a **developer tool, not an AI runtime platform**. A Box is a
-generated software asset intended to become part of a consuming project.
+BoundScript is a **developer tool, not an AI runtime platform**. A Box represents
+a bounded software unit with a public contract, independent verification and an
+integration interface. It is a generated software asset intended to become part
+of a consuming project through its public interfaces. Architecturally, its
+implementation may consist of functions, classes, modules or components; a Box
+is not restricted to a single function or source file. Current experiments use
+fixed TypeScript function exports and single-file candidates, not the full range
+of these intended implementation forms.
+
 Developers own contracts, requirements and acceptance criteria; AI agents
 implement within those boundaries. Independent verification and explicit human
 acceptance are required before an implementation becomes a trusted project asset.
 Once accepted, a Box should be reproducible and usable without BoundScript, Pi or
-an LLM at application runtime; the development sandbox is not its deployment model.
+an LLM at application runtime. Consuming applications should not require an AI
+agent at runtime; the development sandbox is not their deployment model.
 
 Boxes may eventually be integrated as libraries, modules, UI components, services
-or runtime-loaded components. Different integration models may need different
+or runtime-loaded components. Future integration may support hierarchical
+composition and imports between Boxes; current baseline ordinary TypeScript
+composition does not establish those broader capabilities. Boxes may also
+eventually produce standalone executable artifacts, such as CLI tools; this is
+not a current capability. Different integration models may need different
 execution and security guarantees. These are architectural intentions, not
 implemented integration mechanisms or guarantees supplied by current verification.
 
