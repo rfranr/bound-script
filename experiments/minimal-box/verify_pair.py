@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Fixed 0018 checks: two contact Boxes and ordinary TypeScript composition."""
+"""Fixed 0018b checks: richer contact Boxes and ordinary TS composition."""
 import json
 import os
 from pathlib import Path
@@ -11,17 +11,51 @@ from verify import HERE, IMAGE, TSC, digest, run
 
 PAIR = HERE / 'two-boxes'
 BOXES = ('normalize-contact', 'render-welcome')
-INPUTS = [
-    {'name': '  Ada Lovelace  ', 'email': ' ADA@EXAMPLE.TEST '},
-    {'name': ' Grace  Hopper ', 'email': 'Grace@Example.Test'},
-    {'name': ' \t\n', 'email': '  '},
-    {'name': ' Zoë ', 'email': '\tZOE@EXAMPLE.TEST\n'},
+def success(name, email):
+    return {'ok': True, 'contact': {'name': name, 'email': email}}
+
+
+def failure(*errors):
+    return {'ok': False, 'errors': list(errors)}
+
+
+# Literal external examples, not a second implementation of the business rules.
+CASES = [
+    ({'name': '  Ada Lovelace  ', 'email': ' ADA@EXAMPLE.TEST '}, success('Ada Lovelace', 'ada@example.test')),
+    ({'name': ' Grace  Hopper ', 'email': 'Grace@Example.Test'}, success('Grace Hopper', 'grace@example.test')),
+    ({'name': '', 'email': ''}, failure('name.required', 'email.required')),
+    ({'name': ' \t\r\n\u00a0\u2003', 'email': '\t\n '}, failure('name.required', 'email.required')),
+    ({'name': ' Zoë\t\n李\u00a0\u2003雷 ', 'email': '\tÉ@例子.测试\n'}, success('Zoë 李 雷', 'é@例子.测试')),
+    ({'name': ' e\u0301  👩🏽‍💻 ', 'email': 'A+B@X.Y'}, success('e\u0301 👩🏽‍💻', 'a+b@x.y')),
+    ({'name': '\u200b', 'email': 'a@b.c'}, success('\u200b', 'a@b.c')),
+    ({'name': '', 'email': 'bad'}, failure('name.required', 'email.invalid')),
+    ({'name': 'Ada', 'email': ' '}, failure('email.required')),
+    ({'name': '\t', 'email': 'A@B.C'}, failure('name.required')),
+    ({'name': 'Ada', 'email': 'a@b'}, failure('email.invalid')),
+    ({'name': 'Ada', 'email': '@b.c'}, failure('email.invalid')),
+    ({'name': 'Ada', 'email': 'a@.c'}, failure('email.invalid')),
+    ({'name': 'Ada', 'email': 'a@b.'}, failure('email.invalid')),
+    ({'name': 'Ada', 'email': 'a@@b.c'}, failure('email.invalid')),
+    ({'name': 'Ada', 'email': 'a b@c.d'}, failure('email.invalid')),
+    ({'name': 'Ada', 'email': 'a@b\u00a0.c'}, failure('email.invalid')),
+    ({'name': 'Ada', 'email': 'a@b.\nc'}, failure('email.invalid')),
+    ({'name': 'Ada', 'email': ' A..B@C..D '}, success('Ada', 'a..b@c..d')),
+    ({'name': 'Ada', 'email': 'A@B.\u200b'}, success('Ada', 'a@b.\u200b')),
 ]
-EXPECTED = [
-    {'name': 'Ada Lovelace', 'email': 'ada@example.test'},
-    {'name': 'Grace  Hopper', 'email': 'grace@example.test'},
-    {'name': '', 'email': ''},
-    {'name': 'Zoë', 'email': 'zoe@example.test'},
+INPUTS = [raw for raw, expected in CASES]
+EXPECTED = [expected for raw, expected in CASES]
+# Deliberately non-normalized successes and unusual errors detect duplicated rules.
+DEPENDENCY_RESULTS = [
+    success('  Supplied\tNAME  ', 'UPPER@NOT-NORMALIZED'),
+    success('', ''),
+    failure('email.invalid', 'name.required', 'email.invalid'),
+    failure(),
+]
+DEPENDENCY_MESSAGES = [
+    'Welcome,   Supplied\tNAME  ! <UPPER@NOT-NORMALIZED>',
+    'Welcome, ! <>',
+    'Invalid contact: email.invalid, name.required, email.invalid',
+    'Invalid contact: ',
 ]
 
 
@@ -87,36 +121,60 @@ console.log(JSON.stringify(errors));
             observed = observe(inputs + '''
 import { normalizeContact } from '/implementation/implementation.ts';
 console.log(JSON.stringify(inputs.map(input => {
+ Object.freeze(input);
  const result = normalizeContact(input);
- return {result, inputAfter: input, fresh: result !== input};
+ const repeated = normalizeContact(input);
+ return {result, repeated, inputAfter: input, fresh: !result.ok || result.contact !== input};
 })));
 ''')
-            assert observed == [dict(result=expected, inputAfter=raw, fresh=True)
+            assert observed == [dict(result=expected, repeated=expected, inputAfter=raw, fresh=True)
                                 for raw, expected in zip(INPUTS, EXPECTED)], 'NormalizeContact behavior'
         elif mode == BOXES[1]:
-            observed = observe(inputs + '''
+            observed = observe(inputs + 'const supplied = ' + json.dumps(DEPENDENCY_RESULTS) + ';\n' + '''
 import { renderWelcome } from '/implementation/implementation.ts';
-console.log(JSON.stringify(inputs.map((input, i) => {
+for (const result of supplied) {
+ Object.freeze(result.contact ?? result.errors);
+ Object.freeze(result);
+}
+console.log(JSON.stringify(inputs.flatMap(input => supplied.map(dependencyResult => {
+ Object.freeze(input);
  const calls = [];
  const result = renderWelcome(input, value => {
   calls.push({same: value === input, value: {...value}});
-  return {name: 'Supplied ' + i, email: 'dependency' + i + '@example.test'};
+  return dependencyResult;
  });
- return {result, inputAfter: input, calls};
-})));
+ return {result, inputAfter: input, calls, dependencyResult};
+}))));
 ''')
-            assert observed == [dict(result=f'Welcome, Supplied {i}! <dependency{i}@example.test>',
-                                    inputAfter=raw, calls=[dict(same=True, value=raw)])
-                                for i, raw in enumerate(INPUTS)], 'RenderWelcome must use its supplied dependency'
+            assert observed == [dict(result=message, inputAfter=raw,
+                                    calls=[dict(same=True, value=raw)], dependencyResult=result)
+                                for raw in INPUTS
+                                for result, message in zip(DEPENDENCY_RESULTS, DEPENDENCY_MESSAGES)], 'RenderWelcome must use its supplied dependency'
+            thrown = observe('''
+import { renderWelcome } from '/implementation/implementation.ts';
+let calls = 0;
+const sentinel = new Error('sentinel');
+let same = false;
+try { renderWelcome(Object.freeze({name: '', email: ''}), () => { calls++; throw sentinel; }); }
+catch (error) { same = error === sentinel; }
+console.log(JSON.stringify({same, calls}));
+''')
+            assert thrown == dict(same=True, calls=1), 'Dependency exceptions must propagate without retry'
         else:
             observed = observe(inputs + '''
 import { welcomeContact } from '/app/application.ts';
-console.log(JSON.stringify(inputs.map(input => ({result: welcomeContact(input), inputAfter: input}))));
+console.log(JSON.stringify(inputs.map(input => {
+ Object.freeze(input);
+ return {result: welcomeContact(input), inputAfter: input};
+})));
 ''')
-            assert observed == [dict(result=f"Welcome, {row['name']}! <{row['email']}>", inputAfter=raw)
-                                for raw, row in zip(INPUTS, EXPECTED)], 'End-to-end application behavior'
+            messages = [f"Welcome, {row['contact']['name']}! <{row['contact']['email']}>" if row['ok']
+                        else 'Invalid contact: ' + ', '.join(row['errors']) for row in EXPECTED]
+            assert observed == [dict(result=message, inputAfter=raw)
+                                for raw, message in zip(INPUTS, messages)], 'End-to-end application behavior'
         assert all(digest(p) == old for p, old in before.items()), 'Input/artifact changed'
-        print(f'PASS {mode}: four cases; inputs and artifacts unchanged', flush=True)
+        count = len(INPUTS) * len(DEPENDENCY_RESULTS) + 1 if mode == BOXES[1] else len(INPUTS)
+        print(f'PASS {mode}: {count} cases; frozen inputs and artifacts unchanged', flush=True)
     finally:
         run('docker', 'rm', '-f', name)
 

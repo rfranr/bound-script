@@ -1,12 +1,15 @@
-# 0018: two independent Boxes
+# 0018 / 0018b: two independent Boxes
 
 This extends the existing minimal-box reference, not a reusable runner. Tasks,
 contracts, acceptance checks and `application.ts` are human-owned authority.
 
-- **NormalizeContact:** `{name, email} -> {name, email}`; trim name, trim/lowercase
-  email, return a new object without mutation. Authorized Box dependencies: none.
+- **NormalizeContact:** `Contact -> NormalizeContactResult`; trim/collapse name
+  whitespace, trim/lowercase email, accumulate ordered validation errors, return
+  a discriminated success/failure union without mutation. The exact ECMAScript
+  whitespace and deliberately simple Unicode-friendly email rules are defined in
+  [the task](tasks/normalize-contact.md). Authorized Box dependencies: none.
 - **RenderWelcome:** `(Contact, NormalizeContact) -> string`; call the supplied
-  dependency exactly once on the original object and format its returned values.
+  dependency exactly once on the original object and format success or errors.
   Its only authorized Box dependency is NormalizeContact's **public contract**.
 
 These permissions are explicit in `tasks/*.md`; `contracts/render-welcome.ts`
@@ -41,8 +44,11 @@ cannot pass by merely producing plausible welcome messages.
 Only a passing submission is copied unchanged into `accepted/`. After both
 individual promotions, a separate offline integration step loads ordinary
 `application.ts`, which passes the accepted normalizer to the accepted renderer.
-Four end-to-end cases check trimming, lowercasing, preserved internal whitespace,
-empty values and Unicode names. Read-only mounts and before/after hashes check
+Twenty end-to-end cases check trimming, collapsing internal whitespace, lowercasing,
+empty values, simultaneous errors, Unicode preservation and email rule boundaries.
+The normalizer is also called repeatedly on frozen inputs. Eighty injected-result
+renderer cases cover authoritative successes and ordered/duplicate/empty errors;
+a further check requires dependency exception identity and exactly one call. Read-only mounts and before/after hashes check
 that the integration did not repair either artifact. Promotions are per Box, not
 an atomic pair transaction: failure stops the command but can leave an individually
 accepted first artifact. No automatic retries, feedback or implementation repair.
@@ -64,4 +70,5 @@ could fabricate. Raw agent events/diagnostics remain in memory only; safe summar
 include session UUIDs, tool counts, failure counts and accepted-source hashes.
 The literal credential scan is not a general secret/exfiltration detector.
 
-Actual first-run sessions, source hashes, controls and results: [REPORT.md](REPORT.md).
+Historical 0018 first-run results: [REPORT.md](REPORT.md).
+Richer-domain two-generation comparison: [REPORT-0018b.md](REPORT-0018b.md).

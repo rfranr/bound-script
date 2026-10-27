@@ -4,14 +4,18 @@ Implement `/implementation/implementation.ts`, exporting `renderWelcome`
 conforming to `RenderWelcome` in `/inputs/contract.ts`.
 
 Call the supplied `normalize` dependency exactly once with the original Contact
-object. Return `Welcome, NAME! <EMAIL>`, substituting the dependency's normalized
-name and email and retaining the literal punctuation. For example, if the
-supplied dependency returns `{name: 'Ada', email: 'ada@example.test'}`, return
-`Welcome, Ada! <ada@example.test>`.
+object, regardless of its contents. Consume the discriminated union it returns:
+- `ok: true`: return `Welcome, NAME! <EMAIL>` using `result.contact` exactly.
+- `ok: false`: return `Invalid contact: ` followed by `result.errors.join(', ')`.
+  Preserve the supplied order and duplicates; do not sort, filter or translate.
 
-Use the dependency's returned values, not the raw input. Do not implement your
-own normalization, mutate the input, add fallbacks, validation or other rules.
-The input and normalized strings may be empty.
+For example `{ok: false, errors: ['name.required', 'email.invalid']}` produces
+`Invalid contact: name.required, email.invalid`.
+Use only the dependency's result, not raw input. Do not duplicate normalization
+or validation, mutate the input or dependency result, or add fallbacks. Treat the
+injected dependency as authoritative even if its successful strings are empty or
+unnormalized, or its failure errors are empty or in an unusual order. If it
+throws, propagate the same exception without retrying or substituting a message.
 
 ## Dependency permissions and capabilities
 
