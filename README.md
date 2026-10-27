@@ -11,8 +11,8 @@ including its historical pilot, remains on `feature/agent-driven-architecture`.
 
 ## The working skeleton
 
-One TypeScript Greeting Box demonstrates four responsibilities without four
-packages:
+The TypeScript Greeting reference and its fixed two-Box contact experiment
+demonstrate four responsibilities without four packages:
 
 - **Define:** human-owned task, native public contract, authorized dependency
   interface, and capabilities expressed by the task and concrete sandbox policy.
@@ -22,7 +22,8 @@ packages:
 - **Verify:** a separate credential-free, offline environment runs type, behavior,
   dependency-call and negative-access checks. The agent cannot modify the tests.
 - **Promote:** only a passing source file is copied back as the accepted artifact.
-  Multi-Box consumption and application integration are not implemented yet.
+  The two-Box example composes accepted artifacts in ordinary TypeScript
+  `application.ts`, not a BoundScript orchestrator.
 
 ## Run
 
@@ -31,8 +32,9 @@ listed in `experiments/minimal-box/verify.py` already cached locally.
 
 ```bash
 npm ci
-npm test          # Verify the saved implementation; no model calls or credentials
-npm run generate # Real Pi generation, independent verification, then promotion
+npm test              # Saved Greeting + both contact Boxes + integration; no model calls
+npm run generate      # Original Greeting: real Pi generation, verification, promotion
+npm run generate:pair # Two fresh Pi agents, independent checks, then integration
 ```
 
 Generation additionally requires the existing Pi 1.4.0 installation and
@@ -52,11 +54,14 @@ inherently trustworthy.
 - **Removed:** Langium, the DSL/compiler/interpreter/director, executable artifact
   transforms, old demos/tests, ContactOnboarding tooling, monorepo build setup, and
   superseded DSL documentation/assignments/roadmaps (available in Git history).
-- **Retained:** the working one-Box Docker/Pi reference, native TypeScript
-  contracts, explicit dependency injection, independent checks and promotion.
-- **Deferred:** two-Box integration, artifact registry, transitive dependency
+- **Retained/extended:** the Docker/Pi reference, native TypeScript contracts,
+  explicit dependency injection, independent checks, per-Box promotion and a fixed
+  two-Box application. See the [0018 run report](experiments/minimal-box/two-boxes/REPORT.md).
+- **Deferred:** artifact registry, transitive dependency
   enforcement, credential brokerage, egress hardening, other languages, generic
   runners/plugins, and production security. No new runtime or DSL replaces the old
   one.
 
-Scope: [foundation assignment](assignments/0017-boundscript-next-foundation.md).
+Scope: [foundation](assignments/0017-boundscript-next-foundation.md) and
+[two independent Boxes](assignments/0018-two-independent-boxes.md).
+Assignments 0019 and 0020 are not implemented.

@@ -20,8 +20,9 @@
 - An assignment may require multiple commits.
 - Include uncommitted assignment or review files in the corresponding implementation or correction commit.
 - Report deviations, unresolved questions and verification results.
-- Run `npm test` for the credential-free one-Box checks. `npm run generate` makes
-  real provider calls and exposes the explicitly authorized auth file to Pi tools.
+- Run `npm test` for the credential-free saved Box and integration checks.
+  `npm run generate` and `npm run generate:pair` make real provider calls and expose
+  the explicitly authorized auth file to Pi tools.
 - Keep acceptance checks external; do not add a DSL, custom runtime, generic runner
   or new packages without a concrete requirement.
 

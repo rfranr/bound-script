@@ -1,8 +1,8 @@
-# One Box, no framework
+# Minimal Box reference, no framework
 
 This is the existing Greeting Box experiment, relocated from
-`docs/boundscript-next/minimal-box/`. It is the entire working implementation of
-BoundScript Next—not a generic runner or a two-Box pilot.
+`docs/boundscript-next/minimal-box/`, now extended with the fixed
+[0018 two-Box exercise](two-boxes/README.md). No generic runner was introduced.
 
 ## Responsibilities and files
 
@@ -15,8 +15,9 @@ BoundScript Next—not a generic runner or a two-Box pilot.
 
 `implementation/greet.ts` is the accepted artifact, produced by real Pi without
 manual repair. The dependency is injected by the consumer; only its interface is
-exposed to the agent. There is no artifact registry or actual multi-Box consumer
-yet. Other languages could use their own native contracts/checks; only TypeScript
+exposed to the agent. The two-Box version uses ordinary `application.ts` to compose
+accepted NormalizeContact and RenderWelcome sources. There is no artifact registry.
+Other languages could use their own native contracts/checks; only TypeScript
 is implemented. No custom type system or application orchestration is needed.
 
 ## Run
@@ -25,8 +26,10 @@ From the repository root, on `experiment/boundscript-next`:
 
 ```bash
 npm ci
-npm test          # Saved artifact: no model calls, no credentials
-npm run generate # Fresh Pi session, verification, then replace accepted greet.ts
+npm test              # Saved Greeting + contact pair + integration; no model calls/credentials
+npm run generate      # Fresh Pi session, verify, replace accepted greet.ts
+npm run generate:pair # Fresh independent contact agents, verify each, then integrate
+npm run test:pair     # Contact pair and integration only, no model calls
 ```
 
 Requires Linux, Python 3, Docker, Node 24.16+ and locally cached image
@@ -40,9 +43,10 @@ packages. The host invokes Docker, but all model-directed tools run inside it.
 
 ## Actual authority
 
-Generation mounts exactly three read-only Box inputs, the read-only installed Pi
-runtime, the explicitly authorized read-only **auth.json file only**, and an empty
-writable `/implementation`. No repository, peer implementation, test suite,
+Greeting generation mounts three read-only Box inputs; NormalizeContact gets only
+its task/contract, while RenderWelcome additionally gets NormalizeContact's public
+contract. All use the read-only installed Pi runtime, the explicitly authorized
+read-only **auth.json file only**, and an empty writable `/implementation`. No repository, peer implementation, test suite,
 verifier, host settings/extensions/sessions, credential directory or Docker
 socket is mounted. Host environment variables are not forwarded.
 
@@ -76,7 +80,7 @@ agent cannot change those assertions or expected results. The saved artifact is
 replaced only on success. Cleanup removes disposable containers/workspaces on
 ordinary completion/failure; SIGKILL may require manual cleanup.
 
-## Foundation validation
+## Foundation validation (0017, before the two-Box extension)
 
 - `npm ci --ignore-scripts --offline`: clean installation, TypeScript 5.9.3 only.
 - `npm run check` and `npm test`: all saved-artifact checks passed.
@@ -101,7 +105,9 @@ no transitive import allowlist. Candidate-returned data can be fabricated by
 malicious code; external assertions are not hostile-program attestation. Finite
 checks do not prove general correctness or deployed-runtime restrictions.
 
-Two-Box integration, artifact distribution/provenance, credential brokerage,
-egress restrictions, stronger hostile-code verification and additional languages
-remain deliberately unimplemented. Application logic and dependency wiring stay
+The fixed two-Box integration is now implemented; its [run report](two-boxes/REPORT.md)
+records fresh sessions and unchanged artifact hashes. General boundary enforcement,
+a reusable runner, artifact distribution/provenance, credential brokerage, egress
+restrictions, stronger hostile-code verification and additional languages remain
+unimplemented. Application logic and dependency wiring stay
 in ordinary TypeScript, not in BoundScript.

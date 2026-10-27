@@ -21,7 +21,7 @@ Same installed Pi, Docker image, credentials and risks as the
 ```bash
 npm run generate:pair # two fresh Pi processes/containers, then separate integration
 npm run test:pair     # reverify both accepted sources and their composition; no model calls
-npm test              # original Greeting regression
+npm test              # Greeting regression plus both Boxes and integration
 ```
 
 `generate.py --pair` runs only the two named tasks, sequentially in independent
@@ -63,3 +63,5 @@ finite behavioral observations and candidate-returned data that malicious code
 could fabricate. Raw agent events/diagnostics remain in memory only; safe summaries
 include session UUIDs, tool counts, failure counts and accepted-source hashes.
 The literal credential scan is not a general secret/exfiltration detector.
+
+Actual first-run sessions, source hashes, controls and results: [REPORT.md](REPORT.md).

@@ -8,7 +8,7 @@
     "node": ">=24.16.0"
   },
   "scripts": {
-    "test": "python3 experiments/minimal-box/verify.py",
+    "test": "python3 experiments/minimal-box/verify.py && python3 experiments/minimal-box/verify_pair.py",
     "generate": "python3 experiments/minimal-box/generate.py",
     "generate:pair": "python3 experiments/minimal-box/generate.py --pair",
     "test:pair": "python3 experiments/minimal-box/verify_pair.py",
