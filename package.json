@@ -12,9 +12,17 @@
     "generate": "python3 experiments/minimal-box/generate.py",
     "generate:pair": "python3 experiments/minimal-box/generate.py --pair",
     "test:pair": "python3 experiments/minimal-box/verify_pair.py",
-    "check": "npm test"
+    "check": "npm test",
+    "build:native": "typia generate --input experiments/native-typescript-contracts/src --output experiments/native-typescript-contracts/.generated --project experiments/native-typescript-contracts/tsconfig.json",
+    "test:native:tooling": "npm run build:native && vitest run --config experiments/native-typescript-contracts/vitest.tooling.config.mts",
+    "test:native": "npm run build:native && python3 -B experiments/native-typescript-contracts/verify.py",
+    "test:native:baseline": "npm run build:native && python3 -B experiments/native-typescript-contracts/verify.py --baseline",
+    "generate:native": "npm run build:native && python3 -B experiments/native-typescript-contracts/generate.py"
   },
   "devDependencies": {
-    "typescript": "5.9.3"
+    "fast-check": "4.10.2",
+    "typescript": "5.9.3",
+    "typia": "9.7.2",
+    "vitest": "5.0.5"
   }
 }
