@@ -15,6 +15,7 @@ import uuid
 
 sys.dont_write_bytecode = True
 SPIKE = Path(__file__).resolve().parent
+RUNNER = SPIKE  # Trusted adapters are mechanics, not Box verification inputs.
 sys.path.insert(0, str(SPIKE.parents[1]))
 from boundscript_internal.container_runtime import IMAGE, TSC, digest, runtime
 configuration = import_module('experiments.native-typescript-contracts.native_box')
@@ -143,7 +144,7 @@ def run_compiler(engine, name, scratch):
         raise VerificationFailure('infrastructure', 'Compiler failed without compiler diagnostics')
 
 
-def vitest_failure(status, report_path):
+def vitest_failure(status, report_path, expected_files):
     """Print bounded test details; return a classified failure, never raw errors."""
     report = read_report(report_path)
     tests, failed = report.get('tests'), report.get('failed')
@@ -151,17 +152,23 @@ def vitest_failure(status, report_path):
             or not isinstance(failed, list) or len(failed) > 10
             or type(report.get('infrastructureErrors')) is not int or report['infrastructureErrors'] < 0):
         raise VerificationFailure('infrastructure', 'Invalid Vitest report; raw output withheld')
+    files = report.get('files')
+    if (not isinstance(files, list) or not all(isinstance(file, str) for file in files) or
+            len(files) != len(expected_files) or set(files) != set(expected_files)):
+        raise VerificationFailure('infrastructure', 'Declared Vitest files were not all collected exactly once')
     counts = dict(passed=0, failed=0, skipped=0, pending=0)
+    executed = {file: 0 for file in expected_files}
     for test in tests:
-        if (not isinstance(test, dict) or test.get('file') not in ('acceptance.test.ts', 'validators.test.ts')
+        if (not isinstance(test, dict) or test.get('file') not in executed
                 or not isinstance(test.get('name'), str) or test.get('status') not in counts):
             raise VerificationFailure('infrastructure', 'Invalid Vitest test result; raw output withheld')
         counts[test['status']] += 1
         if test['status'] in ('passed', 'failed'):
-            print(f'{"PASS" if test["status"] == "passed" else "FAIL"} {test["file"]}: {quoted(test["name"], 300)}', flush=True)
+            executed[test['file']] += 1
+            print(f'{"PASS" if test["status"] == "passed" else "FAIL"} {quoted(test["file"], 300)}: {quoted(test["name"], 300)}', flush=True)
     kinds = set()
     for test in failed:
-        if not isinstance(test, dict):
+        if not isinstance(test, dict) or test.get('file') not in executed:
             raise VerificationFailure('infrastructure', 'Invalid Vitest failure; raw output withheld')
         assertions, guards = test.get('assertions'), test.get('typia')
         if not isinstance(assertions, list) or not isinstance(guards, list):
@@ -200,7 +207,7 @@ def vitest_failure(status, report_path):
     if counts['failed'] > len(failed):
         print('Additional failed-test details omitted by the bounded reporter', flush=True)
     print(f'Vitest exit status: {status["exitStatus"]}; ' + ', '.join(f'{n} {key}' for key, n in counts.items()), flush=True)
-    if report['infrastructureErrors'] or counts['pending'] or not (counts['passed'] + counts['failed']):
+    if report['infrastructureErrors'] or counts['pending'] or counts['skipped'] or not all(executed.values()):
         return VerificationFailure('infrastructure', 'Vitest collection/unhandled/incomplete-run failure; details withheld')
     if counts['failed'] or failed:
         return VerificationFailure('/'.join(sorted(kinds)) or 'runtime', 'Vitest tests failed; see sanitized results above')
@@ -209,21 +216,22 @@ def vitest_failure(status, report_path):
     return None
 
 
-def run_vitest(engine, name, scratch, group='all'):
-    args = ['/node_modules/vitest/vitest.mjs', 'run', '--config', '/checks/vitest.config.mts',
+def suite_config(suite):
+    """Exact file selection using native Vitest include, never test descriptions."""
+    return ("import base from './vitest.config.mts';\n"
+            'export default { ...base, test: { ...base.test, include: '
+            + json.dumps(suite.files) + ' } };\n')
+
+
+def run_vitest(engine, name, scratch, suite, index):
+    args = ['/node_modules/vitest/vitest.mjs', 'run', '--config', f'/checks/suite-{index}.config.mts',
             '--configLoader', 'runner', '--no-cache', '--fsModuleCachePath', '/implementation/.vitest-cache',
-            '--reporter', '/checks/diagnostic-reporter.mjs']
-    if group == 'typia':
-        args += ['validators.test.ts']
-    elif group == 'acceptance':
-        args += ['acceptance.test.ts', '--testNamePattern', '^matches native acceptance case ']
-    elif group == 'properties':
-        args += ['acceptance.test.ts', '--testNamePattern', '^(?!matches native acceptance case )']
+            '--allowOnly=false', '--reporter', '/checks/diagnostic-reporter.mjs']
     path = scratch / 'vitest-diagnostics.json'
     path.unlink(missing_ok=True)  # Never accept the preceding phase's report.
     status = process_status(engine, name, args, 85)
     try:
-        failure = vitest_failure(status, path)
+        failure = vitest_failure(status, path, suite.files)
     except VerificationFailure:
         print(f'Vitest exit status: {status["exitStatus"]}; report invalid/unavailable', flush=True)
         raise
@@ -240,8 +248,10 @@ def check(submission, box=None):
             raise VerificationFailure('infrastructure', 'Assertions must be enabled')
         if submission.is_symlink() or not submission.is_file() or submission.stat().st_size > 16384:
             raise VerificationFailure('infrastructure', 'Expected regular submission of at most 16 KiB')
-        if not (verification_root / '.generated/validators.ts').is_file():
-            raise VerificationFailure('infrastructure', 'Run npm run build:native first')
+        try:
+            verification_files = box.verification_files(verification_root)
+        except ValueError as error:
+            raise VerificationFailure('infrastructure', str(error)) from None
         engine = runtime()
         engine.image(IMAGE)
     uid, gid = (os.getuid(), os.getgid()) if os.getuid() else (65534, 65534)
@@ -250,13 +260,20 @@ def check(submission, box=None):
         root = Path(tmp)
         checks = root / 'checks'
         checks.mkdir()
-        for filename in ('acceptance.test.ts', 'validators.test.ts', 'vitest.config.mts',
-                         'diagnostic-reporter.mjs', 'compiler-diagnostics.mjs', 'cases.json'):
-            shutil.copyfile(verification_root / filename, checks / filename)
+        reserved = {'check-contract.ts', 'vitest.config.mts', 'diagnostic-reporter.mjs',
+                    'compiler-diagnostics.mjs', *[f'suite-{i}.config.mts' for i in range(len(box.suites))]}
+        if reserved.intersection(verification_files):
+            raise VerificationFailure('infrastructure', 'Verification inputs collide with runner files')
+        for filename in verification_files:
+            destination = checks / filename
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(verification_root / filename, destination)
+        for filename in ('vitest.config.mts', 'diagnostic-reporter.mjs', 'compiler-diagnostics.mjs'):
+            shutil.copyfile(RUNNER / filename, checks / filename)
+        for index, suite in enumerate(box.suites):
+            (checks / f'suite-{index}.config.mts').write_text(suite_config(suite), encoding='utf-8')
         (checks / 'check-contract.ts').write_text(box.contract_check(
             '/implementation/implementation.ts'), encoding='utf-8')
-        shutil.copytree(verification_root / '.generated', checks / '.generated')
-        shutil.copytree(verification_root / 'src', checks / 'src')
         scratch = root / 'scratch'
         scratch.mkdir()
         if os.getuid() == 0:
@@ -280,7 +297,7 @@ for (const action of [
  () => readFileSync('/run/host-auth.json'),
  () => readFileSync('/peer/implementation.ts'),
  () => writeFileSync(CONTRACT_MODULE, 'changed'),
- () => writeFileSync('/checks/acceptance.test.ts', 'changed'),
+ () => writeFileSync(CHECK_FILE, 'changed'),
  () => writeFileSync('/implementation/implementation.ts', 'changed'),
  () => writeFileSync('/outside.txt', 'changed'),
  () => { symlinkSync(CONTRACT_MODULE, '/implementation/escape');
@@ -288,7 +305,8 @@ for (const action of [
          finally { unlinkSync('/implementation/escape'); } },
 ]) { try { action(); result.push('SUCCEEDED'); } catch (e) { result.push(e.code); } }
 console.log(JSON.stringify(result));
-'''.replace('CONTRACT_MODULE', json.dumps(box.contract_module))))
+'''.replace('CONTRACT_MODULE', json.dumps(box.contract_module))
+   .replace('CHECK_FILE', json.dumps('/checks/' + box.suites[0].files[0]))))
                 assert observed == ['ENOENT'] * 3 + ['EROFS'] * 5
                 network = json.loads(engine.exec(name, 'node', '--input-type=module', source='''
 import net from 'node:net';
@@ -304,11 +322,13 @@ console.log(JSON.stringify(result));
                 assert network in ('ENETUNREACH', 'EHOSTUNREACH')
             with phase('TypeScript compilation'):
                 run_compiler(engine, name, scratch)
-            for label, group in [('Typia runtime validation (validator suite)', 'typia'),
-                                 ('Vitest acceptance tests (with runtime input/output guards)', 'acceptance'),
-                                 ('fast-check properties', 'properties')]:
-                with phase(label):
-                    run_vitest(engine, name, scratch, group)
+            labels = {'runtime': 'Typia runtime validation', 'acceptance': 'Vitest acceptance tests',
+                      'properties': 'fast-check properties'}
+            for category in box.optional_categories:
+                print(f'NOT APPLICABLE {labels[category]} (explicit Box declaration)', flush=True)
+            for index, suite in enumerate(box.suites):
+                with phase(' + '.join(labels[category] for category in suite.categories)):
+                    run_vitest(engine, name, scratch, suite, index)
             with phase('Protected input integrity'):
                 assert all(digest(p) == old for p, old in before.items())
         finally:

@@ -10,18 +10,19 @@ import unittest
 from unittest.mock import MagicMock, patch
 
 from test_spike import HERE, generator, verifier
+from boundscript_internal.box_definition import VerificationSuite
 
 STATUS = {'exitStatus': 0, 'signal': None, 'launchError': False, 'timedOut': False}
 
 
 def test_result(status='passed', **extra):
-    return dict(file='acceptance.test.ts', name='known case', status=status, **extra)
+    return dict({'file': 'acceptance.test.ts', 'name': 'known case', 'status': status}, **extra)
 
 
 class DiagnosticTests(unittest.TestCase):
     def report(self, path, **overrides):
         report = {'complete': True, 'infrastructureErrors': 0,
-                  'tests': [test_result()], 'failed': []}
+                  'files': ['acceptance.test.ts'], 'tests': [test_result()], 'failed': []}
         report.update(overrides)
         path.write_text(json.dumps(report))
 
@@ -57,8 +58,8 @@ console.log(JSON.stringify(collectDiagnostics([module], [{message:'PRIVATE UNHAN
             self.report(report)
             output = io.StringIO()
             with redirect_stdout(output):
-                self.assertIsNone(verifier.vitest_failure(STATUS, report))
-            self.assertIn('PASS acceptance.test.ts:', output.getvalue())
+                self.assertIsNone(verifier.vitest_failure(STATUS, report, ('acceptance.test.ts',)))
+            self.assertIn('PASS "acceptance.test.ts":', output.getvalue())
             self.assertIn('1 passed, 0 failed', output.getvalue())
             failed = test_result('failed', assertions=[{
                 'expected': '{ok: true}', 'actual': 'private-value-123 sk-example123',
@@ -68,7 +69,7 @@ console.log(JSON.stringify(collectDiagnostics([module], [{message:'PRIVATE UNHAN
             self.report(report, stdout='PRIVATE STDOUT', stderr='PRIVATE STDERR', tests=[failed], failed=[failed])
             output = io.StringIO()
             with redirect_stdout(output):
-                failure = verifier.vitest_failure(dict(STATUS, exitStatus=1), report)
+                failure = verifier.vitest_failure(dict(STATUS, exitStatus=1), report, ('acceptance.test.ts',))
             text = output.getvalue()
             self.assertEqual(failure.kind, 'assertion')
             self.assertIn('Vitest exit status: 1', text)
@@ -89,7 +90,7 @@ console.log(JSON.stringify(collectDiagnostics([module], [{message:'PRIVATE UNHAN
             self.report(report, tests=[failed], failed=[failed])
             output = io.StringIO()
             with redirect_stdout(output):
-                failure = verifier.vitest_failure(dict(STATUS, exitStatus=1), report)
+                failure = verifier.vitest_failure(dict(STATUS, exitStatus=1), report, ('acceptance.test.ts',))
             self.assertEqual(failure.kind, 'typia')
             self.assertIn('$input.contact.name', output.getvalue())
             self.assertIn('actual type=number', output.getvalue())
@@ -97,11 +98,11 @@ console.log(JSON.stringify(collectDiagnostics([module], [{message:'PRIVATE UNHAN
             failed['typia'] = []
             self.report(report, tests=[failed], failed=[failed])
             with redirect_stdout(io.StringIO()):
-                self.assertEqual(verifier.vitest_failure(dict(STATUS, exitStatus=1), report).kind, 'runtime')
+                self.assertEqual(verifier.vitest_failure(dict(STATUS, exitStatus=1), report, ('acceptance.test.ts',)).kind, 'runtime')
             failed['timedOut'] = True
             self.report(report, tests=[failed], failed=[failed])
             with redirect_stdout(io.StringIO()):
-                self.assertEqual(verifier.vitest_failure(dict(STATUS, exitStatus=1), report).kind, 'timeout')
+                self.assertEqual(verifier.vitest_failure(dict(STATUS, exitStatus=1), report, ('acceptance.test.ts',)).kind, 'timeout')
 
     def test_missing_invalid_oversized_and_symlink_reports_fail_closed(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -110,7 +111,7 @@ console.log(JSON.stringify(collectDiagnostics([module], [{message:'PRIVATE UNHAN
                 if contents is not None:
                     report.write_text(contents)
                 with self.assertRaises(verifier.VerificationFailure) as failure:
-                    verifier.vitest_failure(STATUS, report)
+                    verifier.vitest_failure(STATUS, report, ('acceptance.test.ts',))
                 self.assertEqual(failure.exception.kind, 'infrastructure')
                 self.assertNotIn('PRIVATE', str(failure.exception))
             report.unlink()
@@ -122,10 +123,10 @@ console.log(JSON.stringify(collectDiagnostics([module], [{message:'PRIVATE UNHAN
             report.unlink()
             self.report(report, infrastructureErrors=1)
             with redirect_stdout(io.StringIO()):
-                self.assertEqual(verifier.vitest_failure(STATUS, report).kind, 'infrastructure')
+                self.assertEqual(verifier.vitest_failure(STATUS, report, ('acceptance.test.ts',)).kind, 'infrastructure')
             self.report(report, tests=[])
             with self.assertRaises(verifier.VerificationFailure):
-                verifier.vitest_failure(STATUS, report)
+                verifier.vitest_failure(STATUS, report, ('acceptance.test.ts',))
 
     def test_process_startup_timeout_and_transport_errors_withhold_raw_output(self):
         engine = MagicMock()
@@ -194,9 +195,59 @@ console.log(JSON.stringify(collectDiagnostics([module], [{message:'PRIVATE UNHAN
             self.report(report)
             with patch.object(verifier, 'process_status', return_value=STATUS) as run:
                 with self.assertRaises(verifier.VerificationFailure):
-                    verifier.run_vitest(MagicMock(), 'fixed-name', root, 'properties')
-            self.assertIn('^(?!matches native acceptance case )', run.call_args.args[2])
+                    verifier.run_vitest(MagicMock(), 'fixed-name', root,
+                                        VerificationSuite(('properties',), ('laws/own.spec.ts',)), 2)
+            self.assertIn('/checks/suite-2.config.mts', run.call_args.args[2])
+            self.assertIn('--allowOnly=false', run.call_args.args[2])
+            self.assertNotIn('--testNamePattern', run.call_args.args[2])
             self.assertFalse(report.exists())
+
+    def test_declared_file_coverage_empty_collections_skips_and_pending_fail_closed(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            report = Path(tmp) / 'vitest-diagnostics.json'
+            expected = ('nested/one.spec.ts', 'elsewhere/two.test.ts')
+            tests = [test_result(file=file, name='description unrelated to selection') for file in expected]
+            for overrides in (
+                {'files': list(expected[:1]), 'tests': tests[:1]},
+                {'files': list(expected), 'tests': tests[:1]},  # Empty second file.
+                {'files': [expected[0], expected[0]], 'tests': tests},
+                {'files': [*expected, 'undeclared.spec.ts'], 'tests': tests},
+                {'files': list(expected), 'tests': [tests[0], dict(tests[1], status='skipped')]},
+                {'files': list(expected), 'tests': [tests[0], dict(tests[1], status='pending')]},
+                {'files': list(expected), 'tests': [*tests, test_result(file='unknown.spec.ts')]},
+            ):
+                self.report(report, **overrides)
+                with self.subTest(report=overrides), redirect_stdout(io.StringIO()):
+                    try:
+                        failure = verifier.vitest_failure(STATUS, report, expected)
+                    except verifier.VerificationFailure as error:
+                        failure = error
+                    self.assertIsNotNone(failure)
+                    self.assertEqual(failure.kind, 'infrastructure')
+            self.report(report, files=list(expected), tests=tests)
+            with redirect_stdout(io.StringIO()) as output:
+                self.assertIsNone(verifier.vitest_failure(STATUS, report, expected))
+            self.assertIn('nested/one.spec.ts', output.getvalue())
+            self.assertIn('elsewhere/two.test.ts', output.getvalue())
+
+    def test_reporter_retains_nested_paths_and_fails_closed_on_truncation(self):
+        source = '''
+import {collectDiagnostics} from REPORTER;
+const test = {fullName:'unrelated description', result:() => ({state:'passed'})};
+const module = path => ({moduleId:path, errors:() => [],
+ children:{allTests:() => [test]}});
+const report = collectDiagnostics([
+ module('/checks/one/custom.spec.ts'), module('/checks/two/custom.spec.ts')], []);
+const overflow = collectDiagnostics([{moduleId:'/checks/huge.test.ts', errors:() => [],
+ children:{allTests:() => Array(101).fill(test)}}], []);
+console.log(JSON.stringify({report, overflow}));
+'''.replace('REPORTER', json.dumps((HERE / 'diagnostic-reporter.mjs').as_uri()))
+        result = subprocess.run(['node', '--input-type=module'], input=source, text=True,
+                                capture_output=True, check=True)
+        reports = json.loads(result.stdout)
+        self.assertEqual(reports['report']['files'], ['one/custom.spec.ts', 'two/custom.spec.ts'])
+        self.assertEqual([test['file'] for test in reports['report']['tests']], reports['report']['files'])
+        self.assertEqual(reports['overflow']['infrastructureErrors'], 1)
 
     @unittest.skipUnless(os.environ.get('BOUNDSCRIPT_NATIVE_ENGINE_TEST') == '1', 'opt-in offline engine checks')
     def test_engine_failures_are_readable_and_never_echo_candidate_output(self):

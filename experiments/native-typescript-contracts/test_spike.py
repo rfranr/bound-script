@@ -63,7 +63,7 @@ class SpikeTests(unittest.TestCase):
             engine.exec.side_effect = [json.dumps(['ENOENT'] * 3 + ['EROFS'] * 5),
                                        json.dumps('ENETUNREACH')]
 
-            def inspect_checks(_engine, _name, _scratch, _group):
+            def inspect_checks(_engine, _name, _scratch, _suite, _index):
                 specs = engine.create.call_args.args[2][1::2]
                 checks_spec = next(s for s in specs if 'dst=/checks,' in s)
                 checks = Path(checks_spec.split('src=', 1)[1].split(',')[0])
@@ -80,7 +80,7 @@ class SpikeTests(unittest.TestCase):
                  patch.object(verifier, 'run_compiler') as compiler, \
                  patch.dict(sys.modules, {'verify_pair': None}):
                 verifier.check(candidate)
-            self.assertEqual([call.args[3] for call in vitest.call_args_list], ['typia', 'acceptance', 'properties'])
+            self.assertEqual([call.args[3] for call in vitest.call_args_list], list(verifier.BOX.suites))
             self.assertEqual(engine.exec.call_count, 2)
             compiler.assert_called_once()
             engine.remove.assert_called_once()
@@ -112,6 +112,9 @@ class SpikeTests(unittest.TestCase):
             (root / '.generated').mkdir()
             (root / 'accepted').mkdir()
             (root / '.generated/validators.ts').write_text('// synthetic build')
+            (root / '.generated/contract.ts').write_text('// synthetic generated contract')
+            for filename in ('validators.test.ts', 'acceptance.test.ts', 'cases.json'):
+                (root / filename).write_text('// independently owned synthetic fixture')
             (root / 'task.md').write_text('synthetic task')
             (root / 'src/contract.ts').write_text('// synthetic contract')
             accepted = root / 'accepted/normalize-contact.ts'

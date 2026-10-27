@@ -24,9 +24,16 @@ Historical experiment reports describe earlier states; proposed integration in
    function type/export, destination and independent verification bundle. A
    generation-side definition fingerprint is required to match in its verifier
    subprocess before candidate verification. No registry or export inference is
-   involved; implementation mounts and verification bundle layout remain runner
-   conventions. The generated check is
-   hashed and mounted read-only, not retained as a source artifact.
+   involved; implementation mounts and trusted tool adapters remain runner
+   conventions. Each Box declares exact test-file suites/categories and support
+   inputs relative to its own verification root. Every conventional test/spec
+   JS/TS file must be assigned once; missing, undeclared, duplicate or empty
+   selections fail closed. Runtime validation and acceptance are mandatory;
+   properties can only be absent through an explicit not-applicable declaration.
+   All declared tests must run, with no skipped/pending/focused tests. The
+   generated signature check and per-suite Vitest configs are hashed and mounted
+   read-only alongside independently owned tests/fixtures, not retained as source
+   artifacts. No business-specific test filename or description selects tests.
    Native verification performs strict TypeScript compilation, Typia
    validator tests, 20 independent examples with runtime input/output guards,
    five seeded fast-check properties, protected-file hashes and cleanup.
@@ -70,8 +77,14 @@ candidate can read tests/tooling, but cannot modify them through mounts.
 Versions remain pinned: TypeScript 5.9.3, Typia 9.7.2, Vitest 5.0.5,
 fast-check 4.10.2 and an existing Pi 1.4.0 installation. Typia's standard CLI
 expands `src/validators.ts` into ignored `.generated/` source before Vitest;
-there is no compiler patch or custom Vite transformer. Native tests run in three
-phases; details are emitted at phase completion, not streamed per assertion.
+there is no compiler patch or custom Vite transformer. Vitest runs exact declared
+files, without test-name patterns. NormalizeContact's unchanged mixed
+acceptance/property file is run once in an explicitly combined phase, separate
+from its runtime-validator suite and TypeScript compilation. Boxes with separate
+category files receive separate phases. Reports retain relative file paths and
+must account for every declared file with executed tests; bounded-report
+truncation is a failure. Details are emitted at phase completion, not streamed
+per assertion.
 
 ## Consolidation choices
 
@@ -106,7 +119,7 @@ boundscript_internal/          # shared host-side mechanics; no experiment impor
   container_runtime.py        # engine policy, probes, image/tooling/hash utilities
   agent_workspace.py          # Pi lifecycle, credential scan, generation cleanup
   typescript_contract.py      # deterministic temporary TypeScript signature consumer
-  box_definition.py           # immutable explicit inputs and definition fingerprint
+  box_definition.py           # explicit inputs/suites, ownership checks, fingerprint
 tests/internal/               # shared lifecycle/security/resource regressions
 experiments/minimal-box/      # baseline authority, workflows and policy tests
 experiments/native-typescript-contracts/

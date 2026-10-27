@@ -13,15 +13,17 @@ branch restrictions or guarantees that old candidates meet today's contract.
 - `native_box.py`: one explicit, immutable `BoxDefinition`, imported by both native
   entry points. It selects task/contract paths, the mounted contract module,
   function type/export, accepted destination and independent verification bundle.
-  `boundscript_internal/box_definition.py` only holds this data, renders the
-  signature consumer and fingerprints the definition; there is no registry or
-  source discovery. Generation passes that fingerprint to the separate verifier,
+  `boundscript_internal/box_definition.py` holds this data, validates explicit
+  suite ownership, renders the signature consumer and fingerprints the entire
+  definition (including suites/inputs); there is no registry or source inference. Generation passes that fingerprint to the separate verifier,
   which rejects a mismatch before checking the candidate. Standalone verification
   uses the same fixed definition without requiring a fingerprint argument.
-  Implementation paths and the checks/src/.generated bundle layout remain runner
-  conventions. Each future Box still needs its own human-owned tests, Typia
-  validators and explicit build configuration; synthetic unit definitions do not
-  implement or authorize a second business Box.
+  Implementation mounts and trusted Vitest/compiler adapters remain runner
+  conventions. Box-owned test files, fixtures, source and built validators are
+  staged only from the definition's explicit suites and `verification_inputs`.
+  Each future Box still needs its own human-owned tests, Typia validators and
+  explicit build configuration. Synthetic tests exercise two independent suite
+  layouts with actual Typia/Vitest/fast-check offline, not a second business Box.
 
 - `task.md`: independent, human-owned natural-language functional intent.
 - `src/contract.ts`: authoritative native `Contact`, discriminated result union,
@@ -64,8 +66,9 @@ is also read-only; only a disposable cache directory is writable. It reuses the
 unmodified Docker/Podman adapter, pinned image, nonroot identity, dropped
 capabilities, read-only root, and effective CPU/memory/PID checks. Runtime input
 and output validation happens at the test boundary, not inside agent code.
-Strict TypeScript checking uses `/inputs/contract.ts` mounted from the experiment's
-definition's `contract_path` (`src/contract.ts` today). The independent Vitest suite executes the 20 locally owned
+Strict TypeScript checking uses the definition's `contract_module` mounted from
+its `contract_path` (`/inputs/contract.ts` and `src/contract.ts` today).
+The independent Vitest suite executes the 20 locally owned
 acceptance cases, Typia validation and fast-check properties. It validates the
 complete result before projecting name/email for exact behavioral comparisons.
 The success key check includes the contract's required `phone` field; phone
@@ -116,8 +119,8 @@ BOUNDSCRIPT_NATIVE_ENGINE_TEST=1 BOUNDSCRIPT_RUNTIME=podman \
 
 Use `BOUNDSCRIPT_RUNTIME=docker` for a genuine Docker engine. No automatic image
 pulls or package installation occur inside either container. Set a command
-budget of 900 seconds for live generation and 300 seconds for the
-opt-in negative suite (including container cleanup). Independent verification
+budget of 900 seconds for live generation and 600 seconds for the complete
+opt-in native suite (including two synthetic layouts and container cleanup). Independent verification
 has a bounded 360-second generation-side deadline for its separated phases;
 container resource limits are unchanged. The existing Pi 1.4.0
 installation path and auth-file exception are retained in `generate.py`. Its current
@@ -130,17 +133,46 @@ npm run build:native
 BOUNDSCRIPT_RUNTIME=podman python3 -B experiments/native-typescript-contracts/verify.py /absolute/path/candidate.ts
 ```
 
+## Independent suite configuration
+
+`VerificationSuite(categories, files)` names literal paths relative to the Box's
+`verification_path`, with one or more of `runtime`, `acceptance`, `properties`.
+Every `*.test.*` / `*.spec.*` JavaScript/TypeScript test file under that
+root must be assigned exactly once, including nested files (`.ts`, `.tsx`, `.js`,
+`.jsx`, `.mts`, `.cts`, `.mjs`, `.cjs`). Different fixture names and directory
+structures are explicit `verification_inputs` (files or directories), not known
+by the verifier. No test source or description is parsed to infer requirements.
+
+Runtime validation and acceptance are always required. Properties are required
+unless the human-owned definition explicitly declares
+`optional_categories=('properties',)` and declares no property suite. This is
+reported as `NOT APPLICABLE`, not a pass. Existing property files cannot be
+silently omitted: the test-directory inventory must still be fully covered.
+All declared suites run; optional does not mean skip failures or missing files.
+A mixed file can declare multiple categories and is executed once in a combined
+phase, without duplicating tests or inventing a description-to-category mapping.
+
+A missing input/test, duplicate or undeclared test file, empty suite, empty file
+collection, unexpected collected file, skipped/todo/pending test, focused `.only`
+selection or truncated report fails verification. The bounded reporter retains
+relative paths (not just basenames) and the host requires each declared file to
+execute at least one test. All staged files, generated suite configs and trusted
+adapters are hashed and read-only. Existing business test implementations,
+fixtures, contracts and runtime input/output guards are unchanged.
+
 ## Live verification diagnostics and quarantine
 
 Every phase prints flushed `START` and `PASS`/`FAIL` updates: preflight,
 sandbox/security, strict TypeScript compilation, Typia validator tests, Vitest
 acceptance tests (including full runtime guards), fast-check properties, input
-integrity and cleanup. Vitest still executes the **unchanged** test suites, in
-three filtered runs: 3 validator tests, 20 acceptance cases and 5 properties.
-Each run reports pass/fail test names, counts, exit status and bounded assertion
-differences. Filtered-out tests appear in skipped counts, not as executed passes.
-Acceptance test names identify the existing acceptance/property split; a missing
-or empty selection fails closed.
+integrity and cleanup. Vitest executes the **unchanged** test suites with exact
+file selection, never test-description filters. NormalizeContact declares two
+runs: 3 runtime-validator tests, then the combined 20 acceptance cases and 5
+properties already present in one human-owned file. That phase is explicitly
+reported as `Vitest acceptance tests + fast-check properties`; the verifier does
+not infer which descriptions are properties. Boxes that independently own
+separate files get separate category phases. Each run reports relative paths,
+full test names, counts, exit status and bounded assertion differences.
 
 **Streaming limitation:** phase updates are live, but test details are emitted at
 the end of each phase, not per test. The existing narrow reporter uses Vitest's

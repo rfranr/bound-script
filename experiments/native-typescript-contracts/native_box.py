@@ -3,7 +3,7 @@
 Paths are relative to this experiment. verification_path owns the independent
 acceptance suite, src validators and generated Typia validators, not agent inputs.
 """
-from boundscript_internal.box_definition import BoxDefinition
+from boundscript_internal.box_definition import BoxDefinition, VerificationSuite
 
 BOX = BoxDefinition(
     name='normalize-contact-native',
@@ -14,6 +14,12 @@ BOX = BoxDefinition(
     implementation_export='normalizeContact',
     accepted_path='accepted/normalize-contact.ts',
     verification_path='.',
+    suites=(
+        VerificationSuite(('runtime',), ('validators.test.ts',)),
+        # The unchanged human-owned file contains both examples and properties.
+        VerificationSuite(('acceptance', 'properties'), ('acceptance.test.ts',)),
+    ),
+    verification_inputs=('src', '.generated/contract.ts', '.generated/validators.ts', 'cases.json'),
 )
 
 # Explicit historical comparison only; not a native contract/Box selection.

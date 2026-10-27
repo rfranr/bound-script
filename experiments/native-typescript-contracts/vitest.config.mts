@@ -5,7 +5,8 @@ export default defineConfig({
   root: '/checks',
   cacheDir: '/implementation/.vite',
   test: {
-    include: ['acceptance.test.ts', 'validators.test.ts'],
+    // The verifier's generated per-suite config supplies exact declared files.
+    include: [],
     pool: 'forks',
     maxWorkers: 1,
     fileParallelism: false,

@@ -59,8 +59,7 @@ def main():
         raise RuntimeError('Assertions must be enabled')
     if sys.argv[1:]:
         raise RuntimeError('This fixed Box runner expects no arguments')
-    if not (SPIKE / BOX.verification_path / '.generated/validators.ts').is_file():
-        raise RuntimeError('Run npm run build:native first')
+    BOX.verification_files(SPIKE / BOX.verification_path)
     input_sources = {'task.md': SPIKE / BOX.task_path,
                      BOX.contract_module.removeprefix('/inputs/'): SPIKE / BOX.contract_path}
     destination = SPIKE / BOX.accepted_path
