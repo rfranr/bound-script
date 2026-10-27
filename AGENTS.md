@@ -46,3 +46,10 @@ AI-Reasoning: <effort-level>
 - Use `unknown` when metadata cannot be determined.
 - After an authorized commit, report its hash and a brief summary.
 - When commits are not authorized, leave changes uncommitted and report the results.
+
+## Information Disclosure
+
+- Record technical decisions, requirements and verification evidence.
+- Do not reproduce private conversations, informal remarks or verbatim human instructions in reports or commits.
+- Summarize authorizations factually and minimally.
+- Disclose only information necessary for technical traceability.
