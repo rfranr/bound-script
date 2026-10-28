@@ -30,7 +30,9 @@ Implement {box.function_type} in /implementation/implementation.ts and export th
 {box.implementation_export} function. Use tools to write the file. Only the task and native
 TypeScript contract are authorized inputs. No peer code, tests or repository are
 available. Do not install packages, inspect or disclose credentials, or write
-any other submission file. Use type-only contract imports. Do not change the
+any other submission file. Use type-only relative imports from './contract'.
+The contract and implementation stay siblings when integrated; never import sandbox paths.
+Do not change the
 contract or task. The container, not this prompt, enforces the filesystem boundary.
 '''
 
@@ -62,12 +64,14 @@ def main():
         raise RuntimeError('This fixed Box runner expects no arguments')
     print('Generation preflight: validating Box verification assets', flush=True)
     BOX.verification_files(SPIKE / BOX.verification_path)
-    input_sources = {'task.md': SPIKE / BOX.task_path,
-                     BOX.contract_module.removeprefix('/inputs/'): SPIKE / BOX.contract_path}
+    input_sources = {'task.md': SPIKE / BOX.task_path}
+    contract = SPIKE / BOX.contract_path
+    contract_digest = digest(contract)
     destination = SPIKE / BOX.accepted_path
     with agent_submission(runtime(), input_sources, pi=PI, auth=AUTH, box=BOX.name,
                           filename='implementation.ts', prompt=generation_prompt(BOX),
-                          model=MODEL, thinking=MODEL_THINKING) as (submission, scanned_digest):
+                          model=MODEL, thinking=MODEL_THINKING,
+                          public_contract=contract) as (submission, scanned_digest):
         # Generation has ended; only the source enters independent offline verification.
         verification = [sys.executable, str(SPIKE / 'verify.py'),
                         '--box-definition', BOX.fingerprint(), str(submission)]
@@ -81,8 +85,11 @@ def main():
             raise
         assert digest(submission) == scanned_digest, 'Submission changed during verification'
         print('Generation: promoting unchanged verified source', flush=True)
+        assert digest(contract) == contract_digest, 'Public contract changed during generation/verification'
         destination.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(contract, destination.parent / 'contract.ts')
         shutil.copyfile(submission, destination)
+        assert digest(destination) == scanned_digest, 'Promoted source differs from verified bytes'
         print(f'PASS {BOX.name} independently verified and promoted unchanged; sha256={digest(destination)}', flush=True)
 
 

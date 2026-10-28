@@ -73,7 +73,7 @@ class SpikeTests(unittest.TestCase):
                 self.assertFalse((HERE / 'check-contract.ts').exists())
                 self.assertEqual((checks / 'check-contract.ts').read_text(),
                                  generator.BOX.contract_check('/implementation/implementation.ts'))
-                self.assertIn(f'src={HERE / "src/contract.ts"},dst=/inputs/contract.ts,readonly',
+                self.assertIn(f'src={HERE / "src/contract.ts"},dst=/implementation/contract.ts,readonly',
                               ','.join(specs))
 
             with patch.object(verifier, 'runtime', return_value=engine), \
@@ -195,7 +195,10 @@ class SpikeTests(unittest.TestCase):
             self.assertEqual(engine.remove.call_count, 6)
             specs = engine.create.call_args.args[2][1::2]
             self.assertFalse(any('/checks' in s or '/tests' in s or '/repo' in s for s in specs))
-            self.assertEqual(sum('/inputs/' in s for s in specs), 2)
+            self.assertEqual(sum('/inputs/' in s for s in specs), 1)
+            self.assertEqual(sum('dst=/implementation/contract.ts,readonly' in s for s in specs), 1)
+            self.assertEqual((accepted.parent / 'contract.ts').read_bytes(),
+                             (root / 'src/contract.ts').read_bytes())
 
     def test_generation_cli_does_not_serialize_arbitrary_errors(self):
         with patch.object(generator, 'main', side_effect=RuntimeError('PRIVATE PROVIDER OUTPUT')), \

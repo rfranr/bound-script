@@ -129,7 +129,7 @@ def run_compiler(engine, name, scratch):
         if not isinstance(item, dict) or type(item.get('code')) is not int:
             raise VerificationFailure('infrastructure', 'Invalid compiler diagnostic; raw output withheld')
         file = item.get('file')
-        if file not in ('/checks/check-contract.ts', '/implementation/implementation.ts', '/inputs/contract.ts'):
+        if file not in ('/checks/check-contract.ts', '/implementation/implementation.ts', '/implementation/contract.ts'):
             file = '[tooling/other source]'
         location = ':'.join(str(item[key]) if type(item.get(key)) is int else '?' for key in ('line', 'column'))
         print(f'  TS{item["code"]} {file}:{location}: {quoted(item.get("message"))}', flush=True)

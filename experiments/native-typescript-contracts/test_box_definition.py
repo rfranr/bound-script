@@ -158,8 +158,10 @@ class BoxDefinitionTests(unittest.TestCase):
                      patch.object(generator, 'agent_submission', return_value=submission) as agent, \
                      patch.object(generator.subprocess, 'run') as verification:
                     generator.main()
-                self.assertEqual(agent.call_args.args[1], {'task.md': root / box.task_path,
-                                                          f'{label}.ts': root / box.contract_path})
+                self.assertEqual(agent.call_args.args[1], {'task.md': root / box.task_path})
+                self.assertEqual(agent.call_args.kwargs['public_contract'], root / box.contract_path)
+                self.assertEqual((root / box.accepted_path).parent.joinpath('contract.ts').read_bytes(),
+                                 (root / box.contract_path).read_bytes())
                 self.assertEqual(agent.call_args.kwargs['prompt'], prompt)
                 self.assertEqual(agent.call_args.kwargs['box'], label)
                 self.assertEqual(verification.call_args.args[0][2:4], ['--box-definition', box.fingerprint()])

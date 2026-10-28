@@ -16,7 +16,8 @@ from .container_runtime import IMAGE, digest
 
 
 @contextmanager
-def agent_submission(engine, inputs_from, *, pi, auth, box, filename, prompt, model, thinking):
+def agent_submission(engine, inputs_from, *, pi, auth, box, filename, prompt, model, thinking,
+                     public_contract=None):
     if not __debug__:
         raise RuntimeError('Assertions must be enabled')
     if not auth.is_file() or not (pi / 'dist/bundle/cli.js').is_file():
@@ -41,9 +42,15 @@ def agent_submission(engine, inputs_from, *, pi, auth, box, filename, prompt, mo
         mounts = []
         for p in inputs.iterdir():
             mounts += ['--mount', f'type=bind,src={p},dst=/inputs/{p.name},readonly']
+        if public_contract is not None:
+            contract = candidate / 'contract.ts'
+            shutil.copyfile(public_contract, contract)
+            protected[contract] = digest(contract)
         mounts += ['--mount', f'type=bind,src={candidate},dst=/implementation',
                    '--mount', f'type=bind,src={pi},dst=/opt/pi,readonly',
                    '--mount', f'type=bind,src={auth},dst=/run/host-auth.json,readonly']
+        if public_contract is not None:
+            mounts += ['--mount', f'type=bind,src={contract},dst=/implementation/contract.ts,readonly']
         try:
             print('Generation preflight: creating isolated container', flush=True)
             engine.create(name, IMAGE, mounts, os.getuid(), os.getgid(),
@@ -96,13 +103,16 @@ console.log(JSON.stringify(observed));
             tools = [e for e in events if e.get('type') == 'tool_execution_start']
             reads = [e.get('args', {}).get('path') for e in tools if e.get('toolName') == 'read']
             allowed_reads = {'/inputs/' + p for p in inputs_from} | {'/implementation/' + filename}
+            if public_contract is not None:
+                allowed_reads.add('/implementation/contract.ts')
             assert set(reads) <= allowed_reads, 'Unexpected agent read path'
             assert any(e.get('toolName') == 'write' for e in tools), 'No agent write observed'
             print('Pi tools: ' + json.dumps({t: sum(e.get('toolName') == t for e in tools) for t in ('read', 'write', 'edit', 'bash')}), flush=True)
             failures = sum(bool(e.get('isError')) for e in events if e.get('type') == 'tool_execution_end')
             print(f'Tool failures: {failures}; observed read paths within authorized inputs/own implementation', flush=True)
             submission = candidate / filename
-            assert list(candidate.iterdir()) == [submission] and not submission.is_symlink()
+            expected = {submission, contract} if public_contract is not None else {submission}
+            assert set(candidate.iterdir()) == expected and not submission.is_symlink()
             assert submission.is_file() and submission.stat().st_size <= 16384
             # Scan original AND refreshed literal credential values before the
             # host imports any bytes. Bind the scan to the yielded source hash.

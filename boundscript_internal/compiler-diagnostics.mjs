@@ -8,6 +8,28 @@ const program = ts.createProgram(['/checks/check-contract.ts'], {
   module: ts.ModuleKind.NodeNext, allowImportingTsExtensions: true,
 });
 const diagnostics = ts.getPreEmitDiagnostics(program);
+// Source imports must survive relocation, not merely resolve in this sandbox.
+// Current Boxes have no permitted package dependencies.
+const candidate = program.getSourceFile('/implementation/implementation.ts');
+function checkImports(node) {
+  let specifier;
+  if (ts.isImportDeclaration(node) || ts.isExportDeclaration(node))
+    specifier = node.moduleSpecifier;
+  else if (ts.isImportTypeNode(node) && ts.isLiteralTypeNode(node.argument))
+    specifier = node.argument.literal;
+  else if (ts.isExternalModuleReference(node)) specifier = node.expression;
+  else if (ts.isCallExpression(node) && (node.expression.kind === ts.SyntaxKind.ImportKeyword ||
+           (ts.isIdentifier(node.expression) && node.expression.text === 'require')))
+    specifier = node.arguments[0] ?? node;
+  if (specifier && (!ts.isStringLiteralLike(specifier) ||
+      !/^(\.\/|\.\.\/)/.test(specifier.text))) {
+    diagnostics.push({ category: ts.DiagnosticCategory.Error, code: 95001,
+      file: candidate, start: specifier.getStart(candidate), length: specifier.getWidth(candidate),
+      messageText: 'Box imports must use literal relative paths, not sandbox or package paths.' });
+  }
+  ts.forEachChild(node, checkImports);
+}
+if (candidate) checkImports(candidate);
 const errors = diagnostics.filter(d => d.category === ts.DiagnosticCategory.Error);
 writeFileSync('/implementation/typescript-diagnostics.json', JSON.stringify({
   complete: true, errorCount: errors.length,

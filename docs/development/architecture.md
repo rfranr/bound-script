@@ -107,6 +107,43 @@ implementation, host sessions/settings/extensions, container sockets or verifier
 code. Sharing a host helper does not add any agent mount. In the verifier the
 candidate can read tests/tooling, but cannot modify them through mounts.
 
+## Portable native Box layout
+
+Assignment [0038](../assignments/0038-portable-box-imports.md) keeps the public
+contract and implementation as siblings:
+
+```text
+<box>/
+  contract.ts
+  <implementation>.ts          # imports types from './contract'
+```
+
+Both native sandboxes reproduce this layout under `/implementation/`, with the
+candidate named `implementation.ts` and a read-only `contract.ts`. Generation
+mounts only this public contract and `/inputs/task.md` as task inputs: no tests,
+validators, repository, peer implementations or peer contracts are added. Current
+Boxes declare no implementation dependencies. The public contracts retain their
+existing type-only Typia tags dependency; consumers need the existing `typia`
+package for type checking, not a BoundScript runtime.
+
+Each fixed native generator copies the public contract alongside the unchanged
+verified source under its own `accepted/` directory, retaining the existing
+`normalize-contact.ts` or `render-welcome.ts` filename. Consumers copy both files
+into any Box directory, including a nested one; sibling imports need no rewriting,
+aliases or custom resolution. The compiler adapter rejects non-relative module
+specifiers and nonliteral dynamic imports in candidate source; ordinary TypeScript
+resolution checks the relative imports. This is not universal hostile-code import
+or transitive-dependency enforcement. Future permitted dependencies must preserve
+relative placement and be explicitly staged; no peer implementation access or
+hierarchical composition mechanism is introduced here.
+
+Contract hashes bind generation through promotion, and source hashes bind
+credential scanning through verification and byte-identical copying. No import
+rewriting occurs after verification. Older local candidates using `/inputs/contract`
+or `../inputs/contract` must be generated anew (or submitted as new candidates
+before verification); they are not silently repaired or aliased. Historical
+baseline runners and their accepted source bytes remain unchanged.
+
 ## Mechanisms retained
 
 - `boundscript_internal/container_runtime.py` supplies a single Docker/Podman policy. Engine choice

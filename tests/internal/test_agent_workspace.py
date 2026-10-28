@@ -1,6 +1,7 @@
 """Shared generation regressions; no credentials, model calls or real engines."""
 from contextlib import redirect_stdout
 import io
+import itertools
 import json
 from pathlib import Path
 import sys
@@ -15,8 +16,9 @@ from boundscript_internal import agent_workspace as workspace
 
 class WorkspaceTests(unittest.TestCase):
     def test_generation_cleanup_scan_and_lifetime(self):
-        for failure in (None, 'create', 'start', 'agent', 'scan', 'changed-scan', 'cleanup-change'):
-            with self.subTest(failure=failure), tempfile.TemporaryDirectory() as tmp:
+        for portable, failure in itertools.product((False, True),
+                (None, 'create', 'start', 'agent', 'scan', 'changed-scan', 'cleanup-change')):
+            with self.subTest(portable=portable, failure=failure), tempfile.TemporaryDirectory() as tmp:
                 root = Path(tmp)
                 auth = root / 'auth.json'
                 auth.write_text('{}')
@@ -26,6 +28,8 @@ class WorkspaceTests(unittest.TestCase):
                 (pi / 'package.json').write_text('{"version":"1.4.0"}')
                 task = root / 'task.md'
                 task.write_text('synthetic task')
+                contract = root / 'contract.ts'
+                contract.write_text('export type Contract = () => void;')
                 engine = MagicMock()
                 submission = None
 
@@ -39,6 +43,9 @@ class WorkspaceTests(unittest.TestCase):
                         spec = next(s for s in specs if 'dst=/implementation' in s)
                         directory = Path(spec.split('src=', 1)[1].split(',')[0])
                         submission = directory / 'implementation.ts'
+                        if portable:
+                            self.assertEqual((directory / 'contract.ts').read_bytes(), contract.read_bytes())
+                            self.assertTrue(any('dst=/implementation/contract.ts,readonly' in s for s in specs))
                         submission.write_text('// scanned source')
                         return '\n'.join(json.dumps(e) for e in [
                             {'type': 'session', 'id': '00000000-0000-4000-8000-000000000031', 'cwd': '/implementation'},
@@ -65,7 +72,8 @@ class WorkspaceTests(unittest.TestCase):
                 try:
                     with redirect_stdout(output), workspace.agent_submission(
                             engine, {'task.md': task}, pi=pi, auth=auth, box='synthetic',
-                            filename='implementation.ts', prompt='synthetic', model='synthetic', thinking='low') as (candidate, scanned):
+                            filename='implementation.ts', prompt='synthetic', model='synthetic', thinking='low',
+                            public_contract=contract if portable else None) as (candidate, scanned):
                         yielded = True
                         engine.remove.assert_called_once()
                         self.assertTrue(candidate.is_file())

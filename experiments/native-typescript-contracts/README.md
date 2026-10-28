@@ -73,7 +73,7 @@ unmodified Docker/Podman adapter, pinned image, nonroot identity, dropped
 capabilities, read-only root, and effective CPU/memory/PID checks. Runtime input
 and output validation happens at the test boundary, not inside agent code.
 Strict TypeScript checking uses the definition's `contract_module` mounted from
-its `contract_path` (`/inputs/contract.ts` and `src/contract.ts` today).
+its `contract_path` (`/implementation/contract.ts` and `src/contract.ts` today).
 The independent Vitest suite executes the 20 locally owned
 acceptance cases, Typia validation and fast-check properties. It validates the
 complete result before projecting name/email for exact behavioral comparisons.
@@ -96,12 +96,18 @@ The native runners no longer add the baseline experiment directory to `sys.path`
 scanned digest; each generator independently selects verification and promotion.
 Native verification imports only shared infrastructure, not a baseline verifier.
 
-The agent receives only `/inputs/task.md`, `/inputs/contract.ts`, read-only Pi
-and the explicitly authorized auth file, plus an initially empty writable
-`/implementation`. It receives neither Typia/Vitest tooling nor tests nor peer
+The agent receives only `/inputs/task.md`, `/implementation/contract.ts`, read-only Pi
+and the explicitly authorized auth file, plus a writable `/implementation` with
+no seeded implementation. The sibling contract is mounted read-only. It receives neither Typia/Vitest tooling nor tests nor peer
 code. Generation ends before verification starts. Only a regular, size-limited,
 credential-scanned source that passes the independent native verification pipeline
-is copied unchanged to `accepted/normalize-contact.ts`. Failed verification
+is copied unchanged to `accepted/normalize-contact.ts`, with the public contract
+copied to `accepted/contract.ts`. Copy these sibling files together into a consuming
+project; generated type imports use `./contract` in both sandboxes and the consumer.
+Existing type-only Typia tags require `typia` for type checking. Legacy sandbox-path
+candidates are not rewritten after verification; generate a new candidate instead.
+See the [portable layout](../../docs/development/architecture.md#portable-native-box-layout).
+Failed verification
 leaves the previous accepted source untouched. No integration promotion or peer generation is performed by this root.
 The new native RenderWelcome workflow is separate, not a migration of the
 historical dependency-injected baseline Box.

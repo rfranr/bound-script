@@ -99,6 +99,8 @@ assert 'NormalizeContact' not in generate.generation_prompt(generate.BOX)
             root = Path(tmp)
             candidate = root / 'implementation.ts'
             candidate.write_text('// scanned synthetic candidate')
+            (root / 'src').mkdir()
+            (root / 'src/contract.ts').write_bytes((HERE / 'src/contract.ts').read_bytes())
             scanned = generator.digest(candidate)
             destination = root / generator.BOX.accepted_path
             destination.parent.mkdir()
@@ -121,8 +123,10 @@ assert 'NormalizeContact' not in generate.generation_prompt(generate.BOX)
                 verification.side_effect = None
                 generator.main()
                 self.assertEqual(destination.read_bytes(), candidate.read_bytes())
-                self.assertEqual(agent.call_args.args[1], {'task.md': root / 'task.md',
-                                                          'contract.ts': root / 'src/contract.ts'})
+                self.assertEqual(agent.call_args.args[1], {'task.md': root / 'task.md'})
+                self.assertEqual(agent.call_args.kwargs['public_contract'], root / 'src/contract.ts')
+                self.assertEqual((destination.parent / 'contract.ts').read_bytes(),
+                                 (root / 'src/contract.ts').read_bytes())
                 self.assertEqual(verification.call_args.args[0],
                                  [sys.executable, str(root / 'verify.py'), '--box-definition',
                                   generator.BOX.fingerprint(), str(candidate)])
