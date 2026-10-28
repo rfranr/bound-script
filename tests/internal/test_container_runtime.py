@@ -136,6 +136,27 @@ class RuntimeTests(unittest.TestCase):
             with self.assertRaises(AssertionError):
                 cr.verify_effective(data, 1000, 1000, generation)
 
+    def test_resource_failures_are_actionable_and_never_echo_evidence(self):
+        for generation in (False, True):
+            for field, label in [('memory', 'memory.max'), ('swap', 'memory.swap.max'),
+                                 ('cpu', 'cpu.max'), ('pids', 'pids.max')]:
+                for value, state in [('max 100000' if field == 'cpu' else 'max', 'unlimited'),
+                                     ('PRIVATE\nTOKEN', 'malformed'), (None, 'malformed'),
+                                     ('9' * 100, 'malformed'), ('2 1' if field == 'cpu' else '2', 'mismatch')]:
+                    data = evidence(generation)
+                    data[field] = value
+                    with self.subTest(generation=generation, field=field, state=state):
+                        with self.assertRaises(cr.ResourcePolicyError) as failure:
+                            cr.verify_effective(data, 1000, 1000, generation)
+                        message = str(failure.exception)
+                        self.assertIn(f'{label}: {state}', message)
+                        self.assertIn('delegation', message)
+                        self.assertNotIn('PRIVATE', message)
+                        self.assertNotIn('TOKEN', message)
+        data = evidence()
+        data['cpu'] = '50000 50000'
+        cr.verify_effective(data, 1000, 1000, False)
+
     def test_effective_bind_flags(self):
         for cls in (cr.Docker, cr.Podman):
             for options in (['rw'], None):

@@ -144,6 +144,22 @@ assert 'NormalizeContact' not in generate.generation_prompt(generate.BOX)
                 self.assertEqual(module.cli(), 1)
                 self.assertNotIn('PRIVATE', out.getvalue() + err.getvalue())
 
+    def test_cli_reports_resource_root_cause_and_safe_location(self):
+        from boundscript_internal.container_runtime import check_resource
+
+        def fail():
+            check_resource('memory.max', 'max', (512 * 1024 * 1024,))
+
+        with patch.object(generator, 'main', side_effect=fail), \
+             redirect_stdout(io.StringIO()), redirect_stderr(io.StringIO()) as err:
+            self.assertEqual(generator.cli(), 1)
+        message = err.getvalue()
+        self.assertIn('memory.max: unlimited', message)
+        self.assertIn('cgroup-v2', message)
+        self.assertIn('boundscript_internal/container_runtime.py:', message)
+        self.assertIn('(check_resource)', message)
+        self.assertNotIn(str(Path.home()), message)
+
     @unittest.skipUnless(os.environ.get('BOUNDSCRIPT_WELCOME_ENGINE_TEST') == '1', 'opt-in offline engine checks')
     def test_engine_rejects_wrong_signature_shape_behavior_and_mutation(self):
         # Require an independently generated positive candidate first.

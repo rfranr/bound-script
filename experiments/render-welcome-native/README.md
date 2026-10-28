@@ -69,6 +69,39 @@ checkout has no candidate: generate one independently or supply a candidate path
 public-contract compatibility and baseline regressions; it does not require local
 native accepted artifacts. Full native candidate verification is separate.
 
+## Troubleshooting generation
+
+Generation prints stage markers and, on failure, repository-relative Python code
+locations (without source lines, locals, arbitrary exception text or raw engine/
+provider events). A `ResourcePolicyError` also identifies the failing cgroup
+controller and classifies its evidence as unlimited, malformed or mismatched.
+
+`memory.max: unlimited` means the container actually sees `memory.max=max`, not
+its required 512 MiB generation limit. This used to surface as a bare `ValueError`.
+It is an isolation preflight failure, before auth is copied or Pi is started,
+not a Typia or model failure. Verification separately requires 256 MiB.
+
+Check `podman info` and `systemctl --user status`. A Podman warning about no
+systemd user session and fallback to cgroupfs is a useful clue: confirm cgroup-v2
+memory/CPU/PID controller delegation to the invoking user. On WSL, enable systemd
+in `/etc/wsl.conf` if absent and restart WSL from Windows (`wsl --shutdown`, which
+stops running WSL workloads). If needed, ask the administrator to enable user
+lingering with `loginctl enable-linger USER`. These are host configuration steps,
+not automatic runner repairs; lingering alone does not guarantee delegation.
+Do not remove resource checks or use a privileged container as a workaround.
+
+After repairing the host, exercise both isolation profiles without auth or a
+billable model call:
+
+```sh
+BOUNDSCRIPT_ENGINE_TEST=1 BOUNDSCRIPT_RUNTIME=podman python3 -B -m unittest discover \
+  -s tests/internal -p test_container_runtime.py -v
+```
+
+Only rerun `npm run generate:welcome` once that preflight passes. Other generation
+failures show the last stage and code locations for developer investigation;
+raw diagnostic payloads remain withheld to protect credentials.
+
 ## Limits and evidence
 
 See [0036 implementation report](../../docs/development/render-welcome-report.md).

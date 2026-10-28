@@ -15,6 +15,7 @@ SPIKE = Path(__file__).resolve().parent
 sys.path.insert(0, str(SPIKE.parents[1]))
 from boundscript_internal.agent_workspace import agent_submission
 from boundscript_internal.container_runtime import digest, runtime
+from boundscript_internal.generation_diagnostics import report_generation_failure
 BOX = import_module('experiments.render-welcome-native.native_box').BOX
 
 PI = Path.home() / '.nvm/versions/node/v24.16.0/lib/node_modules/@earendil-works/pi-coding-agent'
@@ -59,6 +60,7 @@ def main():
         raise RuntimeError('Assertions must be enabled')
     if sys.argv[1:]:
         raise RuntimeError('This fixed Box runner expects no arguments')
+    print('Generation preflight: validating Box verification assets', flush=True)
     BOX.verification_files(SPIKE / BOX.verification_path)
     input_sources = {'task.md': SPIKE / BOX.task_path,
                      BOX.contract_module.removeprefix('/inputs/'): SPIKE / BOX.contract_path}
@@ -69,6 +71,7 @@ def main():
         # Generation has ended; only the source enters independent offline verification.
         verification = [sys.executable, str(SPIKE / 'verify.py'),
                         '--box-definition', BOX.fingerprint(), str(submission)]
+        print('Generation: starting independent offline verification', flush=True)
         try:
             subprocess.run(verification, check=True, timeout=360)
         except (subprocess.SubprocessError, OSError):
@@ -77,6 +80,7 @@ def main():
                   f'sha256={scanned_digest}; not promoted', flush=True)
             raise
         assert digest(submission) == scanned_digest, 'Submission changed during verification'
+        print('Generation: promoting unchanged verified source', flush=True)
         destination.parent.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(submission, destination)
         print(f'PASS {BOX.name} independently verified and promoted unchanged; sha256={digest(destination)}', flush=True)
@@ -89,8 +93,7 @@ def cli():
     try:
         main()
     except Exception as error:
-        # Never serialize arbitrary provider/tool diagnostics.
-        print(f'Generation stopped: {type(error).__name__}; no raw diagnostics emitted', file=sys.stderr)
+        report_generation_failure(error)
         return 1
     return 0
 

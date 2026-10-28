@@ -45,6 +45,41 @@ console.log(JSON.stringify({uid:process.getuid(), gid:process.getgid(), status, 
 '''
 
 
+class ResourcePolicyError(AssertionError):
+    """Host-owned resource diagnosis; never contains raw engine output."""
+
+
+RESOURCE_GUIDANCE = (
+    'Effective container resource limits are missing or incorrect. '
+    'Check cgroup-v2 controller delegation and the Podman systemd user session '
+    '(systemctl --user status; podman info). On WSL, enable systemd and restart '
+    'WSL if needed; an administrator may need to enable user lingering. '
+    'Rerun the credential-free engine preflight; do not disable isolation checks.'
+)
+
+
+def check_resource(field, value, expected):
+    # Classify untrusted evidence without echoing it (even malformed strings).
+    if not isinstance(value, str):
+        state = 'malformed'
+    elif value == 'max' or value.startswith('max '):
+        state = 'unlimited'
+    else:
+        parts = value.split()
+        if (len(parts) != len(expected) or
+                any(not p.isascii() or not p.isdecimal() or len(p) > 20 for p in parts)):
+            state = 'malformed'
+        else:
+            numbers = tuple(map(int, parts))
+            if field == 'cpu.max':
+                if numbers[0] > 0 and numbers[0] == numbers[1]:
+                    return
+            elif numbers == expected:
+                return
+            state = 'mismatch'
+    raise ResourcePolicyError(f'{field}: {state}. {RESOURCE_GUIDANCE}')
+
+
 def verify_effective(data, uid, gid, generation):
     assert uid != 0 and data['uid'] == uid and data['gid'] == gid
     status = data['status']
@@ -53,11 +88,10 @@ def verify_effective(data, uid, gid, generation):
         assert int(status[field], 16) == 0
     root = [m for m in data['mounts'] if m['path'] == '/']
     assert len(root) == 1 and 'ro' in root[0]['options']
-    assert int(data['memory']) == (512 if generation else 256) * 1024 * 1024
-    assert int(data['swap']) == 0
-    quota, period = map(int, data['cpu'].split())
-    assert quota > 0 and quota == period
-    assert int(data['pids']) == (64 if generation else 32)
+    check_resource('memory.max', data['memory'], ((512 if generation else 256) * 1024 * 1024,))
+    check_resource('memory.swap.max', data['swap'], (0,))
+    check_resource('cpu.max', data['cpu'], (1, 1))
+    check_resource('pids.max', data['pids'], (64 if generation else 32,))
     if generation:
         state = data['tmpfs']
         assert state['uid'] == uid and state['gid'] == gid and state['mode'] == 0o700

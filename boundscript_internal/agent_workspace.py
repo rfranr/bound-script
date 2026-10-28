@@ -23,6 +23,7 @@ def agent_submission(engine, inputs_from, *, pi, auth, box, filename, prompt, mo
         raise RuntimeError('Expected existing Pi 1.4.0 installation and auth.json')
     assert json.loads((pi / 'package.json').read_text())['version'] == '1.4.0'
     assert os.getuid() != 0, 'Run as the existing nonroot Pi user'
+    print('Generation preflight: checking cached image', flush=True)
     engine.image(IMAGE)
     auth_before = digest(auth)
     name = 'boundscript-box-agent-' + uuid.uuid4().hex[:12]
@@ -44,9 +45,12 @@ def agent_submission(engine, inputs_from, *, pi, auth, box, filename, prompt, mo
                    '--mount', f'type=bind,src={pi},dst=/opt/pi,readonly',
                    '--mount', f'type=bind,src={auth},dst=/run/host-auth.json,readonly']
         try:
+            print('Generation preflight: creating isolated container', flush=True)
             engine.create(name, IMAGE, mounts, os.getuid(), os.getgid(),
                           generation=True, workdir='/implementation')
+            print('Generation preflight: checking effective filesystem/cgroup isolation', flush=True)
             engine.start(name, os.getuid(), os.getgid(), generation=True)
+            print('Generation preflight: isolation passed; preparing private auth state', flush=True)
             # Secrets never enter stdout/stderr, command arguments or host files.
             engine.exec(name, 'sh', '-c',
                 'umask 077; cp /run/host-auth.json /pi-state/auth.json; '
@@ -80,6 +84,7 @@ console.log(JSON.stringify(observed));
                        '--no-context-files', '--no-approve', '--offline', prompt]
             # Raw events/diagnostics remain in memory; never print or save them.
             output = engine.exec(name, *command, timeout=300)
+            print('Generation: validating agent completion and tool events', flush=True)
             events = [json.loads(line) for line in output.split('\n') if line.strip()]
             settled = [e for e in events if e.get('type') == 'agent_settled']
             assert settled and settled[-1].get('aborted') is False, 'Pi did not settle successfully'
@@ -101,6 +106,7 @@ console.log(JSON.stringify(observed));
             assert submission.is_file() and submission.stat().st_size <= 16384
             # Scan original AND refreshed literal credential values before the
             # host imports any bytes. Bind the scan to the yielded source hash.
+            print('Generation: scanning submission for literal credentials (contents withheld)', flush=True)
             scanned_digest = engine.exec(name, 'node', '--input-type=module', source='''
 import {readFileSync} from 'node:fs';
 import {createHash} from 'node:crypto';
@@ -118,6 +124,7 @@ console.log(createHash('sha256').update(bytes).digest('hex'));
             assert all(digest(p) == old for p, old in protected.items())
             assert digest(auth) == auth_before, 'Host authentication changed'
         finally:
+            print('Generation cleanup: removing container', flush=True)
             engine.remove(name)
         # No credential-bearing generation process remains when verification runs.
         assert digest(submission) == scanned_digest, 'Submission changed during generation cleanup'
