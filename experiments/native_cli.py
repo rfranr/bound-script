@@ -18,6 +18,9 @@ def select_box(selection):
     if selection == 'render-welcome':
         configuration = import_module('experiments.render-welcome-native.native_box')
         return ROOT / 'experiments/render-welcome-native', configuration.BOX, None
+    if selection == 'process-orders':
+        configuration = import_module('experiments.process-orders-native.native_box')
+        return ROOT / 'experiments/process-orders-native', configuration.BOX, None
     raise ValueError('Expected explicit Box: normalize-contact or render-welcome')
 
 

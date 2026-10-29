@@ -1,0 +1,106 @@
+[
+  {
+    "input": {
+      "id": "basic",
+      "lines": [
+        {
+          "sku": "A",
+          "quantity": 2,
+          "unitPriceCents": 125,
+          "discountPercent": 10,
+          "taxPercent": 20
+        }
+      ]
+    },
+    "expected": {
+      "id": "basic",
+      "lines": [
+        {
+          "sku": "A",
+          "subtotalCents": 250,
+          "discountCents": 25,
+          "taxCents": 45,
+          "totalCents": 270
+        }
+      ],
+      "subtotalCents": 250,
+      "discountCents": 25,
+      "taxCents": 45,
+      "totalCents": 270
+    }
+  },
+  {
+    "input": {
+      "id": "rounding",
+      "lines": [
+        {
+          "sku": "X",
+          "quantity": 1,
+          "unitPriceCents": 99,
+          "discountPercent": 33,
+          "taxPercent": 21
+        },
+        {
+          "sku": "X",
+          "quantity": 2,
+          "unitPriceCents": 101,
+          "discountPercent": 0,
+          "taxPercent": 10
+        }
+      ]
+    },
+    "expected": {
+      "id": "rounding",
+      "lines": [
+        {
+          "sku": "X",
+          "subtotalCents": 99,
+          "discountCents": 32,
+          "taxCents": 14,
+          "totalCents": 81
+        },
+        {
+          "sku": "X",
+          "subtotalCents": 202,
+          "discountCents": 0,
+          "taxCents": 20,
+          "totalCents": 222
+        }
+      ],
+      "subtotalCents": 301,
+      "discountCents": 32,
+      "taxCents": 34,
+      "totalCents": 303
+    }
+  },
+  {
+    "input": {
+      "id": "free",
+      "lines": [
+        {
+          "sku": "FREE",
+          "quantity": 3,
+          "unitPriceCents": 0,
+          "discountPercent": 100,
+          "taxPercent": 21
+        }
+      ]
+    },
+    "expected": {
+      "id": "free",
+      "lines": [
+        {
+          "sku": "FREE",
+          "subtotalCents": 0,
+          "discountCents": 0,
+          "taxCents": 0,
+          "totalCents": 0
+        }
+      ],
+      "subtotalCents": 0,
+      "discountCents": 0,
+      "taxCents": 0,
+      "totalCents": 0
+    }
+  }
+]

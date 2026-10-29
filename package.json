@@ -23,6 +23,8 @@
     "test:welcome:tooling": "npm run build:welcome && vitest run --config experiments/render-welcome-native/vitest.tooling.config.mts",
     "test:welcome": "npm run build:welcome && python3 -B experiments/native_cli.py verify render-welcome",
     "generate:welcome": "npm run build:welcome && python3 -B experiments/native_cli.py generate render-welcome",
+    "build:orders": "typia generate --input experiments/process-orders-native/src --output experiments/process-orders-native/.generated --project experiments/process-orders-native/tsconfig.json",
+    "generate:orders": "npm run build:orders && python3 -B experiments/native_cli.py generate process-orders --agent-owned --retain-candidate",
     "test:contact:contracts": "tsc --strict --noEmit --target ES2022 --module NodeNext --allowImportingTsExtensions tests/integration/check-contact-composition.ts"
   },
   "devDependencies": {
