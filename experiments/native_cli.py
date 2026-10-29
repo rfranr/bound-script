@@ -29,7 +29,7 @@ def main(args=None):
     args = sys.argv[1:] if args is None else args
     if len(args) < 2 or args[0] not in ('generate', 'verify'):
         print('Usage: python3 -B experiments/native_cli.py {generate|verify} '
-              '{normalize-contact|render-welcome} [verification arguments]', file=sys.stderr)
+              '{normalize-contact|render-welcome} [--agent-owned for generate; verification arguments for verify]', file=sys.stderr)
         return 1
     operation, selection = args[:2]
     try:

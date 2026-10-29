@@ -156,8 +156,8 @@ Limits: 16 source files, 16 KiB total, eight directory levels and 240-byte ASCII
 relative paths. Unsafe entries, dependency/config files, emitted outputs and
 imports outside the source/type-only-contract boundary are rejected. Source and
 contract views are read-only; reports/caches use separate writable work storage.
-Existing single-file commands remain supported. Multi-file generation and the
-RenderWelcome A/B experiment are not part of this increment.
+Existing single-file commands remain supported. Agent-owned generation can use
+this same complete-tree verifier as described below.
 
 ### Autonomous generation (billable)
 
@@ -173,6 +173,17 @@ BOUNDSCRIPT_RUNTIME=podman npm run generate:welcome # independent RenderWelcome 
 BOUNDSCRIPT_RUNTIME=podman npm run generate
 BOUNDSCRIPT_RUNTIME=podman npm run generate:pair
 ```
+
+Native generation also accepts explicit `--agent-owned` after the Box name in
+`experiments/native_cli.py generate`. This opt-in lets the agent choose its internal
+TypeScript organization while preserving the public entry/export and contract.
+It scans all output, destroys the credential-bearing container, binds a private
+snapshot to the scan digest, and independently verifies the complete tree—even
+for one source file. Success reports the file count and checks full-tree/input
+integrity. All temporary sources are discarded; **no promotion or quarantine**
+occurs in this mode, including on failure. Default generation remains unchanged.
+Live model-backed experiments require separate authorization; 0047 evidence uses
+only credential-free simulated generation and independent Docker verification.
 
 Allow at least 900 seconds for a native generation invocation. It has a 300-second
 agent deadline and a separate 360-second verification deadline; outer termination

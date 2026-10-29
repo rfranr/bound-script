@@ -9,6 +9,7 @@ import sys
 import tempfile
 import traceback
 
+from boundscript_internal import source_tree as tree
 from boundscript_internal.agent_workspace import agent_submission
 from boundscript_internal.container_runtime import digest, runtime
 from boundscript_internal.generation_diagnostics import report_generation_failure
@@ -33,6 +34,50 @@ contract or task. The container, not this prompt, enforces the filesystem bounda
 '''
 
 
+def agent_owned_prompt(box):
+    return f'''Read /inputs/task.md and {box.contract_module} using the read tool.
+Implement {box.function_type}; the public entry is /implementation/implementation.ts
+and its named function export is {box.implementation_export}. Preserve the public contract.
+Use tools to write supported TypeScript sources within /implementation only.
+Only the task and native TypeScript contract are authorized inputs. No peer code,
+tests or repository are available. Do not install packages, inspect or disclose
+credentials, or change the contract or task. Imports must be relative; imports of
+contract types must be type-only. Never import sandbox paths.
+Output must be regular UTF-8 .ts source, not .d.ts, dependency, configuration or
+emitted files. Limits: {tree.MAX_FILES} source files, {tree.MAX_BYTES} total bytes,
+depth {tree.MAX_DEPTH}, {tree.MAX_PATH}-byte ASCII relative paths, and
+{tree.MAX_ENTRIES} traversed entries. Unsafe objects and path collisions are prohibited.
+The container, not this prompt, enforces the filesystem boundary.
+'''
+
+
+def verify_agent_owned(submission, scanned_digest, *, verification_command, box,
+                       protected):
+    """Verify the entire private snapshot; never publish or retain its sources."""
+    def inventory():
+        with tree.staged_source_tree(submission) as (_, records):
+            if tree.inventory_digest(records) != scanned_digest:
+                raise RuntimeError('Complete source changed during verification handoff')
+            return len(records)
+
+    def integrity():
+        if any(digest(path) != sha for path, sha in protected.items()):
+            raise RuntimeError('Public generation inputs changed during verification')
+
+    try:
+        count = inventory()
+        integrity()
+        subprocess.run([*verification_command, '--box-definition', box.fingerprint(),
+                        '--source-tree', str(submission)], check=True, timeout=360)
+        inventory()
+        integrity()
+        print(f'PASS {box.name} independently verified temporary source tree; '
+              f'files={count}; sha256={scanned_digest}; not promoted', flush=True)
+    finally:
+        print('Agent-owned output: temporary sources discarded on cleanup; '
+              'no promotion or quarantine', flush=True)
+
+
 def quarantine(submission, expected_digest, *, box_root):
     """Retain only the same bounded, credential-scanned bytes, never agent logs."""
     fd = os.open(submission, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
@@ -53,7 +98,8 @@ def quarantine(submission, expected_digest, *, box_root):
     return saved
 
 
-def generate(*, box_root, box, verification_command, detailed_diagnostics=False):
+def generate(*, box_root, box, verification_command, detailed_diagnostics=False,
+             agent_owned=False):
     """Generate and promote using an explicitly supplied independent verifier command."""
     if not __debug__:
         raise RuntimeError('Assertions must be enabled')
@@ -64,10 +110,18 @@ def generate(*, box_root, box, verification_command, detailed_diagnostics=False)
     contract = box_root / box.contract_path
     contract_digest = digest(contract)
     destination = box_root / box.accepted_path
+    protected = {path: digest(path) for path in (contract, *input_sources.values())} if agent_owned else {}
+    options = {'source_tree': True} if agent_owned else {}
+    prompt = agent_owned_prompt(box) if agent_owned else generation_prompt(box)
     with agent_submission(runtime(), input_sources, pi=PI, auth=AUTH, box=box.name,
-                          filename='implementation.ts', prompt=generation_prompt(box),
+                          filename='implementation.ts', prompt=prompt,
                           model=MODEL, thinking=MODEL_THINKING,
-                          public_contract=contract) as (submission, scanned_digest):
+                          public_contract=contract, **options) as (submission, scanned_digest):
+        if agent_owned:
+            verify_agent_owned(submission, scanned_digest,
+                               verification_command=verification_command, box=box,
+                               protected=protected)
+            return
         # Generation has ended; only source enters separate offline verification.
         verification = [*verification_command, '--box-definition', box.fingerprint(), str(submission)]
         if detailed_diagnostics:
@@ -94,10 +148,11 @@ def cli(*, box_root, box, verification_command, detailed_diagnostics=False, args
         print('Generation stopped: Assertions must be enabled', file=sys.stderr)
         return 1
     try:
-        if args:
-            raise RuntimeError('This fixed Box runner expects no arguments')
+        if args and list(args) != ['--agent-owned']:
+            raise RuntimeError('Expected no arguments or --agent-owned')
+        options = {'agent_owned': True} if args else {}
         generate(box_root=box_root, box=box, verification_command=verification_command,
-                 detailed_diagnostics=detailed_diagnostics)
+                 detailed_diagnostics=detailed_diagnostics, **options)
     except Exception as error:
         if DEBUG:
             traceback.print_exc()
