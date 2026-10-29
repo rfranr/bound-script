@@ -85,6 +85,26 @@ checkout has no candidate: generate one independently or supply a candidate path
 public-contract compatibility and baseline regressions; it does not require local
 native accepted artifacts. Full native candidate verification is separate.
 
+## Credential-free A/B verification experiment (0044)
+
+```sh
+npm run build:welcome
+BOUNDSCRIPT_RUNTIME=docker BOUNDSCRIPT_WELCOME_AB_TEST=1 \
+  python3 -B -m unittest discover -s experiments/render-welcome-native -p test_ab_experiment.py -v
+```
+
+This opt-in experiment materializes fresh manual fixtures outside the Box root:
+A is a single-file formatter; B uses nested helper modules and a class. Separate
+shared CLI processes verify A as a file and tree, B as a tree, and B after moving
+helpers (including a test-like filename) without changing its public entry.
+All consume the unchanged contract, validators, fixtures and acceptance/property
+suite. Missing-export, wrong-format, call-history and input-mutation controls must
+fail. Source/consumer/workflow
+hashes and existing accepted/quarantine state are checked before/after; temporary
+candidates are deleted. No generation, model, promotion or quarantine is invoked.
+Default `npm run check` skips this opt-in experiment. Results and limits are recorded
+in [0044](../../docs/assignments/0044-render-welcome-ab-verification-experiment.md).
+
 ## Troubleshooting generation
 
 Generation prints stage markers and, on failure, repository-relative Python code

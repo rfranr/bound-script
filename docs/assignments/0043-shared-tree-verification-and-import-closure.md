@@ -1,6 +1,6 @@
 # 0043 — Shared Tree Verification and Import Closure
 
-Status: In Review
+Status: In Review — Product Owner approved, subject to final diff review
 Type: Implementation — step 2 only
 Depends on: approved revised design 0041 and 0042 (approved subject to final code review)
 
@@ -56,4 +56,4 @@ Tree verification concerns the bounded staged snapshot, not atomic capture of a 
 
 Static module-policy checks are not universal JavaScript capability enforcement or hostile-code attestation; reflective loader tricks and malicious same-authority host/kernel actors remain outside the stated guarantee. Safe normal diagnostics are preserved; existing raw DEBUG behavior is not changed or presented as safe.
 
-No model calls or pushes occurred. The Product Owner subsequently authorized a local commit of this delivery, including the pending 0041/0042 design and staging work. This does not constitute acceptance of 0043. Awaiting Product Owner review.
+No model calls or pushes occurred. The Product Owner subsequently authorized a local commit of this delivery, including the pending 0041/0042 design and staging work. This does not constitute acceptance of 0043. The Product Owner subsequently approved 0043 subject to final diff review and authorized the separate 0044 experiment.

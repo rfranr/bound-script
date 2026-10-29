@@ -122,4 +122,4 @@ Use one parameterized infrastructure suite over file, one-file-directory and mul
 
 **Not a completion criterion:** multi-file generation, publication, quarantine, packaging or future artifact support. Those require separate evidence and assignments.
 
-**Review outcome:** the Product Owner accepted this revised design and authorized step 1 under separate Assignment 0042. Step 2 was subsequently authorized as 0043. Step 3 remains unauthorized; design approval does not accept an implementation delivery.
+**Review outcome:** the Product Owner accepted this revised design and authorized step 1 under separate Assignment 0042. Step 2 was subsequently authorized as 0043. Step 3 was subsequently authorized as experiment 0044; design approval does not accept an implementation or experiment delivery.
