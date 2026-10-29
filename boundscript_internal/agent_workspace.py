@@ -8,18 +8,44 @@ from contextlib import contextmanager
 import json
 import os
 from pathlib import Path
+import posixpath
 import shutil
 import tempfile
 import uuid
 
 from .container_runtime import IMAGE, digest
+from . import source_tree as tree
+
+
+def scan_source_tree(engine, name, *, protected_contract):
+    """Run trusted scanning in-container; only policy/paths/hashes cross argv."""
+    info, sha = protected_contract
+    config = {'root': '/implementation', 'auth': ['/run/host-auth.json', '/pi-state/auth.json'],
+              'contract': {'size': info.st_size, 'sha256': sha},
+              'limits': {'files': tree.MAX_FILES, 'bytes': tree.MAX_BYTES,
+                         'depth': tree.MAX_DEPTH, 'path': tree.MAX_PATH, 'entries': tree.MAX_ENTRIES}}
+    scanned = engine.exec(name, 'node', '--input-type=module', '-', json.dumps(config),
+                          source=Path(__file__).with_name('credential_scanner.mjs').read_text())
+    if not isinstance(scanned, str) or len(scanned) != 64 or any(c not in '0123456789abcdef' for c in scanned):
+        raise RuntimeError('Invalid complete-source scan result')
+    return scanned
+
+
+def _own_source_read(value, inputs_from):
+    if not isinstance(value, str) or not value or '\\' in value or '\x00' in value:
+        return False
+    path = posixpath.normpath(posixpath.join('/implementation', value))
+    return (path in {'/inputs/' + name for name in inputs_from}
+            or path == '/implementation' or path.startswith('/implementation/'))
 
 
 @contextmanager
 def agent_submission(engine, inputs_from, *, pi, auth, box, filename, prompt, model, thinking,
-                     public_contract=None):
+                     public_contract=None, source_tree=False):
     if not __debug__:
         raise RuntimeError('Assertions must be enabled')
+    if source_tree and (public_contract is None or filename != 'implementation.ts'):
+        raise RuntimeError('Tree output requires the native entry and protected public contract')
     if not auth.is_file() or not (pi / 'dist/bundle/cli.js').is_file():
         raise RuntimeError('Expected existing Pi 1.4.0 installation and auth.json')
     assert json.loads((pi / 'package.json').read_text())['version'] == '1.4.0'
@@ -46,6 +72,7 @@ def agent_submission(engine, inputs_from, *, pi, auth, box, filename, prompt, mo
             contract = candidate / 'contract.ts'
             shutil.copyfile(public_contract, contract)
             protected[contract] = digest(contract)
+            contract_proof = (contract.stat(), protected[contract])
         mounts += ['--mount', f'type=bind,src={candidate},dst=/implementation',
                    '--mount', f'type=bind,src={pi},dst=/opt/pi,readonly',
                    '--mount', f'type=bind,src={auth},dst=/run/host-auth.json,readonly']
@@ -105,19 +132,24 @@ console.log(JSON.stringify(observed));
             allowed_reads = {'/inputs/' + p for p in inputs_from} | {'/implementation/' + filename}
             if public_contract is not None:
                 allowed_reads.add('/implementation/contract.ts')
-            assert set(reads) <= allowed_reads, 'Unexpected agent read path'
+            if source_tree:
+                assert all(_own_source_read(path, inputs_from) for path in reads), 'Unexpected agent read path'
+            else:
+                assert set(reads) <= allowed_reads, 'Unexpected agent read path'
             assert any(e.get('toolName') == 'write' for e in tools), 'No agent write observed'
             print('Pi tools: ' + json.dumps({t: sum(e.get('toolName') == t for e in tools) for t in ('read', 'write', 'edit', 'bash')}), flush=True)
             failures = sum(bool(e.get('isError')) for e in events if e.get('type') == 'tool_execution_end')
             print(f'Tool failures: {failures}; observed read paths within authorized inputs/own implementation', flush=True)
             submission = candidate / filename
-            expected = {submission, contract} if public_contract is not None else {submission}
-            assert set(candidate.iterdir()) == expected and not submission.is_symlink()
-            assert submission.is_file() and submission.stat().st_size <= 16384
-            # Scan original AND refreshed literal credential values before the
-            # host imports any bytes. Bind the scan to the yielded source hash.
-            print('Generation: scanning submission for literal credentials (contents withheld)', flush=True)
-            scanned_digest = engine.exec(name, 'node', '--input-type=module', source='''
+            if source_tree:
+                print('Generation: scanning complete source for literal credentials (contents withheld)', flush=True)
+                scanned_digest = scan_source_tree(engine, name, protected_contract=contract_proof)
+            else:
+                expected = {submission, contract} if public_contract is not None else {submission}
+                assert set(candidate.iterdir()) == expected and not submission.is_symlink()
+                assert submission.is_file() and submission.stat().st_size <= 16384
+                print('Generation: scanning submission for literal credentials (contents withheld)', flush=True)
+                scanned_digest = engine.exec(name, 'node', '--input-type=module', source='''
 import {readFileSync} from 'node:fs';
 import {createHash} from 'node:crypto';
 const bytes = readFileSync('/implementation/FILENAME');
@@ -130,12 +162,21 @@ for (const path of ['/run/host-auth.json', '/pi-state/auth.json']) check(JSON.pa
 console.log(createHash('sha256').update(bytes).digest('hex'));
 '''.replace('FILENAME', filename))
             assert len(scanned_digest) == 64 and all(c in '0123456789abcdef' for c in scanned_digest)
-            assert digest(submission) == scanned_digest, 'Submission changed after credential scan'
+            if not source_tree:
+                assert digest(submission) == scanned_digest, 'Submission changed after credential scan'
             assert all(digest(p) == old for p, old in protected.items())
             assert digest(auth) == auth_before, 'Host authentication changed'
         finally:
             print('Generation cleanup: removing container', flush=True)
             engine.remove(name)
         # No credential-bearing generation process remains when verification runs.
-        assert digest(submission) == scanned_digest, 'Submission changed during generation cleanup'
-        yield submission, scanned_digest
+        if source_tree:
+            assert all(digest(p) == old for p, old in protected.items()), 'Protected input changed during cleanup'
+            assert digest(auth) == auth_before, 'Host authentication changed during cleanup'
+            with tree.staged_source_tree(candidate, protected_contract=contract_proof) as (snapshot, records):
+                if tree.inventory_digest(records) != scanned_digest:
+                    raise RuntimeError('Complete source changed after credential scan')
+                yield snapshot, scanned_digest
+        else:
+            assert digest(submission) == scanned_digest, 'Submission changed during generation cleanup'
+            yield submission, scanned_digest
