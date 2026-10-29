@@ -180,10 +180,23 @@ TypeScript organization while preserving the public entry/export and contract.
 It scans all output, destroys the credential-bearing container, binds a private
 snapshot to the scan digest, and independently verifies the complete tree—even
 for one source file. Success reports the file count and checks full-tree/input
-integrity. All temporary sources are discarded; **no promotion or quarantine**
-occurs in this mode, including on failure. Default generation remains unchanged.
-Live model-backed experiments require separate authorization; 0047 evidence uses
-only credential-free simulated generation and independent Docker verification.
+integrity. By default all temporary sources are discarded; **no promotion or
+quarantine** occurs in this mode, including on failure. Default generation remains
+unchanged.
+
+Add `--retain-candidate` together with `--agent-owned` to keep a scanned,
+integrity-validated source tree for human review only. After independent
+verification finishes, it is copied to private, Git-ignored
+`candidates/<generated-id>/source/` under the selected Box, preserving source paths
+and bytes. `review.json` records the Box, source digest/count, model/reasoning,
+candidate ID and PASS/FAIL verification result. A completed nonzero verifier exit
+can be retained as FAIL and still returns failure; neither status means acceptance.
+Scanner, integrity, generation-cleanup, verifier-launch and timeout failures retain
+nothing. Existing candidates are never overwritten. No logs, prompts or credentials
+are saved, and retained directories are never mounted into the verifier or executed.
+
+Live model-backed experiments require separate authorization; 0047–0048 evidence
+uses only credential-free simulated generation and independent Docker verification.
 
 Allow at least 900 seconds for a native generation invocation. It has a 300-second
 agent deadline and a separate 360-second verification deadline; outer termination

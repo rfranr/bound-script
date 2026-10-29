@@ -2,9 +2,11 @@ node_modules/
 experiments/native-typescript-contracts/.generated/
 experiments/native-typescript-contracts/accepted/
 experiments/native-typescript-contracts/quarantine/
+experiments/native-typescript-contracts/candidates/
 experiments/render-welcome-native/.generated/
 experiments/render-welcome-native/accepted/
 experiments/render-welcome-native/quarantine/
+experiments/render-welcome-native/candidates/
 __pycache__/
 *.py[cod]
 .DS_Store

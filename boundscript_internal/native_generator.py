@@ -1,6 +1,8 @@
 """Shared native generation; sandbox policy remains in agent_workspace/runtime."""
 import hashlib
+import json
 import os
+import re
 from pathlib import Path
 import shutil
 import stat
@@ -8,6 +10,7 @@ import subprocess
 import sys
 import tempfile
 import traceback
+import uuid
 
 from boundscript_internal import source_tree as tree
 from boundscript_internal.agent_workspace import agent_submission
@@ -51,9 +54,56 @@ The container, not this prompt, enforces the filesystem boundary.
 '''
 
 
+def retain_review_candidate(submission, scanned_digest, *, box_root, box, result):
+    """Copy only a bound source snapshot; no execution or acceptance authority."""
+    identifier = uuid.uuid4().hex
+    if not re.fullmatch(r'[0-9a-f]{32}', identifier):
+        raise RuntimeError('Unsafe candidate identifier')
+    if result not in ('PASS', 'FAIL'):
+        raise RuntimeError('Invalid candidate verification result')
+    with tree.staged_source_tree(submission) as (snapshot, records):
+        if tree.inventory_digest(records) != scanned_digest:
+            raise RuntimeError('Source changed before retention')
+        directory = box_root / 'candidates'
+        directory.mkdir(mode=0o700, exist_ok=True)
+        # Pin every ancestor without following symlinks, including candidates.
+        fd = tree._open_directory(directory)
+        try:
+            info = os.fstat(fd)
+            if info.st_uid != os.getuid() or stat.S_IMODE(info.st_mode) != 0o700:
+                raise RuntimeError('Candidate directory must be private and host-owned')
+            os.mkdir(identifier, mode=0o700, dir_fd=fd)  # Exclusive; never replace.
+            # Descriptor anchoring prevents a path swap from redirecting writes.
+            saved = Path(f'/proc/self/fd/{fd}') / identifier
+            try:
+                shutil.copytree(snapshot, saved / 'source')
+                source_fd = os.open(saved / 'source', os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
+                try:
+                    if tree._inventory(source_fd) != records:
+                        raise RuntimeError('Retained source differs from scanned source')
+                finally:
+                    os.close(source_fd)
+                metadata = {'box': box.name, 'source_inventory_digest': scanned_digest,
+                            'verification_result': result, 'source_file_count': len(records),
+                            'model': MODEL, 'reasoning': MODEL_THINKING,
+                            'candidate_id': identifier}
+                output_fd = os.open(saved / 'review.json', os.O_WRONLY | os.O_CREAT | os.O_EXCL,
+                                    0o600)
+                with os.fdopen(output_fd, 'w') as output:
+                    json.dump(metadata, output, sort_keys=True)
+                    output.write('\n')
+            except BaseException:
+                shutil.rmtree(saved)
+                raise
+        finally:
+            os.close(fd)
+    print(f'Candidate retained for human review: candidates/{identifier}; '
+          f'verification={result}; not accepted or promoted', flush=True)
+
+
 def verify_agent_owned(submission, scanned_digest, *, verification_command, box,
-                       protected):
-    """Verify the entire private snapshot; never publish or retain its sources."""
+                       protected, retain_candidate=False, box_root=None):
+    """Verify the entire private snapshot; optionally retain it for review only."""
     def inventory():
         with tree.staged_source_tree(submission) as (_, records):
             if tree.inventory_digest(records) != scanned_digest:
@@ -67,10 +117,21 @@ def verify_agent_owned(submission, scanned_digest, *, verification_command, box,
     try:
         count = inventory()
         integrity()
-        subprocess.run([*verification_command, '--box-definition', box.fingerprint(),
-                        '--source-tree', str(submission)], check=True, timeout=360)
+        failure = None
+        try:
+            subprocess.run([*verification_command, '--box-definition', box.fingerprint(),
+                            '--source-tree', str(submission)], check=True, timeout=360)
+        except subprocess.CalledProcessError as error:
+            if not retain_candidate:
+                raise
+            failure = error
         inventory()
         integrity()
+        if retain_candidate:
+            retain_review_candidate(submission, scanned_digest, box_root=box_root, box=box,
+                                    result='FAIL' if failure else 'PASS')
+        if failure:
+            raise failure
         print(f'PASS {box.name} independently verified temporary source tree; '
               f'files={count}; sha256={scanned_digest}; not promoted', flush=True)
     finally:
@@ -99,10 +160,12 @@ def quarantine(submission, expected_digest, *, box_root):
 
 
 def generate(*, box_root, box, verification_command, detailed_diagnostics=False,
-             agent_owned=False):
+             agent_owned=False, retain_candidate=False):
     """Generate and promote using an explicitly supplied independent verifier command."""
     if not __debug__:
         raise RuntimeError('Assertions must be enabled')
+    if retain_candidate and not agent_owned:
+        raise RuntimeError('--retain-candidate requires --agent-owned')
     if detailed_diagnostics:
         print('Generation preflight: validating Box verification assets', flush=True)
     box.verification_files(box_root / box.verification_path)
@@ -120,7 +183,9 @@ def generate(*, box_root, box, verification_command, detailed_diagnostics=False,
         if agent_owned:
             verify_agent_owned(submission, scanned_digest,
                                verification_command=verification_command, box=box,
-                               protected=protected)
+                               protected=protected,
+                               **({'retain_candidate': True, 'box_root': box_root}
+                                  if retain_candidate else {}))
             return
         # Generation has ended; only source enters separate offline verification.
         verification = [*verification_command, '--box-definition', box.fingerprint(), str(submission)]
@@ -148,9 +213,14 @@ def cli(*, box_root, box, verification_command, detailed_diagnostics=False, args
         print('Generation stopped: Assertions must be enabled', file=sys.stderr)
         return 1
     try:
-        if args and list(args) != ['--agent-owned']:
-            raise RuntimeError('Expected no arguments or --agent-owned')
-        options = {'agent_owned': True} if args else {}
+        flags = list(args)
+        if (len(flags) != len(set(flags))
+                or any(flag not in ('--agent-owned', '--retain-candidate') for flag in flags)
+                or ('--retain-candidate' in flags and '--agent-owned' not in flags)):
+            raise RuntimeError('Expected --agent-owned with optional --retain-candidate')
+        options = {'agent_owned': True} if '--agent-owned' in flags else {}
+        if '--retain-candidate' in flags:
+            options['retain_candidate'] = True
         generate(box_root=box_root, box=box, verification_command=verification_command,
                  detailed_diagnostics=detailed_diagnostics, **options)
     except Exception as error:
