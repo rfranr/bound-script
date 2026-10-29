@@ -1,0 +1,632 @@
+[
+  {
+    "input": {
+      "facts": {},
+      "rules": []
+    },
+    "expected": {
+      "ok": true,
+      "results": [],
+      "actions": []
+    }
+  },
+  {
+    "input": {
+      "facts": {
+        "age": 25,
+        "country": "ES",
+        "active": true
+      },
+      "rules": [
+        {
+          "id": "adult",
+          "when": {
+            "op": "gte",
+            "fact": "age",
+            "value": 18
+          },
+          "then": {
+            "key": "allowed",
+            "value": true
+          }
+        },
+        {
+          "id": "country",
+          "when": {
+            "op": "eq",
+            "fact": "country",
+            "value": "ES"
+          },
+          "then": {
+            "key": "region",
+            "value": "eu"
+          }
+        },
+        {
+          "id": "enabled",
+          "when": {
+            "op": "eq",
+            "fact": "active",
+            "value": false
+          },
+          "then": {
+            "key": "activated",
+            "value": true
+          }
+        }
+      ]
+    },
+    "expected": {
+      "ok": true,
+      "results": [
+        {
+          "id": "adult",
+          "matched": true
+        },
+        {
+          "id": "country",
+          "matched": true
+        },
+        {
+          "id": "enabled",
+          "matched": false
+        }
+      ],
+      "actions": [
+        {
+          "ruleId": "adult",
+          "key": "allowed",
+          "value": true
+        },
+        {
+          "ruleId": "country",
+          "key": "region",
+          "value": "eu"
+        }
+      ]
+    }
+  },
+  {
+    "input": {
+      "facts": {
+        "score": 10,
+        "label": "10"
+      },
+      "rules": [
+        {
+          "id": "strict",
+          "when": {
+            "op": "eq",
+            "fact": "score",
+            "value": "10"
+          },
+          "then": {
+            "key": "out",
+            "value": true
+          }
+        },
+        {
+          "id": "missing",
+          "when": {
+            "op": "eq",
+            "fact": "absent",
+            "value": false
+          },
+          "then": {
+            "key": "out",
+            "value": true
+          }
+        },
+        {
+          "id": "gte-type",
+          "when": {
+            "op": "gte",
+            "fact": "label",
+            "value": 3
+          },
+          "then": {
+            "key": "out",
+            "value": true
+          }
+        }
+      ]
+    },
+    "expected": {
+      "ok": true,
+      "results": [
+        {
+          "id": "strict",
+          "matched": false
+        },
+        {
+          "id": "missing",
+          "matched": false
+        },
+        {
+          "id": "gte-type",
+          "matched": false
+        }
+      ],
+      "actions": []
+    }
+  },
+  {
+    "input": {
+      "facts": {},
+      "rules": [
+        {
+          "id": "all-empty",
+          "when": {
+            "op": "all",
+            "conditions": []
+          },
+          "then": {
+            "key": "out",
+            "value": true
+          }
+        },
+        {
+          "id": "any-empty",
+          "when": {
+            "op": "any",
+            "conditions": []
+          },
+          "then": {
+            "key": "out",
+            "value": true
+          }
+        },
+        {
+          "id": "not-empty",
+          "when": {
+            "op": "not",
+            "condition": {
+              "op": "any",
+              "conditions": []
+            }
+          },
+          "then": {
+            "key": "out",
+            "value": true
+          }
+        }
+      ]
+    },
+    "expected": {
+      "ok": true,
+      "results": [
+        {
+          "id": "all-empty",
+          "matched": true
+        },
+        {
+          "id": "any-empty",
+          "matched": false
+        },
+        {
+          "id": "not-empty",
+          "matched": true
+        }
+      ],
+      "actions": [
+        {
+          "ruleId": "all-empty",
+          "key": "out",
+          "value": true
+        },
+        {
+          "ruleId": "not-empty",
+          "key": "out",
+          "value": true
+        }
+      ]
+    }
+  },
+  {
+    "input": {
+      "facts": {
+        "age": 30,
+        "country": "ES"
+      },
+      "rules": [
+        {
+          "id": "dependent",
+          "when": {
+            "op": "all",
+            "conditions": [
+              {
+                "op": "matched",
+                "ruleId": "adult"
+              },
+              {
+                "op": "not",
+                "condition": {
+                  "op": "eq",
+                  "fact": "country",
+                  "value": "FR"
+                }
+              }
+            ]
+          },
+          "then": {
+            "key": "grant",
+            "value": 1
+          }
+        },
+        {
+          "id": "adult",
+          "when": {
+            "op": "gte",
+            "fact": "age",
+            "value": 18
+          },
+          "then": {
+            "key": "eligible",
+            "value": true
+          }
+        }
+      ]
+    },
+    "expected": {
+      "ok": true,
+      "results": [
+        {
+          "id": "dependent",
+          "matched": true
+        },
+        {
+          "id": "adult",
+          "matched": true
+        }
+      ],
+      "actions": [
+        {
+          "ruleId": "dependent",
+          "key": "grant",
+          "value": 1
+        },
+        {
+          "ruleId": "adult",
+          "key": "eligible",
+          "value": true
+        }
+      ]
+    }
+  },
+  {
+    "input": {
+      "facts": {},
+      "rules": [
+        {
+          "id": "a",
+          "when": {
+            "op": "matched",
+            "ruleId": "b"
+          },
+          "then": {
+            "key": "out",
+            "value": true
+          }
+        },
+        {
+          "id": "b",
+          "when": {
+            "op": "eq",
+            "fact": "x",
+            "value": 1
+          },
+          "then": {
+            "key": "out",
+            "value": true
+          }
+        },
+        {
+          "id": "c",
+          "when": {
+            "op": "any",
+            "conditions": [
+              {
+                "op": "all",
+                "conditions": []
+              },
+              {
+                "op": "matched",
+                "ruleId": "b"
+              }
+            ]
+          },
+          "then": {
+            "key": "out",
+            "value": true
+          }
+        }
+      ]
+    },
+    "expected": {
+      "ok": true,
+      "results": [
+        {
+          "id": "a",
+          "matched": false
+        },
+        {
+          "id": "b",
+          "matched": false
+        },
+        {
+          "id": "c",
+          "matched": true
+        }
+      ],
+      "actions": [
+        {
+          "ruleId": "c",
+          "key": "out",
+          "value": true
+        }
+      ]
+    }
+  },
+  {
+    "input": {
+      "facts": {},
+      "rules": [
+        {
+          "id": "a",
+          "when": {
+            "op": "eq",
+            "fact": "x",
+            "value": 1
+          },
+          "then": {
+            "key": "out",
+            "value": true
+          }
+        },
+        {
+          "id": "b",
+          "when": {
+            "op": "eq",
+            "fact": "x",
+            "value": 1
+          },
+          "then": {
+            "key": "out",
+            "value": true
+          }
+        },
+        {
+          "id": "a",
+          "when": {
+            "op": "eq",
+            "fact": "x",
+            "value": 1
+          },
+          "then": {
+            "key": "out",
+            "value": true
+          }
+        }
+      ]
+    },
+    "expected": {
+      "ok": false,
+      "error": {
+        "code": "DUPLICATE_RULE",
+        "ruleId": "a"
+      }
+    }
+  },
+  {
+    "input": {
+      "facts": {},
+      "rules": [
+        {
+          "id": "first",
+          "when": {
+            "op": "any",
+            "conditions": [
+              {
+                "op": "all",
+                "conditions": []
+              },
+              {
+                "op": "matched",
+                "ruleId": "missing"
+              }
+            ]
+          },
+          "then": {
+            "key": "out",
+            "value": true
+          }
+        },
+        {
+          "id": "second",
+          "when": {
+            "op": "matched",
+            "ruleId": "not-there"
+          },
+          "then": {
+            "key": "out",
+            "value": true
+          }
+        }
+      ]
+    },
+    "expected": {
+      "ok": false,
+      "error": {
+        "code": "UNKNOWN_RULE",
+        "ruleId": "first"
+      }
+    }
+  },
+  {
+    "input": {
+      "facts": {},
+      "rules": [
+        {
+          "id": "self",
+          "when": {
+            "op": "matched",
+            "ruleId": "self"
+          },
+          "then": {
+            "key": "out",
+            "value": true
+          }
+        }
+      ]
+    },
+    "expected": {
+      "ok": false,
+      "error": {
+        "code": "CYCLE",
+        "ruleId": "self"
+      }
+    }
+  },
+  {
+    "input": {
+      "facts": {},
+      "rules": [
+        {
+          "id": "outside",
+          "when": {
+            "op": "matched",
+            "ruleId": "b"
+          },
+          "then": {
+            "key": "out",
+            "value": true
+          }
+        },
+        {
+          "id": "a",
+          "when": {
+            "op": "matched",
+            "ruleId": "b"
+          },
+          "then": {
+            "key": "out",
+            "value": true
+          }
+        },
+        {
+          "id": "b",
+          "when": {
+            "op": "matched",
+            "ruleId": "a"
+          },
+          "then": {
+            "key": "out",
+            "value": true
+          }
+        }
+      ]
+    },
+    "expected": {
+      "ok": false,
+      "error": {
+        "code": "CYCLE",
+        "ruleId": "a"
+      }
+    }
+  },
+  {
+    "input": {
+      "facts": {},
+      "rules": [
+        {
+          "id": "a",
+          "when": {
+            "op": "matched",
+            "ruleId": "unknown"
+          },
+          "then": {
+            "key": "out",
+            "value": true
+          }
+        },
+        {
+          "id": "a",
+          "when": {
+            "op": "matched",
+            "ruleId": "unknown"
+          },
+          "then": {
+            "key": "out",
+            "value": true
+          }
+        }
+      ]
+    },
+    "expected": {
+      "ok": false,
+      "error": {
+        "code": "DUPLICATE_RULE",
+        "ruleId": "a"
+      }
+    }
+  },
+  {
+    "input": {
+      "facts": {
+        "a": "  X ",
+        "b": -2
+      },
+      "rules": [
+        {
+          "id": "whitespace",
+          "when": {
+            "op": "eq",
+            "fact": "a",
+            "value": "  X "
+          },
+          "then": {
+            "key": " exact ",
+            "value": " Y "
+          }
+        },
+        {
+          "id": "negative",
+          "when": {
+            "op": "gte",
+            "fact": "b",
+            "value": -3
+          },
+          "then": {
+            "key": "n",
+            "value": -2
+          }
+        }
+      ]
+    },
+    "expected": {
+      "ok": true,
+      "results": [
+        {
+          "id": "whitespace",
+          "matched": true
+        },
+        {
+          "id": "negative",
+          "matched": true
+        }
+      ],
+      "actions": [
+        {
+          "ruleId": "whitespace",
+          "key": " exact ",
+          "value": " Y "
+        },
+        {
+          "ruleId": "negative",
+          "key": "n",
+          "value": -2
+        }
+      ]
+    }
+  }
+]

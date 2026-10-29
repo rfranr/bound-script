@@ -1,0 +1,654 @@
+[
+  {
+    "name": "empty",
+    "input": {
+      "today": "2026-10-29",
+      "warehousePriority": [
+        "W1",
+        "W2"
+      ],
+      "picking": "FEFO",
+      "lots": [],
+      "orders": []
+    },
+    "expected": {
+      "ok": true,
+      "allocations": [],
+      "shortages": [],
+      "remaining": []
+    }
+  },
+  {
+    "name": "partial",
+    "input": {
+      "today": "2026-10-29",
+      "warehousePriority": [
+        "W1",
+        "W2"
+      ],
+      "picking": "FEFO",
+      "lots": [
+        {
+          "id": "L",
+          "sku": "SKU",
+          "warehouse": "W1",
+          "available": 3,
+          "expiresOn": "2026-12-31",
+          "receivedSequence": 0,
+          "blocked": false
+        }
+      ],
+      "orders": [
+        {
+          "id": "O",
+          "priority": 0,
+          "allowedWarehouses": [
+            "W1",
+            "W2"
+          ],
+          "lines": [
+            {
+              "id": "O-0",
+              "sku": "SKU",
+              "quantity": 5
+            }
+          ]
+        }
+      ]
+    },
+    "expected": {
+      "ok": true,
+      "allocations": [
+        {
+          "orderId": "O",
+          "lineId": "O-0",
+          "lotId": "L",
+          "warehouse": "W1",
+          "quantity": 3
+        }
+      ],
+      "shortages": [
+        {
+          "orderId": "O",
+          "lineId": "O-0",
+          "quantity": 2
+        }
+      ],
+      "remaining": [
+        {
+          "lotId": "L",
+          "quantity": 0
+        }
+      ]
+    }
+  },
+  {
+    "name": "warehouse-priority-over-expiry",
+    "input": {
+      "today": "2026-10-29",
+      "warehousePriority": [
+        "W1",
+        "W2"
+      ],
+      "picking": "FEFO",
+      "lots": [
+        {
+          "id": "later",
+          "sku": "SKU",
+          "warehouse": "W1",
+          "available": 2,
+          "expiresOn": "2027-01-01",
+          "receivedSequence": 0,
+          "blocked": false
+        },
+        {
+          "id": "earlier",
+          "sku": "SKU",
+          "warehouse": "W2",
+          "available": 2,
+          "expiresOn": "2026-11-01",
+          "receivedSequence": 0,
+          "blocked": false
+        }
+      ],
+      "orders": [
+        {
+          "id": "O",
+          "priority": 0,
+          "allowedWarehouses": [
+            "W1",
+            "W2"
+          ],
+          "lines": [
+            {
+              "id": "O-0",
+              "sku": "SKU",
+              "quantity": 3
+            }
+          ]
+        }
+      ]
+    },
+    "expected": {
+      "ok": true,
+      "allocations": [
+        {
+          "orderId": "O",
+          "lineId": "O-0",
+          "lotId": "later",
+          "warehouse": "W1",
+          "quantity": 2
+        },
+        {
+          "orderId": "O",
+          "lineId": "O-0",
+          "lotId": "earlier",
+          "warehouse": "W2",
+          "quantity": 1
+        }
+      ],
+      "shortages": [],
+      "remaining": [
+        {
+          "lotId": "later",
+          "quantity": 0
+        },
+        {
+          "lotId": "earlier",
+          "quantity": 1
+        }
+      ]
+    }
+  },
+  {
+    "name": "fefo-ties-and-exclusions",
+    "input": {
+      "today": "2026-10-29",
+      "warehousePriority": [
+        "W1",
+        "W2"
+      ],
+      "picking": "FEFO",
+      "lots": [
+        {
+          "id": "blocked",
+          "sku": "SKU",
+          "warehouse": "W1",
+          "available": 5,
+          "expiresOn": "2026-12-31",
+          "receivedSequence": 0,
+          "blocked": true
+        },
+        {
+          "id": "expired",
+          "sku": "SKU",
+          "warehouse": "W1",
+          "available": 5,
+          "expiresOn": "2026-10-28",
+          "receivedSequence": 0,
+          "blocked": false
+        },
+        {
+          "id": "B",
+          "sku": "SKU",
+          "warehouse": "W1",
+          "available": 1,
+          "expiresOn": "2026-10-29",
+          "receivedSequence": 2,
+          "blocked": false
+        },
+        {
+          "id": "A",
+          "sku": "SKU",
+          "warehouse": "W1",
+          "available": 2,
+          "expiresOn": "2026-10-29",
+          "receivedSequence": 1,
+          "blocked": false
+        }
+      ],
+      "orders": [
+        {
+          "id": "O",
+          "priority": 0,
+          "allowedWarehouses": [
+            "W1",
+            "W2"
+          ],
+          "lines": [
+            {
+              "id": "O-0",
+              "sku": "SKU",
+              "quantity": 4
+            }
+          ]
+        }
+      ]
+    },
+    "expected": {
+      "ok": true,
+      "allocations": [
+        {
+          "orderId": "O",
+          "lineId": "O-0",
+          "lotId": "A",
+          "warehouse": "W1",
+          "quantity": 2
+        },
+        {
+          "orderId": "O",
+          "lineId": "O-0",
+          "lotId": "B",
+          "warehouse": "W1",
+          "quantity": 1
+        }
+      ],
+      "shortages": [
+        {
+          "orderId": "O",
+          "lineId": "O-0",
+          "quantity": 1
+        }
+      ],
+      "remaining": [
+        {
+          "lotId": "blocked",
+          "quantity": 5
+        },
+        {
+          "lotId": "expired",
+          "quantity": 5
+        },
+        {
+          "lotId": "B",
+          "quantity": 0
+        },
+        {
+          "lotId": "A",
+          "quantity": 0
+        }
+      ]
+    }
+  },
+  {
+    "name": "fifo-differs",
+    "input": {
+      "today": "2026-10-29",
+      "warehousePriority": [
+        "W1",
+        "W2"
+      ],
+      "picking": "FIFO",
+      "lots": [
+        {
+          "id": "newer",
+          "sku": "SKU",
+          "warehouse": "W1",
+          "available": 2,
+          "expiresOn": "2026-11-01",
+          "receivedSequence": 4,
+          "blocked": false
+        },
+        {
+          "id": "older",
+          "sku": "SKU",
+          "warehouse": "W1",
+          "available": 3,
+          "expiresOn": "2027-01-01",
+          "receivedSequence": 1,
+          "blocked": false
+        }
+      ],
+      "orders": [
+        {
+          "id": "O",
+          "priority": 0,
+          "allowedWarehouses": [
+            "W1",
+            "W2"
+          ],
+          "lines": [
+            {
+              "id": "O-0",
+              "sku": "SKU",
+              "quantity": 4
+            }
+          ]
+        }
+      ]
+    },
+    "expected": {
+      "ok": true,
+      "allocations": [
+        {
+          "orderId": "O",
+          "lineId": "O-0",
+          "lotId": "older",
+          "warehouse": "W1",
+          "quantity": 3
+        },
+        {
+          "orderId": "O",
+          "lineId": "O-0",
+          "lotId": "newer",
+          "warehouse": "W1",
+          "quantity": 1
+        }
+      ],
+      "shortages": [],
+      "remaining": [
+        {
+          "lotId": "newer",
+          "quantity": 1
+        },
+        {
+          "lotId": "older",
+          "quantity": 0
+        }
+      ]
+    }
+  },
+  {
+    "name": "priority-and-line-order",
+    "input": {
+      "today": "2026-10-29",
+      "warehousePriority": [
+        "W1",
+        "W2"
+      ],
+      "picking": "FEFO",
+      "lots": [
+        {
+          "id": "L",
+          "sku": "SKU",
+          "warehouse": "W1",
+          "available": 5,
+          "expiresOn": "2026-12-31",
+          "receivedSequence": 0,
+          "blocked": false
+        }
+      ],
+      "orders": [
+        {
+          "id": "Z",
+          "priority": 5,
+          "allowedWarehouses": [
+            "W1",
+            "W2"
+          ],
+          "lines": [
+            {
+              "id": "Z-0",
+              "sku": "SKU",
+              "quantity": 4
+            }
+          ]
+        },
+        {
+          "id": "B",
+          "priority": 0,
+          "allowedWarehouses": [
+            "W1",
+            "W2"
+          ],
+          "lines": [
+            {
+              "id": "B-0",
+              "sku": "SKU",
+              "quantity": 2
+            },
+            {
+              "id": "B-1",
+              "sku": "SKU",
+              "quantity": 2
+            }
+          ]
+        }
+      ]
+    },
+    "expected": {
+      "ok": true,
+      "allocations": [
+        {
+          "orderId": "B",
+          "lineId": "B-0",
+          "lotId": "L",
+          "warehouse": "W1",
+          "quantity": 2
+        },
+        {
+          "orderId": "B",
+          "lineId": "B-1",
+          "lotId": "L",
+          "warehouse": "W1",
+          "quantity": 2
+        },
+        {
+          "orderId": "Z",
+          "lineId": "Z-0",
+          "lotId": "L",
+          "warehouse": "W1",
+          "quantity": 1
+        }
+      ],
+      "shortages": [
+        {
+          "orderId": "Z",
+          "lineId": "Z-0",
+          "quantity": 3
+        }
+      ],
+      "remaining": [
+        {
+          "lotId": "L",
+          "quantity": 0
+        }
+      ]
+    }
+  },
+  {
+    "name": "warehouse-allowlist",
+    "input": {
+      "today": "2026-10-29",
+      "warehousePriority": [
+        "W1",
+        "W2"
+      ],
+      "picking": "FEFO",
+      "lots": [
+        {
+          "id": "L1",
+          "sku": "SKU",
+          "warehouse": "W1",
+          "available": 3,
+          "expiresOn": "2026-12-31",
+          "receivedSequence": 0,
+          "blocked": false
+        },
+        {
+          "id": "L2",
+          "sku": "SKU",
+          "warehouse": "W2",
+          "available": 3,
+          "expiresOn": "2026-12-31",
+          "receivedSequence": 0,
+          "blocked": false
+        }
+      ],
+      "orders": [
+        {
+          "id": "O",
+          "priority": 0,
+          "allowedWarehouses": [
+            "W2"
+          ],
+          "lines": [
+            {
+              "id": "O-0",
+              "sku": "SKU",
+              "quantity": 4
+            }
+          ]
+        }
+      ]
+    },
+    "expected": {
+      "ok": true,
+      "allocations": [
+        {
+          "orderId": "O",
+          "lineId": "O-0",
+          "lotId": "L2",
+          "warehouse": "W2",
+          "quantity": 3
+        }
+      ],
+      "shortages": [
+        {
+          "orderId": "O",
+          "lineId": "O-0",
+          "quantity": 1
+        }
+      ],
+      "remaining": [
+        {
+          "lotId": "L1",
+          "quantity": 3
+        },
+        {
+          "lotId": "L2",
+          "quantity": 0
+        }
+      ]
+    }
+  },
+  {
+    "name": "duplicate-lot",
+    "input": {
+      "today": "2026-10-29",
+      "warehousePriority": [
+        "W1",
+        "W2"
+      ],
+      "picking": "FEFO",
+      "lots": [
+        {
+          "id": "dup",
+          "sku": "SKU",
+          "warehouse": "W1",
+          "available": 5,
+          "expiresOn": "2026-12-31",
+          "receivedSequence": 0,
+          "blocked": false
+        },
+        {
+          "id": "dup",
+          "sku": "SKU",
+          "warehouse": "W1",
+          "available": 5,
+          "expiresOn": "2026-12-31",
+          "receivedSequence": 0,
+          "blocked": false
+        }
+      ],
+      "orders": []
+    },
+    "expected": {
+      "ok": false,
+      "error": {
+        "code": "DUPLICATE_ID",
+        "id": "dup"
+      }
+    }
+  },
+  {
+    "name": "unknown-warehouse",
+    "input": {
+      "today": "2026-10-29",
+      "warehousePriority": [
+        "W1",
+        "W2"
+      ],
+      "picking": "FEFO",
+      "lots": [
+        {
+          "id": "L",
+          "sku": "SKU",
+          "warehouse": "WX",
+          "available": 5,
+          "expiresOn": "2026-12-31",
+          "receivedSequence": 0,
+          "blocked": false
+        }
+      ],
+      "orders": []
+    },
+    "expected": {
+      "ok": false,
+      "error": {
+        "code": "UNKNOWN_WAREHOUSE",
+        "id": "WX"
+      }
+    }
+  },
+  {
+    "name": "invalid-leap-date",
+    "input": {
+      "today": "2025-02-29",
+      "warehousePriority": [
+        "W1",
+        "W2"
+      ],
+      "picking": "FEFO",
+      "lots": [],
+      "orders": []
+    },
+    "expected": {
+      "ok": false,
+      "error": {
+        "code": "INVALID_DATE",
+        "id": "2025-02-29"
+      }
+    }
+  },
+  {
+    "name": "duplicate-line-within-order",
+    "input": {
+      "today": "2026-10-29",
+      "warehousePriority": [
+        "W1",
+        "W2"
+      ],
+      "picking": "FEFO",
+      "lots": [],
+      "orders": [
+        {
+          "id": "O",
+          "priority": 0,
+          "allowedWarehouses": [
+            "W1"
+          ],
+          "lines": [
+            {
+              "id": "same",
+              "sku": "SKU",
+              "quantity": 1
+            },
+            {
+              "id": "same",
+              "sku": "SKU",
+              "quantity": 2
+            }
+          ]
+        }
+      ]
+    },
+    "expected": {
+      "ok": false,
+      "error": {
+        "code": "DUPLICATE_ID",
+        "id": "same"
+      }
+    }
+  }
+]

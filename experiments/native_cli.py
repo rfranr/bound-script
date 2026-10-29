@@ -21,6 +21,13 @@ def select_box(selection):
     if selection == 'process-orders':
         configuration = import_module('experiments.process-orders-native.native_box')
         return ROOT / 'experiments/process-orders-native', configuration.BOX, None
+    if selection == 'evaluate-rules':
+        configuration = import_module('experiments.evaluate-rules-native.native_box')
+        return ROOT / 'experiments/evaluate-rules-native', configuration.BOX, None
+    if selection == 'plan-fulfillment':
+        configuration = import_module('experiments.plan-fulfillment-native.native_box')
+        return ROOT / 'experiments/plan-fulfillment-native', configuration.BOX, None
+
     raise ValueError('Expected explicit Box: normalize-contact or render-welcome')
 
 
