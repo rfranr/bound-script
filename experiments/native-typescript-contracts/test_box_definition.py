@@ -160,8 +160,7 @@ class BoxDefinitionTests(unittest.TestCase):
                     generator.main()
                 self.assertEqual(agent.call_args.args[1], {'task.md': root / box.task_path})
                 self.assertEqual(agent.call_args.kwargs['public_contract'], root / box.contract_path)
-                self.assertEqual((root / box.accepted_path).parent.joinpath('contract.ts').read_bytes(),
-                                 (root / box.contract_path).read_bytes())
+                self.assertFalse((root / box.accepted_path).parent.joinpath('contract.ts').exists())
                 self.assertEqual(agent.call_args.kwargs['prompt'], prompt)
                 self.assertEqual(agent.call_args.kwargs['box'], label)
                 self.assertEqual(verification.call_args.args[0][2:4], ['--box-definition', box.fingerprint()])

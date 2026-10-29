@@ -126,11 +126,14 @@ Boxes declare no implementation dependencies. The public contracts retain their
 existing type-only Typia tags dependency; consumers need the existing `typia`
 package for type checking, not a BoundScript runtime.
 
-Each fixed native generator copies the public contract alongside the unchanged
-verified source under its own `accepted/` directory, retaining the existing
-`normalize-contact.ts` or `render-welcome.ts` filename. Consumers copy both files
-into any Box directory, including a nested one; sibling imports need no rewriting,
-aliases or custom resolution. The compiler adapter rejects non-relative module
+As corrected by assignment [0039](../assignments/0039-remove-contract-promotion-ownership.md),
+each fixed native generator promotes only the unchanged verified implementation to
+its own `accepted/` directory, retaining the existing `normalize-contact.ts` or
+`render-welcome.ts` filename. The public contract remains a consumer-owned read-only
+input, not a generated or promoted artifact. Consumers integrate the implementation
+beside their existing `contract.ts` in their Box directory, including nested ones;
+sibling imports need no rewriting, aliases or custom resolution. Promotion neither
+creates nor updates contracts. The compiler adapter rejects non-relative module
 specifiers and nonliteral dynamic imports in candidate source; ordinary TypeScript
 resolution checks the relative imports. This is not universal hostile-code import
 or transitive-dependency enforcement. Future permitted dependencies must preserve

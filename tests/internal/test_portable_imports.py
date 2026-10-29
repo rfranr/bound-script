@@ -1,11 +1,14 @@
 """Real TypeScript relocation checks; no model, credentials or container required."""
+from contextlib import redirect_stdout
 import importlib
+import io
 import json
 from pathlib import Path
 import shutil
 import subprocess
 import tempfile
 import unittest
+from unittest.mock import MagicMock, patch
 
 from boundscript_internal.container_runtime import digest
 from boundscript_internal.native_verifier import RUNNER
@@ -44,12 +47,15 @@ class PortableImportTests(unittest.TestCase):
                 self.assertEqual(result.returncode, 0, report)
                 self.assertEqual(report['errorCount'], 0)
 
-                # Nest freely and retain existing promoted filenames: no runtime tooling or aliases.
+                # Consumer-owned fixture setup, not a generation/promotion output.
                 consumer = root / 'application' / 'boxes' / 'parent' / box.name
                 consumer.mkdir(parents=True)
+                consumer_contract = consumer / 'contract.ts'
+                consumer_contract.write_bytes(contract.read_bytes())
+                contract_before = digest(consumer_contract)
+                # Integrate only the implementation beside the existing consumer contract.
                 promoted = consumer / Path(box.accepted_path).name
                 shutil.copyfile(candidate, promoted)
-                shutil.copyfile(contract, consumer / 'contract.ts')
                 self.assertEqual(digest(promoted), before)
                 result = subprocess.run([
                     'node', str(ROOT / 'node_modules/typescript/bin/tsc'), '--strict', '--noEmit',
@@ -57,6 +63,7 @@ class PortableImportTests(unittest.TestCase):
                     str(promoted)], capture_output=True, text=True, timeout=30)
                 self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
                 self.assertEqual(digest(promoted), before)
+                self.assertEqual(digest(consumer_contract), contract_before)
 
                 for specifier in (str(sandbox / 'contract.ts'), '../inputs/contract'):
                     candidate.write_text(source.replace('./contract', specifier))
@@ -66,6 +73,42 @@ class PortableImportTests(unittest.TestCase):
                     self.assertGreater(report['errorCount'], 0)
                 self.assertIn("'./contract'", generator.generation_prompt(box))
                 self.assertEqual(box.contract_module, '/implementation/contract.ts')
+
+    def test_native_promotion_leaves_existing_contracts_untouched(self):
+        for directory in ('native-typescript-contracts', 'render-welcome-native'):
+            generator = importlib.import_module(f'experiments.{directory}.generate')
+            box = generator.BOX
+            with self.subTest(box=box.name), tempfile.TemporaryDirectory() as tmp:
+                root = Path(tmp)
+                contract = root / box.contract_path
+                contract.parent.mkdir(parents=True)
+                contract.write_bytes(b'// consumer-owned input\n')
+                destination = root / box.accepted_path
+                destination.parent.mkdir(parents=True)
+                existing_contract = destination.parent / 'contract.ts'
+                existing_contract.write_bytes(b'// existing consumer contract; do not overwrite\n')
+                protected = {p: p.read_bytes() for p in (contract, existing_contract)}
+                candidate = root / 'candidate.ts'
+                candidate.write_bytes(b'// independently verified fixture\r\n')
+                scanned = digest(candidate)
+                context = MagicMock()
+                context.__enter__.return_value = (candidate, scanned)
+                with patch.object(generator, 'SPIKE', root), \
+                     patch.object(box.__class__, 'verification_files', return_value=()), \
+                     patch.object(generator, 'runtime'), \
+                     patch.object(generator, 'agent_submission', return_value=context), \
+                     patch.object(generator.sys, 'argv', ['generate.py']), \
+                     patch.object(generator.subprocess, 'run') as verification, \
+                     patch.object(generator.shutil, 'copyfile', wraps=shutil.copyfile) as copy, \
+                     redirect_stdout(io.StringIO()):
+                    generator.main()
+                verification.assert_called_once()
+                copy.assert_called_once_with(candidate, destination)
+                self.assertEqual(destination.read_bytes(), candidate.read_bytes())
+                self.assertEqual(digest(destination), scanned)
+                self.assertEqual(set(destination.parent.iterdir()), {destination, existing_contract})
+                for path, before in protected.items():
+                    self.assertEqual(path.read_bytes(), before)
 
 
 if __name__ == '__main__':

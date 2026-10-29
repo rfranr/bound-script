@@ -101,9 +101,11 @@ and the explicitly authorized auth file, plus a writable `/implementation` with
 no seeded implementation. The sibling contract is mounted read-only. It receives neither Typia/Vitest tooling nor tests nor peer
 code. Generation ends before verification starts. Only a regular, size-limited,
 credential-scanned source that passes the independent native verification pipeline
-is copied unchanged to `accepted/normalize-contact.ts`, with the public contract
-copied to `accepted/contract.ts`. Copy these sibling files together into a consuming
-project; generated type imports use `./contract` in both sandboxes and the consumer.
+is copied unchanged to `accepted/normalize-contact.ts`. Promotion publishes only
+the implementation, never the public contract. The consumer integrates that source
+beside its own existing `contract.ts`; generated type imports use `./contract` in
+both sandboxes and the consumer. The contract remains a consumer-owned read-only
+input, not a generation output.
 Existing type-only Typia tags require `typia` for type checking. Legacy sandbox-path
 candidates are not rewritten after verification; generate a new candidate instead.
 See the [portable layout](../../docs/development/architecture.md#portable-native-box-layout).

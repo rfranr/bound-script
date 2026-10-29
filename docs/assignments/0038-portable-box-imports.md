@@ -10,6 +10,13 @@ Prefer ordinary relative imports; avoid aliases, custom resolution, registries a
 
 ## Implementation notes / evidence
 
+**Correction:** Assignment [0039](0039-remove-contract-promotion-ownership.md)
+removes the contract-promotion responsibility introduced in this delivery. The
+contract is consumer-owned input; only the verified implementation is promoted.
+The evidence below records the original 0038 delivery, not the corrected ownership
+policy. Current integration places the implementation beside the consumer's
+existing contract; the generator does not distribute contracts.
+
 Implemented for the two current native Box workflows. Each Box has sibling `contract.ts` and implementation source; both sandboxes reproduce that layout under `/implementation/`. Generated type imports use `./contract`. Existing promoted implementation filenames remain unchanged, with a sibling public contract copied during promotion. Consumers can relocate the pair into nested directories. Historical baseline workflows/artifacts remain regression references, unchanged.
 
 The generation helper optionally mounts only the public contract read-only beside the empty candidate slot. Native prompts require relative imports; the trusted compiler rejects non-relative module specifiers and nonliteral dynamic imports. Existing ordinary TypeScript resolution validates relative imports. No aliases, registry, peer implementation exposure, import rewriting or custom resolution were added. Source and contract hashes bind promotion to verified inputs. This does not claim universal hostile-program dependency enforcement or implement hierarchical composition. Current public contracts retain their existing type-only Typia tags dependency for consumer type checking.

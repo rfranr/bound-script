@@ -51,8 +51,9 @@ Human-owned task.md + TypeScript contract
 The native workflow now has independently generated and verified **NormalizeContact**
 and **RenderWelcome** Boxes, with separate roots, consumer-owned contracts and
 fixed entry points. Native generated implementations use sibling `./contract`
-imports in generation, verification and promotion: copy each Box's promoted
-implementation together with its `accepted/contract.ts` into the consuming project.
+imports in generation and verification. Promotion publishes only the verified
+implementation; the consumer integrates it beside its own existing `contract.ts`.
+Contracts remain consumer-owned inputs, never generation outputs.
 See the [portable layout](docs/development/architecture.md#portable-native-box-layout).
 The Product Owner reviewed and accepted the RenderWelcome delivery.
 Greeting, historical NormalizeContact/RenderWelcome and ordinary TypeScript

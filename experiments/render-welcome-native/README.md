@@ -65,9 +65,11 @@ NormalizeContact runner. There are no automatic repairs, retries or peer calls.
 
 Generated source imports types from `./contract`. Generation and verification
 both place the read-only public contract beside `implementation.ts` under
-`/implementation/`. Promotion copies the verified bytes to `accepted/render-welcome.ts`
-and the contract to `accepted/contract.ts`. Copy both sibling files into any consuming
-project directory, including nested Box directories; no import rewriting is needed.
+`/implementation/`. Promotion copies only the verified implementation bytes to
+`accepted/render-welcome.ts`, never the public contract. The consumer integrates
+that source beside its own existing `contract.ts`, including in nested Box
+directories; no import rewriting is needed. The contract remains a consumer-owned
+read-only input, not a generation output.
 The contract retains its existing type-only `typia` tags dependency for type checking.
 No peer implementations, tests or validator tooling are exposed during generation.
 Older sandbox-path candidates need fresh generation, not post-verification repair.

@@ -125,8 +125,9 @@ assert 'NormalizeContact' not in generate.generation_prompt(generate.BOX)
                 self.assertEqual(destination.read_bytes(), candidate.read_bytes())
                 self.assertEqual(agent.call_args.args[1], {'task.md': root / 'task.md'})
                 self.assertEqual(agent.call_args.kwargs['public_contract'], root / 'src/contract.ts')
-                self.assertEqual((destination.parent / 'contract.ts').read_bytes(),
-                                 (root / 'src/contract.ts').read_bytes())
+                self.assertEqual(set(destination.parent.iterdir()), {destination})
+                self.assertEqual((root / 'src/contract.ts').read_bytes(),
+                                 (HERE / 'src/contract.ts').read_bytes())
                 self.assertEqual(verification.call_args.args[0],
                                  [sys.executable, str(root / 'verify.py'), '--box-definition',
                                   generator.BOX.fingerprint(), str(candidate)])

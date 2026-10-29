@@ -83,7 +83,6 @@ def main():
         assert digest(submission) == scanned_digest, 'Submission changed during verification'
         assert digest(contract) == contract_digest, 'Public contract changed during generation/verification'
         destination.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copyfile(contract, destination.parent / 'contract.ts')
         shutil.copyfile(submission, destination)
         assert digest(destination) == scanned_digest, 'Promoted source differs from verified bytes'
         print(f'PASS {BOX.name} independently verified and promoted unchanged; sha256={digest(destination)}', flush=True)

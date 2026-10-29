@@ -197,8 +197,8 @@ class SpikeTests(unittest.TestCase):
             self.assertFalse(any('/checks' in s or '/tests' in s or '/repo' in s for s in specs))
             self.assertEqual(sum('/inputs/' in s for s in specs), 1)
             self.assertEqual(sum('dst=/implementation/contract.ts,readonly' in s for s in specs), 1)
-            self.assertEqual((accepted.parent / 'contract.ts').read_bytes(),
-                             (root / 'src/contract.ts').read_bytes())
+            self.assertEqual(set(accepted.parent.iterdir()), {accepted})
+            self.assertEqual((root / 'src/contract.ts').read_text(), '// synthetic contract')
 
     def test_generation_cli_does_not_serialize_arbitrary_errors(self):
         with patch.object(generator, 'main', side_effect=RuntimeError('PRIVATE PROVIDER OUTPUT')), \
