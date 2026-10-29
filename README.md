@@ -138,6 +138,27 @@ so that comparison is expected to fail compilation. `npm test` is the positive
 baseline regression. Phone normalization semantics remain unspecified; types
 and tests must not silently invent them.
 
+### Independent source-tree verification
+
+Assignments 0042–0043 add explicit bounded tree input to the same verifier:
+
+```sh
+npm run build:welcome
+BOUNDSCRIPT_RUNTIME=docker python3 -B experiments/native_cli.py verify render-welcome --source-tree /path/to/source-directory
+```
+
+The directory supplies public `implementation.ts` and freely organized internal
+TypeScript helpers, not consumer `contract.ts`. Keep it outside the Box's oracle
+root (the existing native experiment roots): source and test ownership must be
+disjoint. The verifier checks all source imports/types, runs the unchanged declared
+suites, checks integrity and cleans up; it never promotes or quarantines trees.
+Limits: 16 source files, 16 KiB total, eight directory levels and 240-byte ASCII
+relative paths. Unsafe entries, dependency/config files, emitted outputs and
+imports outside the source/type-only-contract boundary are rejected. Source and
+contract views are read-only; reports/caches use separate writable work storage.
+Existing single-file commands remain supported. Multi-file generation and the
+RenderWelcome A/B experiment are not part of this increment.
+
 ### Autonomous generation (billable)
 
 Requires the existing **Pi 1.4.0** installation at the fixed path in `boundscript_internal/native_generator.py`

@@ -40,6 +40,7 @@ class PortableImportTests(unittest.TestCase):
                 adapter = (RUNNER / 'compiler-diagnostics.mjs').read_text()
                 adapter = adapter.replace('/node_modules', str(ROOT / 'node_modules'))
                 adapter = adapter.replace('/implementation/', str(sandbox) + '/').replace('/checks/', str(root) + '/')
+                adapter = adapter.replace('/verification-work/', str(sandbox) + '/')
                 compiler.write_text(adapter)
                 (root / 'check-contract.ts').write_text(box.contract_check(str(candidate)).replace(
                     box.contract_module, str(sandbox / 'contract.ts')))

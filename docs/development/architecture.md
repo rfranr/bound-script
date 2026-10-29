@@ -150,6 +150,31 @@ or `../inputs/contract` must be generated anew (or submitted as new candidates
 before verification); they are not silently repaired or aliased. Historical
 baseline runners and their accepted source bytes remain unchanged.
 
+## Explicit tree verification (0042–0043)
+
+File inputs and explicit `--source-tree DIRECTORY` use the same independent
+compiler/test execution path. Tree staging preserves bounded source bytes and an
+in-memory inventory; the public entry remains `implementation.ts`, but helpers
+and directories are implementation-owned. Source trees must be disjoint from the
+consumer's verification root, so helper test-like filenames cannot alter oracle
+collection. Existing BoxDefinition fields and business contracts/tests are unchanged.
+
+Verification composes a private read-only `/implementation` source view and retains
+the read-only consumer contract mount. The only writable bind is `/verification-work`:
+compiler/Vitest reports, caches and tool subprocess HOME data (including Vitest's
+local API token) go there. The container's environment/allowlist, effective security
+checks and resource restrictions are unchanged. Full source membership/bytes and
+protected inputs are checked; all submitted source files, even unused helpers, are
+strictly compiled and checked for literal relative import/reference closure. Only
+inventoried implementation files and the exact type-only consumer contract may be
+candidate module dependencies. Trusted tooling/contract dependencies remain separate.
+
+This does not create universal JavaScript capability enforcement or hostile-code
+attestation. Verification concerns a staged snapshot, not atomic capture of a live
+producer. Tree generation, promotion, quarantine, persistent receipts and the
+RenderWelcome A/B experiment remain deferred. Legacy single-file accepted paths,
+generation and promotion stay unchanged.
+
 ## Mechanisms retained
 
 - `boundscript_internal/container_runtime.py` supplies a single Docker/Podman policy. Engine choice

@@ -80,8 +80,9 @@ assert {'NormalizeContact' if selection == 'render-welcome' else 'RenderWelcome'
                     engine.remove.assert_called_once()
                     specs = engine.create.call_args.args[2][1::2]
                     self.assertEqual(sum('readonly' not in spec for spec in specs), 1)
-                    self.assertIn('dst=/implementation', specs[0])
+                    self.assertIn('dst=/verification-work', specs[0])
                     self.assertTrue(all('readonly' in spec for spec in specs[1:]))
+                    self.assertTrue(any('dst=/implementation,readonly' in spec for spec in specs[1:]))
 
     def test_verification_stages_only_owned_assets_and_exact_suites(self):
         for selection in SELECTIONS:

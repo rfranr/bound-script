@@ -66,7 +66,7 @@ export function collectDiagnostics(modules, unhandledErrors) {
 
 export default class DiagnosticReporter {
   onTestRunEnd(modules, unhandledErrors) {
-    writeFileSync('/implementation/vitest-diagnostics.json',
+    writeFileSync('/verification-work/vitest-diagnostics.json',
       JSON.stringify(collectDiagnostics(modules, unhandledErrors)));
   }
 }

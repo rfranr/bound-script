@@ -8,10 +8,11 @@ There are no new framework APIs, plugin hooks, manifests or orchestration layers
 | --- | --- |
 | `container_runtime.py` | Docker/Podman CLI adapters; exact mounts/environment and effective procfs/cgroup-v2 checks; pinned image, repository-relative TypeScript path and file hashing. |
 | `box_definition.py` | Immutable explicit native Box inputs and test-file suites, complete suite-directory ownership checks, signature-consumer rendering and definition fingerprint; no registry, source inference or acceptance oracle. |
-| `native_verifier.py` | Existing offline verification mechanics extracted without policy changes; explicit Box root/definition, no configuration discovery, generation or promotion. |
-| `native_cli.py` | Shared verification entry point: candidate/baseline arguments, fingerprint validation and failure reporting. Receives Box/root explicitly. |
+| `native_verifier.py` | One offline verifier for file and explicitly selected tree inputs; read-only source views, separate writable work space, strict all-source import/type checks, unchanged declared suites and source/input integrity. No configuration discovery, generation or promotion. |
+| `native_cli.py` | Shared verification entry point: file/tree/baseline arguments, fingerprint validation and failure reporting. Receives Box/root explicitly and delegates both layouts to the same verifier. |
+| `source_tree.py` | Bounded, no-follow TypeScript tree staging with temporary snapshots and in-memory inventories; no execution, credentials, quarantine or promotion. |
 | `native_generator.py` | Shared native prompt, preflight, independent verifier invocation, bounded scanned-source quarantine and unchanged implementation-only promotion. Reuses workspace/runtime lifecycle. |
-| `vitest.config.mts`, `compiler-diagnostics.mjs`, `diagnostic-reporter.mjs` | Unchanged trusted verifier tooling moved out of NormalizeContact; staged read-only for each independent verification. |
+| `vitest.config.mts`, `compiler-diagnostics.mjs`, `diagnostic-reporter.mjs` | Trusted verifier tooling staged read-only for independent verification; full source-set compilation/import closure and bounded reports to writable work storage. |
 | `typescript_contract.py` | Deterministic TypeScript assignability-check text from contract/implementation module paths and named exports; no model, candidate access or acceptance criteria. |
 | `agent_workspace.py` | Disposable Pi workspace, security probes, private credential state, bounded submission/literal scan, safe event summaries and cleanup before yielding a source. |
 

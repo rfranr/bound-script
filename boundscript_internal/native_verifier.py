@@ -2,7 +2,7 @@
 
 No experiment configuration, generation or promotion policy belongs here.
 """
-from contextlib import contextmanager
+from contextlib import contextmanager, ExitStack
 import json
 import os
 import sys
@@ -15,6 +15,7 @@ import tempfile
 import uuid
 
 from boundscript_internal.container_runtime import IMAGE, TSC, digest, runtime
+from boundscript_internal.source_tree import staged_source_tree
 
 DEBUG = os.environ.get("DEBUG", "False").lower() in ("true", "1", "t")
 RUNNER = Path(__file__).resolve().parent  # Shared trusted tooling, never Box data.
@@ -118,7 +119,10 @@ else:
 
 
 def process_status(engine, name, args, timeout):
-    source = PROCESS_RUN.replace('ARGS', json.dumps(args)).replace('TIMEOUT', str(timeout * 1000))
+    # Tool-owned HOME data (including Vitest's API token) belongs in writable
+    # work storage, never the read-only source. Container policy stays unchanged.
+    source = "process.env.HOME = '/verification-work';\n" + PROCESS_RUN.replace(
+        'ARGS', json.dumps(args)).replace('TIMEOUT', str(timeout * 1000))
     try:
         status = json.loads(engine.exec(name, 'node', '--input-type=module', source=source, timeout=timeout + 5))
 
@@ -144,8 +148,10 @@ def process_status(engine, name, args, timeout):
     return status
 
 
-def run_compiler(engine, name, scratch):
-    status = process_status(engine, name, ['/checks/compiler-diagnostics.mjs'], 30)
+def run_compiler(engine, name, scratch, source_files=('/implementation/implementation.ts',),
+                 contract_module='/implementation/contract.ts'):
+    status = process_status(engine, name,
+                            ['/checks/compiler-diagnostics.mjs', contract_module, *source_files], 30)
     try:
         report = read_report(scratch / 'typescript-diagnostics.json')
     except VerificationFailure:
@@ -159,7 +165,7 @@ def run_compiler(engine, name, scratch):
         if not isinstance(item, dict) or type(item.get('code')) is not int:
             raise VerificationFailure('infrastructure', 'Invalid compiler diagnostic; raw output withheld')
         file = item.get('file')
-        if file not in ('/checks/check-contract.ts', '/implementation/implementation.ts', '/implementation/contract.ts'):
+        if file not in ('/checks/check-contract.ts', contract_module, *source_files):
             file = '[tooling/other source]'
         location = ':'.join(str(item[key]) if type(item.get(key)) is int else '?' for key in ('line', 'column'))
         print(f'  TS{item["code"]} {file}:{location}: {quoted(item.get("message"))}', flush=True)
@@ -251,7 +257,7 @@ def suite_config(suite):
 
 def run_vitest(engine, name, scratch, suite, index):
     args = ['/node_modules/vitest/vitest.mjs', 'run', '--config', f'/checks/suite-{index}.config.mts',
-            '--configLoader', 'runner', '--no-cache', '--fsModuleCachePath', '/implementation/.vitest-cache',
+            '--configLoader', 'runner', '--no-cache', '--fsModuleCachePath', '/verification-work/.vitest-cache',
             '--allowOnly=false', '--reporter', '/checks/diagnostic-reporter.mjs']
     path = scratch / 'vitest-diagnostics.json'
     path.unlink(missing_ok=True)  # Never accept the preceding phase's report.
@@ -267,13 +273,51 @@ def run_vitest(engine, name, scratch, suite, index):
         raise failure
 
 
-def check(submission, *, box_root, box):
+def _assert_source_view(root, expected):
+    """Check complete membership as well as bytes of the private read-only view."""
+    directories = {parent.as_posix() for file in expected for parent in Path(file).parents
+                   if parent != Path('.')}
+    seen = set()
+    for path in root.rglob('*'):
+        relative = path.relative_to(root).as_posix()
+        assert relative in expected or relative in directories, 'Unexpected source entry'
+        assert not path.is_symlink(), 'Source view contains a symlink'
+        seen.add(relative)
+        if relative in directories:
+            assert path.is_dir(), 'Source directory changed'
+        else:
+            size, sha = expected[relative]
+            assert path.is_file() and path.stat().st_size == size, 'Source file changed'
+            assert digest(path) == sha, 'Source bytes changed'
+    assert seen == set(expected) | directories, 'Source membership changed'
+
+
+def check(submission, *, box_root, box, source_tree=False):
+    with ExitStack() as resources:
+        records = None
+        if source_tree:
+            with phase('Source tree staging'):
+                if not __debug__:
+                    raise VerificationFailure('infrastructure', 'Assertions must be enabled')
+                oracle = (box_root / box.verification_path).resolve()
+                selected = submission.resolve()
+                if selected.is_relative_to(oracle) or oracle.is_relative_to(selected):
+                    raise VerificationFailure('infrastructure', 'Source tree and verification root must be disjoint')
+                try:
+                    submission, records = resources.enter_context(staged_source_tree(submission))
+                except ValueError as error:
+                    raise VerificationFailure('infrastructure', str(error)) from None
+        _check(submission, box_root=box_root, box=box, source_records=records)
+
+
+def _check(submission, *, box_root, box, source_records=None):
     verification_root = box_root / box.verification_path
     contract = box_root / box.contract_path
     with phase('Verifier preflight'):
         if not __debug__:
             raise VerificationFailure('infrastructure', 'Assertions must be enabled')
-        if submission.is_symlink() or not submission.is_file() or submission.stat().st_size > 16384:
+        if source_records is None and (submission.is_symlink() or not submission.is_file()
+                                       or submission.stat().st_size > 16384):
             raise VerificationFailure('infrastructure', 'Expected regular submission of at most 16 KiB')
         try:
             verification_files = box.verification_files(verification_root)
@@ -305,13 +349,42 @@ def check(submission, *, box_root, box):
         scratch.mkdir()
         if os.getuid() == 0:
             os.chown(scratch, uid, gid)
-        protected = [submission, *[p for p in checks.rglob('*') if p.is_file()], contract]
+        inputs = ({'implementation.ts': submission} if source_records is None else
+                  {relative: submission / relative for relative, _, _ in source_records})
+        protected = [*inputs.values(), *[p for p in checks.rglob('*') if p.is_file()], contract]
         before = {p: digest(p) for p in protected}
-        bindings = {checks: '/checks', submission.resolve(): '/implementation/implementation.ts',
+        source = root / 'source'
+        source.mkdir(mode=0o755)
+        expected = {}
+        with phase('Source view integrity'):
+            for relative, path in inputs.items():
+                target = source / relative
+                target.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copyfile(path, target)
+                target.chmod(0o644)
+                expected[relative] = (path.stat().st_size, before[path])
+            if source_records is not None:
+                assert tuple(sorted((file, size, sha) for file, (size, sha) in expected.items())) == source_records
+            try:
+                contract_relative = Path(box.contract_module).relative_to('/implementation')
+            except ValueError:
+                contract_relative = None
+            if contract_relative is not None:
+                if (not contract_relative.parts or '..' in contract_relative.parts
+                        or contract_relative.as_posix() in expected):
+                    raise VerificationFailure('infrastructure', 'Contract mount collides with source')
+                target = source / contract_relative
+                target.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copyfile(contract, target)
+                target.chmod(0o644)
+                expected[contract_relative.as_posix()] = (contract.stat().st_size, before[contract])
+            _assert_source_view(source, expected)
+        source_files = tuple('/implementation/' + file for file in inputs)
+        bindings = {source: '/implementation', checks: '/checks',
                     contract: box.contract_module, TSC.parents[2]: '/node_modules'}
-        mounts = ['--mount', f'type=bind,src={scratch},dst=/implementation']
-        for source, destination in bindings.items():
-            mounts += ['--mount', f'type=bind,src={source},dst={destination},readonly']
+        mounts = ['--mount', f'type=bind,src={scratch},dst=/verification-work']
+        for binding_source, destination in bindings.items():
+            mounts += ['--mount', f'type=bind,src={binding_source},dst={destination},readonly']
         try:
             with phase('Sandbox/security checks'):
                 engine.create(name, IMAGE, mounts, uid, gid, workdir='/implementation')
@@ -325,16 +398,17 @@ for (const action of [
  () => readFileSync('/peer/implementation.ts'),
  () => writeFileSync(CONTRACT_MODULE, 'changed'),
  () => writeFileSync(CHECK_FILE, 'changed'),
- () => writeFileSync('/implementation/implementation.ts', 'changed'),
+ ...SOURCE_FILES.map(file => () => writeFileSync(file, 'changed')),
  () => writeFileSync('/outside.txt', 'changed'),
- () => { symlinkSync(CONTRACT_MODULE, '/implementation/escape');
-         try { writeFileSync('/implementation/escape', 'changed'); }
-         finally { unlinkSync('/implementation/escape'); } },
+ () => { symlinkSync(CONTRACT_MODULE, '/verification-work/escape');
+         try { writeFileSync('/verification-work/escape', 'changed'); }
+         finally { unlinkSync('/verification-work/escape'); } },
 ]) { try { action(); result.push('SUCCEEDED'); } catch (e) { result.push(e.code); } }
 console.log(JSON.stringify(result));
 '''.replace('CONTRACT_MODULE', json.dumps(box.contract_module))
-   .replace('CHECK_FILE', json.dumps('/checks/' + box.suites[0].files[0]))))
-                assert observed == ['ENOENT'] * 3 + ['EROFS'] * 5
+   .replace('CHECK_FILE', json.dumps('/checks/' + box.suites[0].files[0]))
+   .replace('SOURCE_FILES', json.dumps(source_files))))
+                assert observed == ['ENOENT'] * 3 + ['EROFS'] * (4 + len(source_files))
                 network = json.loads(engine.exec(name, 'node', '--input-type=module', source='''
 import net from 'node:net';
 const result = await new Promise(resolve => {
@@ -348,7 +422,7 @@ console.log(JSON.stringify(result));
 '''))
                 assert network in ('ENETUNREACH', 'EHOSTUNREACH')
             with phase('TypeScript compilation'):
-                run_compiler(engine, name, scratch)
+                run_compiler(engine, name, scratch, source_files, box.contract_module)
             labels = {'runtime': 'Typia runtime validation', 'acceptance': 'Vitest acceptance tests',
                       'properties': 'fast-check properties'}
             for category in box.optional_categories:
@@ -358,6 +432,7 @@ console.log(JSON.stringify(result));
                     print(f'[RUN VITEST] {suite}')
                     run_vitest(engine, name, scratch, suite, index)
             with phase('Protected input integrity'):
+                _assert_source_view(source, expected)
                 assert all(digest(p) == old for p, old in before.items())
         finally:
             with phase('Sandbox cleanup'):
