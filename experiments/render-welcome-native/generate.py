@@ -9,6 +9,10 @@ import stat
 import subprocess
 import sys
 import tempfile
+import traceback
+
+DEBUG = os.environ.get("DEBUG", "False").lower() in ("true", "1", "t")
+
 
 sys.dont_write_bytecode = True
 SPIKE = Path(__file__).resolve().parent
@@ -99,6 +103,8 @@ def cli():
     try:
         main()
     except Exception as error:
+        if DEBUG:
+            traceback.print_exc();
         report_generation_failure(error)
         return 1
     return 0

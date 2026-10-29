@@ -11,6 +11,15 @@ export function collectDiagnostics(modules, unhandledErrors) {
   const files = [];
   const failed = [];
   let infrastructureErrors = unhandledErrors.length;
+
+  if ( process.env.DEBUG ) {
+    console.error('UNHANDLED ERRORS:', unhandledErrors);
+    for (const module of modules) {
+      console.error('MODULE:', module.moduleId);
+      console.error('MODULE ERRORS:', module.errors());
+    }
+  }
+
   for (const module of modules) {
     infrastructureErrors += module.errors().length;
     const file = module.moduleId.startsWith('/checks/') ? module.moduleId.slice('/checks/'.length)

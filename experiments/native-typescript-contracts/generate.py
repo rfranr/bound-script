@@ -9,6 +9,9 @@ import stat
 import subprocess
 import sys
 import tempfile
+import traceback
+
+DEBUG = os.environ.get("DEBUG", "False").lower() in ("true", "1", "t")
 
 sys.dont_write_bytecode = True
 SPIKE = Path(__file__).resolve().parent
@@ -96,6 +99,8 @@ def cli():
         main()
     except Exception as error:
         # Never serialize arbitrary provider/tool diagnostics.
+        if DEBUG:
+            traceback.print_exc();
         print(f'Generation stopped: {type(error).__name__}; no raw diagnostics emitted', file=sys.stderr)
         return 1
     return 0

@@ -7,7 +7,7 @@ export default defineConfig({
   test: {
     // The verifier's generated per-suite config supplies exact declared files.
     include: [],
-    pool: 'forks',
+    pool: 'threads',
     maxWorkers: 1,
     fileParallelism: false,
     isolate: true,

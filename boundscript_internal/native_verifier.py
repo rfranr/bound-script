@@ -5,6 +5,7 @@ No experiment configuration, generation or promotion policy belongs here.
 from contextlib import contextmanager
 import json
 import os
+import sys
 from pathlib import Path
 import re
 import shutil
@@ -15,6 +16,7 @@ import uuid
 
 from boundscript_internal.container_runtime import IMAGE, TSC, digest, runtime
 
+DEBUG = os.environ.get("DEBUG", "False").lower() in ("true", "1", "t")
 RUNNER = Path(__file__).resolve().parent  # Shared trusted tooling, never Box data.
 
 
@@ -84,18 +86,46 @@ def read_report(path):
 
 # Fixed parent process: candidate stdout/stderr never reaches the host channel.
 # Only bounded reports and process status are consumed. Not an agent capability.
-PROCESS_RUN = '''
-import {spawnSync} from 'node:child_process';
-const result = spawnSync(process.execPath, ARGS, {stdio: 'ignore', timeout: TIMEOUT});
-console.log(JSON.stringify({exitStatus: result.status, signal: result.signal,
- launchError: Boolean(result.error), timedOut: result.error?.code === 'ETIMEDOUT'}));
-'''
+if not DEBUG:
+    PROCESS_RUN = '''
+    import {spawnSync} from 'node:child_process';
+    const result = spawnSync(process.execPath, ARGS, {stdio: 'ignore', timeout: TIMEOUT});
+    console.log(JSON.stringify({exitStatus: result.status, signal: result.signal,
+    launchError: Boolean(result.error), timedOut: result.error?.code === 'ETIMEDOUT'}));
+    '''
+else:
+    PROCESS_RUN = '''
+    import {spawnSync} from 'node:child_process';
+    const result = spawnSync(process.execPath, ARGS, {
+        encoding: 'utf8',
+        timeout: TIMEOUT,
+        maxBuffer: 1024 * 1024,
+        env: {
+            ...process.env,
+            DEBUG: '1'
+        }
+    });
+    console.log(JSON.stringify({
+        exitStatus: result.status,
+        signal: result.signal,
+        launchError: Boolean(result.error),
+        timedOut: result.error?.code === 'ETIMEDOUT',
+        stdout: result.stdout,
+        stderr: result.stderr
+    }));
+    '''
+
 
 
 def process_status(engine, name, args, timeout):
     source = PROCESS_RUN.replace('ARGS', json.dumps(args)).replace('TIMEOUT', str(timeout * 1000))
     try:
         status = json.loads(engine.exec(name, 'node', '--input-type=module', source=source, timeout=timeout + 5))
+
+        if DEBUG:
+            print('STDOUT:', status.get('stdout', ''), flush=True)
+            print('STDERR:', status.get('stderr', ''), flush=True)
+
         if (not isinstance(status, dict) or type(status.get('launchError')) is not bool
                 or type(status.get('timedOut')) is not bool
                 or (status.get('exitStatus') is not None and
@@ -146,6 +176,8 @@ def vitest_failure(status, report_path, expected_files):
     if (not isinstance(tests, list) or not tests or len(tests) > 100
             or not isinstance(failed, list) or len(failed) > 10
             or type(report.get('infrastructureErrors')) is not int or report['infrastructureErrors'] < 0):
+        if DEBUG:
+            print(f"DEBUG: Invalid report structure -> tests: {type(tests)} (len={len(tests) if isinstance(tests, list) else 'N/A'}), failed: {type(failed)} (len={len(failed) if isinstance(failed, list) else 'N/A'}), infraErrors: {report.get('infrastructureErrors')}", file=sys.stderr)
         raise VerificationFailure('infrastructure', 'Invalid Vitest report; raw output withheld')
     files = report.get('files')
     if (not isinstance(files, list) or not all(isinstance(file, str) for file in files) or
@@ -217,7 +249,6 @@ def suite_config(suite):
             'export default { ...base, test: { ...base.test, include: '
             + json.dumps(suite.files) + ' } };\n')
 
-
 def run_vitest(engine, name, scratch, suite, index):
     args = ['/node_modules/vitest/vitest.mjs', 'run', '--config', f'/checks/suite-{index}.config.mts',
             '--configLoader', 'runner', '--no-cache', '--fsModuleCachePath', '/implementation/.vitest-cache',
@@ -231,6 +262,8 @@ def run_vitest(engine, name, scratch, suite, index):
         print(f'Vitest exit status: {status["exitStatus"]}; report invalid/unavailable', flush=True)
         raise
     if failure:
+        if DEBUG:
+            print ( failure )
         raise failure
 
 
@@ -322,6 +355,7 @@ console.log(JSON.stringify(result));
                 print(f'NOT APPLICABLE {labels[category]} (explicit Box declaration)', flush=True)
             for index, suite in enumerate(box.suites):
                 with phase(' + '.join(labels[category] for category in suite.categories)):
+                    print(f'[RUN VITEST] {suite}')
                     run_vitest(engine, name, scratch, suite, index)
             with phase('Protected input integrity'):
                 assert all(digest(p) == old for p, old in before.items())
