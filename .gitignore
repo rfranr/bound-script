@@ -8,6 +8,7 @@ experiments/render-welcome-native/accepted/
 experiments/render-welcome-native/quarantine/
 experiments/render-welcome-native/candidates/
 experiments/**/candidates/
+experiments/**/versions/
 experiments/**/.generated/
 __pycache__/
 *.py[cod]

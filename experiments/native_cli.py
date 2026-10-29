@@ -7,7 +7,7 @@ import sys
 sys.dont_write_bytecode = True
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
-from boundscript_internal import native_cli, native_generator
+from boundscript_internal import native_cli, native_generator, native_promotion
 
 
 def select_box(selection):
@@ -37,9 +37,9 @@ def verification_command(selection):
 
 def main(args=None):
     args = sys.argv[1:] if args is None else args
-    if len(args) < 2 or args[0] not in ('generate', 'verify'):
-        print('Usage: python3 -B experiments/native_cli.py {generate|verify} '
-              '{normalize-contact|render-welcome} [--agent-owned [--retain-candidate] for generate; verification arguments for verify]', file=sys.stderr)
+    if len(args) < 2 or args[0] not in ('generate', 'verify', 'promote'):
+        print('Usage: python3 -B experiments/native_cli.py {generate|verify|promote} '
+              '<box> [--candidate ID for promote; --agent-owned [--retain-candidate] for generate; verification arguments for verify]', file=sys.stderr)
         return 1
     operation, selection = args[:2]
     try:
@@ -47,6 +47,8 @@ def main(args=None):
     except ValueError as error:
         print(str(error), file=sys.stderr)
         return 1
+    if operation == 'promote':
+        return native_promotion.cli(args[2:], box_root=root, box=box)
     if operation == 'verify':
         return native_cli.cli(args[2:], box_root=root, box=box, baseline_source=baseline)
     return native_generator.cli(box_root=root, box=box,

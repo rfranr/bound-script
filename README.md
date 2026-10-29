@@ -195,6 +195,36 @@ Scanner, integrity, generation-cleanup, verifier-launch and timeout failures ret
 nothing. Existing candidates are never overwritten. No logs, prompts or credentials
 are saved, and retained directories are never mounted into the verifier or executed.
 
+### Explicit manual candidate promotion
+
+A human can separately authorize a retained PASS candidate for the selected Box:
+
+```bash
+python3 -B experiments/native_cli.py promote plan-fulfillment --candidate <candidate-id>
+```
+
+This command never calls a model. It validates `review.json` and the complete
+bounded source inventory, then independently verifies a private source snapshot
+against frozen copies of the **current** consumer-owned contract, task, fixtures
+and suites. It checks the originals and snapshots again before publication.
+Existing PASS metadata alone is neither authorization nor sufficient evidence.
+
+Success creates `versions/0001/source/` and `versions/0001/manifest.json` under
+the selected Box; subsequent promotions use the next local numeric version.
+All source paths and bytes are preserved. The manifest binds candidate/Box/version,
+source inventory, BoxDefinition fingerprint and verification-input SHA-256 hashes.
+Versions are independent of Pi/workspaces, never overwritten by normal operations,
+and not automatically integrated. The candidate, `accepted/` and `quarantine/`
+remain untouched. Version trees are Git-ignored local outputs.
+
+Publication uses Linux `renameat2(RENAME_NOREPLACE)` and a private, host-owned
+versions directory with an advisory sequence lock. Complete publication is atomic,
+not a crash-durability guarantee. An interrupted process may leave a hidden
+`.pending-*` staging tree; later promotion fails closed until a human inspects and
+removes that unpublished tree. Immutability is an application policy, not protection
+against the filesystem owner or privileged external writers. Integrity comparisons
+do not promise detection of transient external mutations restored between checks.
+
 Live model-backed experiments require separate authorization; 0047–0048 evidence
 uses only credential-free simulated generation and independent Docker verification.
 
