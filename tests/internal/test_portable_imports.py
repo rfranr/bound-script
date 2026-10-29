@@ -10,6 +10,8 @@ import tempfile
 import unittest
 from unittest.mock import MagicMock, patch
 
+from boundscript_internal import native_generator as generator
+from experiments.native_cli import verification_command
 from boundscript_internal.container_runtime import digest
 from boundscript_internal.native_verifier import RUNNER
 
@@ -19,8 +21,7 @@ ROOT = Path(__file__).resolve().parents[2]
 class PortableImportTests(unittest.TestCase):
     def test_both_boxes_compile_before_and_after_byte_identical_relocation(self):
         for directory in ('native-typescript-contracts', 'render-welcome-native'):
-            generator = importlib.import_module(f'experiments.{directory}.generate')
-            box = generator.BOX
+            box = importlib.import_module(f'experiments.{directory}.native_box').BOX
             with self.subTest(box=box.name), tempfile.TemporaryDirectory() as tmp:
                 root = Path(tmp)
                 (root / 'node_modules').symlink_to(ROOT / 'node_modules', target_is_directory=True)
@@ -76,8 +77,7 @@ class PortableImportTests(unittest.TestCase):
 
     def test_native_promotion_leaves_existing_contracts_untouched(self):
         for directory in ('native-typescript-contracts', 'render-welcome-native'):
-            generator = importlib.import_module(f'experiments.{directory}.generate')
-            box = generator.BOX
+            box = importlib.import_module(f'experiments.{directory}.native_box').BOX
             with self.subTest(box=box.name), tempfile.TemporaryDirectory() as tmp:
                 root = Path(tmp)
                 contract = root / box.contract_path
@@ -93,15 +93,14 @@ class PortableImportTests(unittest.TestCase):
                 scanned = digest(candidate)
                 context = MagicMock()
                 context.__enter__.return_value = (candidate, scanned)
-                with patch.object(generator, 'SPIKE', root), \
-                     patch.object(box.__class__, 'verification_files', return_value=()), \
+                with patch.object(box.__class__, 'verification_files', return_value=()), \
                      patch.object(generator, 'runtime'), \
                      patch.object(generator, 'agent_submission', return_value=context), \
-                     patch.object(generator.sys, 'argv', ['generate.py']), \
                      patch.object(generator.subprocess, 'run') as verification, \
                      patch.object(generator.shutil, 'copyfile', wraps=shutil.copyfile) as copy, \
                      redirect_stdout(io.StringIO()):
-                    generator.main()
+                    generator.generate(box_root=root, box=box, verification_command=verification_command(
+                        'normalize-contact' if directory == 'native-typescript-contracts' else 'render-welcome'))
                 verification.assert_called_once()
                 copy.assert_called_once_with(candidate, destination)
                 self.assertEqual(destination.read_bytes(), candidate.read_bytes())
@@ -109,6 +108,23 @@ class PortableImportTests(unittest.TestCase):
                 self.assertEqual(set(destination.parent.iterdir()), {destination, existing_contract})
                 for path, before in protected.items():
                     self.assertEqual(path.read_bytes(), before)
+
+                # Verification must not authorize promotion if the public input changes.
+                destination.write_bytes(b'// previous accepted implementation\n')
+
+                def change_contract(*args, **kwargs):
+                    contract.write_bytes(b'// changed during verification\n')
+
+                with patch.object(box.__class__, 'verification_files', return_value=()), \
+                     patch.object(generator, 'runtime'), \
+                     patch.object(generator, 'agent_submission', return_value=context), \
+                     patch.object(generator.subprocess, 'run', side_effect=change_contract), \
+                     redirect_stdout(io.StringIO()):
+                    with self.assertRaisesRegex(AssertionError, 'Public contract changed'):
+                        generator.generate(box_root=root, box=box, verification_command=verification_command(
+                            'normalize-contact' if directory == 'native-typescript-contracts' else 'render-welcome'))
+                self.assertEqual(destination.read_bytes(), b'// previous accepted implementation\n')
+                self.assertEqual(existing_contract.read_bytes(), protected[existing_contract])
 
 
 if __name__ == '__main__':

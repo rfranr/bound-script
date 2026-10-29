@@ -16,13 +16,13 @@
     "check": "npm run test:unit && npm run test:native:tooling && npm run test:welcome:tooling && npm run test:contact:contracts && npm test",
     "build:native": "typia generate --input experiments/native-typescript-contracts/src --output experiments/native-typescript-contracts/.generated --project experiments/native-typescript-contracts/tsconfig.json",
     "test:native:tooling": "npm run build:native && vitest run --config experiments/native-typescript-contracts/vitest.tooling.config.mts",
-    "test:native": "npm run build:native && python3 -B experiments/native-typescript-contracts/verify.py",
-    "test:native:baseline": "npm run build:native && python3 -B experiments/native-typescript-contracts/verify.py --baseline",
-    "generate:native": "npm run build:native && python3 -B experiments/native-typescript-contracts/generate.py",
+    "test:native": "npm run build:native && python3 -B experiments/native_cli.py verify normalize-contact",
+    "test:native:baseline": "npm run build:native && python3 -B experiments/native_cli.py verify normalize-contact --baseline",
+    "generate:native": "npm run build:native && python3 -B experiments/native_cli.py generate normalize-contact",
     "build:welcome": "typia generate --input experiments/render-welcome-native/src --output experiments/render-welcome-native/.generated --project experiments/render-welcome-native/tsconfig.json",
     "test:welcome:tooling": "npm run build:welcome && vitest run --config experiments/render-welcome-native/vitest.tooling.config.mts",
-    "test:welcome": "npm run build:welcome && python3 -B experiments/render-welcome-native/verify.py",
-    "generate:welcome": "npm run build:welcome && python3 -B experiments/render-welcome-native/generate.py",
+    "test:welcome": "npm run build:welcome && python3 -B experiments/native_cli.py verify render-welcome",
+    "generate:welcome": "npm run build:welcome && python3 -B experiments/native_cli.py generate render-welcome",
     "test:contact:contracts": "tsc --strict --noEmit --target ES2022 --module NodeNext --allowImportingTsExtensions tests/integration/check-contact-composition.ts"
   },
   "devDependencies": {

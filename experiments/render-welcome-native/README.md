@@ -19,17 +19,21 @@ rendering. Invalid direct calls have no prescribed business behavior.
   (seed 36, 100 runs): formatting, phone independence, call independence and
   immutability. `validators.test.ts` owns three small table-driven shape tests.
 - `native_box.py` explicitly declares both suites and all support files.
-- `verify.py` selects this root/definition and calls the existing extracted
+- `experiments/native_cli.py verify render-welcome` explicitly selects this root
+  and definition, using shared verification argument/fingerprint handling and
   `boundscript_internal/native_verifier.py`; it never promotes.
-- `generate.py` is fixed to this Box, reuses the existing disposable workspace
-  mechanics, ends generation before running the separate offline verifier, and
-  promotes only unchanged scanned/verifiable source. Failed verification saves
-  scanned source only to a private local quarantine; failed scans are not saved.
+- `experiments/native_cli.py generate render-welcome` calls shared plain functions
+  in `boundscript_internal/native_generator.py`, reusing the existing workspace.
+  Generation ends before separate offline verification. Only unchanged verified
+  implementation bytes are promoted. Failed verification quarantines scanned
+  source privately; failed scans are not saved.
+- Shared infrastructure tests live in `tests/internal/`; local definition/fixture
+  and behavior checks remain in `test_box_behavior.py`.
 
-No definition, runner, build or standalone test imports or reads the
-NormalizeContact experiment. Its implementation, task and fixtures are not
+Selecting Welcome does not import or read the NormalizeContact experiment;
+the CLI's fixed imports are lazy and selection is separate from core workflows. Its implementation, task and fixtures are not
 inputs to this Box. Shared verifier assets live under `boundscript_internal/`,
-not in a peer Box. There is no discovery, registry or joint runner.
+not in a peer Box. There is no discovery, registry or joint generation.
 
 ## Run from the repository root
 
@@ -48,7 +52,7 @@ BOUNDSCRIPT_RUNTIME=podman npm run generate:welcome
 # Verify the local generated artifact again without model/auth:
 BOUNDSCRIPT_RUNTIME=podman npm run test:welcome
 # Verify an explicit candidate without promotion:
-BOUNDSCRIPT_RUNTIME=podman python3 -B experiments/render-welcome-native/verify.py /absolute/path/candidate.ts
+BOUNDSCRIPT_RUNTIME=docker python3 -B experiments/native_cli.py verify render-welcome /absolute/path/candidate.ts
 
 # Positive generated candidate required; then reject signature/shape/behavior/mutation negatives:
 BOUNDSCRIPT_WELCOME_ENGINE_TEST=1 BOUNDSCRIPT_RUNTIME=podman \

@@ -62,8 +62,9 @@ branch restrictions or guarantees that old candidates meet today's contract.
   200 randomized Contact checks, plus explicit examples of what shapes cannot
   establish about behavior.
 
-`verify.py` is a thin fixed entry point selecting this root and its unchanged
-definition. The extracted `boundscript_internal/native_verifier.py` and shared
+`experiments/native_cli.py verify normalize-contact` explicitly selects this root
+and its unchanged definition. The shared `boundscript_internal/native_cli.py`
+validates fingerprints and candidate/baseline arguments. `native_verifier.py` and shared
 trusted Vitest/compiler adapters contain the existing verification mechanics,
 with explicit Box-root/definition arguments and no experiment imports. They mount
 trusted checks, native contract, generated validators and
@@ -87,14 +88,15 @@ The frozen baseline source path remains available only for the explicit
 phone contract. No candidate executes on the host. See the
 [fixture decoupling report](ACCEPTANCE-REPORT.md) for results and open assumptions.
 
-`generate.py` remains a fixed NormalizeContact runner, not a generic orchestrator.
-All fixed generators use `../../boundscript_internal/agent_workspace.py` for the shared
-Pi workspace, credential/probe/event-summary/scan lifecycle and
-`../../boundscript_internal/container_runtime.py` for engine policy. This private
-package imports no experiment code; shared regressions live in `../../tests/internal/`.
-The native runners no longer add the baseline experiment directory to `sys.path`. The helper removes the generation container before yielding a source and
-scanned digest; each generator independently selects verification and promotion.
-Native verification imports only shared infrastructure, not a baseline verifier.
+`experiments/native_cli.py generate normalize-contact` selects this Box and calls
+plain functions in `boundscript_internal/native_generator.py`, shared with Welcome.
+The shared implementation receives the root, definition and independent verifier
+command explicitly; it does not select or import Boxes. It reuses `agent_workspace.py`
+for Pi/credential/probe/event-summary/scan lifecycle and `container_runtime.py` for
+engine policy, then handles quarantine and implementation-only promotion.
+The workspace removes the generation container before yielding scanned source.
+Shared workflow/diagnostic/synthetic-configuration tests live in `tests/internal/`;
+Box-specific fixture and behavior checks remain here. No baseline verifier is imported.
 
 The agent receives only `/inputs/task.md`, `/implementation/contract.ts`, read-only Pi
 and the explicitly authorized auth file, plus a writable `/implementation` with
@@ -128,7 +130,10 @@ python3 -B -m unittest discover -s experiments/native-typescript-contracts -v
 BOUNDSCRIPT_RUNTIME=podman npm run test:native:baseline
 BOUNDSCRIPT_RUNTIME=podman npm run generate:native  # billable Pi; explicitly authorized auth mount
 BOUNDSCRIPT_RUNTIME=podman npm run test:native     # saved local generated artifact; no model/auth
-BOUNDSCRIPT_NATIVE_ENGINE_TEST=1 BOUNDSCRIPT_RUNTIME=podman \
+BOUNDSCRIPT_NATIVE_ENGINE_TEST=1 BOUNDSCRIPT_RUNTIME=docker \
+  python3 -B -m unittest discover -s tests/internal -v
+# Local business negatives additionally require accepted/normalize-contact.ts:
+BOUNDSCRIPT_NATIVE_ENGINE_TEST=1 BOUNDSCRIPT_RUNTIME=docker \
   python3 -B -m unittest discover -s experiments/native-typescript-contracts -v
 ```
 
@@ -138,14 +143,14 @@ budget of 900 seconds for live generation and 600 seconds for the complete
 opt-in native suite (including two synthetic layouts and container cleanup). Independent verification
 has a bounded 360-second generation-side deadline for its separated phases;
 container resource limits are unchanged. The existing Pi 1.4.0
-installation path and auth-file exception are retained in `generate.py`. Its current
+installation path and auth-file exception are retained in `boundscript_internal/native_generator.py`. Its current
 model is `openai-codex/gpt-5.6-luna`, low reasoning; historical runs may differ.
 
 To check another standalone candidate, without promotion:
 
 ```sh
 npm run build:native
-BOUNDSCRIPT_RUNTIME=podman python3 -B experiments/native-typescript-contracts/verify.py /absolute/path/candidate.ts
+BOUNDSCRIPT_RUNTIME=docker python3 -B experiments/native_cli.py verify normalize-contact /absolute/path/candidate.ts
 ```
 
 ## Independent suite configuration
@@ -232,11 +237,11 @@ Rerun a quarantined source without credentials or another model call:
 
 ```sh
 npm run build:native
-BOUNDSCRIPT_RUNTIME=podman python3 -B experiments/native-typescript-contracts/verify.py \
+BOUNDSCRIPT_RUNTIME=docker python3 -B experiments/native_cli.py verify normalize-contact \
   experiments/native-typescript-contracts/quarantine/failed-<id>/implementation.ts
-python3 -B -m unittest discover -s experiments/native-typescript-contracts -p test_diagnostics.py -v
-BOUNDSCRIPT_NATIVE_ENGINE_TEST=1 BOUNDSCRIPT_RUNTIME=podman \
-  python3 -B -m unittest discover -s experiments/native-typescript-contracts -p test_diagnostics.py -v
+python3 -B -m unittest discover -s tests/internal -p test_native_diagnostics.py -v
+BOUNDSCRIPT_NATIVE_ENGINE_TEST=1 BOUNDSCRIPT_RUNTIME=docker \
+  python3 -B -m unittest discover -s tests/internal -p test_native_diagnostics.py -v
 ```
 
 `.generated/`, `accepted/` and `quarantine/` are ignored and must not be committed. A clean

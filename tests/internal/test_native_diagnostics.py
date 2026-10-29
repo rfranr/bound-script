@@ -9,7 +9,8 @@ import tempfile
 import unittest
 from unittest.mock import MagicMock, patch
 
-from test_spike import HERE, generator, verifier, entrypoint
+from test_native_workflow import HERE, BOX, generator, verifier, entrypoint
+from experiments.native_cli import verification_command
 from boundscript_internal.box_definition import VerificationSuite
 
 STATUS = {'exitStatus': 0, 'signal': None, 'launchError': False, 'timedOut': False}
@@ -181,12 +182,12 @@ console.log(JSON.stringify(collectDiagnostics([module], [{message:'PRIVATE UNHAN
         for error in (verifier.VerificationFailure('assertion', 'Safe assertion summary'),
                       RuntimeError('PRIVATE EXCEPTION')):
             output = io.StringIO()
-            with patch.object(entrypoint, 'main', side_effect=error), redirect_stdout(output):
-                self.assertEqual(entrypoint.cli(), 1)
+            with patch.object(entrypoint, 'verify', side_effect=error), redirect_stdout(output):
+                self.assertEqual(entrypoint.cli([], box_root=HERE, box=BOX), 1)
             self.assertNotIn('PRIVATE', output.getvalue())
             self.assertNotIn('Traceback', output.getvalue())
-        with patch.object(entrypoint, 'main'):
-            self.assertEqual(entrypoint.cli(), 0)
+        with patch.object(entrypoint, 'verify'):
+            self.assertEqual(entrypoint.cli([], box_root=HERE, box=BOX), 0)
 
     def test_phase_reports_group_selection_and_rejects_stale_reports(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -264,7 +265,7 @@ return {ok:true,contact:{name:3,email:'a@b.c',phone:'PRIVATE VALUE'}} as any; };
                 with self.subTest(kind=kind):
                     candidate = Path(tmp) / (kind + '.ts')
                     candidate.write_text(source)
-                    result = subprocess.run(['python3', '-B', str(HERE / 'verify.py'), str(candidate)],
+                    result = subprocess.run([*verification_command('normalize-contact'), str(candidate)],
                                             capture_output=True, text=True, timeout=180)
                     self.assertEqual(result.returncode, 1)
                     self.assertIn(f'FAIL [{kind}]', result.stdout)
@@ -282,21 +283,20 @@ return {ok:true,contact:{name:3,email:'a@b.c',phone:'PRIVATE VALUE'}} as any; };
             candidate = root / 'candidate.ts'
             candidate.write_bytes(b'// credential-scanned candidate\n')
             expected = generator.digest(candidate)
-            with patch.object(generator, 'SPIKE', root):
-                first = generator.quarantine(candidate, expected)
-                second = generator.quarantine(candidate, expected)
-                self.assertNotEqual(first, second)
-                self.assertEqual(first.read_bytes(), candidate.read_bytes())
-                self.assertEqual(first.stat().st_mode & 0o777, 0o600)
-                self.assertEqual(first.parent.stat().st_mode & 0o777, 0o700)
-                self.assertEqual(list(first.parent.iterdir()), [first])
-                candidate.write_text('changed after scan')
-                with self.assertRaises(RuntimeError):
-                    generator.quarantine(candidate, expected)
-                candidate.unlink()
-                candidate.symlink_to(first)
-                with self.assertRaises(OSError):
-                    generator.quarantine(candidate, expected)
+            first = generator.quarantine(candidate, expected, box_root=root)
+            second = generator.quarantine(candidate, expected, box_root=root)
+            self.assertNotEqual(first, second)
+            self.assertEqual(first.read_bytes(), candidate.read_bytes())
+            self.assertEqual(first.stat().st_mode & 0o777, 0o600)
+            self.assertEqual(first.parent.stat().st_mode & 0o777, 0o700)
+            self.assertEqual(list(first.parent.iterdir()), [first])
+            candidate.write_text('changed after scan')
+            with self.assertRaises(RuntimeError):
+                generator.quarantine(candidate, expected, box_root=root)
+            candidate.unlink()
+            candidate.symlink_to(first)
+            with self.assertRaises(OSError):
+                generator.quarantine(candidate, expected, box_root=root)
             ignored = subprocess.run(['git', 'check-ignore', '--stdin'], text=True, capture_output=True,
                                      input='experiments/native-typescript-contracts/quarantine/failed-example/implementation.ts\n')
             self.assertEqual(ignored.returncode, 0)

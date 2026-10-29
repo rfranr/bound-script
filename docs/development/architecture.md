@@ -5,6 +5,8 @@ This records the existing approach, not approval of a new framework architecture
 Assignment [0036](../assignments/0036-design-render-welcome-specification.md)
 adds independent native RenderWelcome and extracts existing verification mechanics
 into the private shared package; the Product Owner reviewed and accepted its delivery.
+Assignment [0040](../assignments/0040-consolidate-native-python-workflows.md)
+consolidates native generation, verification entry handling and infrastructure tests.
 Historical experiment reports describe earlier states; proposed integration in
 `docs/proposals/0018c-architectural-integration.md` is not implemented.
 
@@ -69,8 +71,8 @@ yet implement the planned versioned lifecycle or a human-acceptance gate.
 3. **Verify:** separate Python processes create fresh offline, credential-free
    containers. The native verifier stages a temporary signature consumer using
    `boundscript_internal/typescript_contract.py`, deterministically from module
-   paths and export names, without agent involvement. Both native entry points
-   import the same explicit `native_box.py` definition: public task/contract,
+   paths and export names, without agent involvement. The explicit selection CLI
+   imports only the chosen Box's `native_box.py` for either operation: public task/contract,
    function type/export, destination and independent verification bundle. A
    generation-side definition fingerprint is required to match in its verifier
    subprocess before candidate verification. No registry or export inference is
@@ -85,9 +87,10 @@ yet implement the planned versioned lifecycle or a human-acceptance gate.
    read-only alongside independently owned tests/fixtures, not retained as source
    artifacts. No business-specific test filename or description selects tests.
    Native verification mechanics and the unchanged trusted Vitest/compiler adapters
-   now live in `boundscript_internal/`, not in a business Box directory. Thin fixed
-   entry points pass their own root and definition; no discovery or registry is
-   involved. Native verification performs strict TypeScript compilation, Typia
+   now live in `boundscript_internal/`, not in a business Box directory.
+   `experiments/native_cli.py` selects a Box and passes its root/definition to shared
+   plain functions; selection remains outside core generation/verification.
+   No discovery or registry is involved. Native verification performs strict TypeScript compilation, Typia
    validator tests, guarded examples/properties, protected-file hashes and cleanup.
    NormalizeContact retains its 20 examples and five seeded properties. Independent
    RenderWelcome owns six examples and one combined property (seed 36, 100 runs).
@@ -190,9 +193,12 @@ per assertion.
   imports or public framework API. Preserve paths
   for tasks, contracts, accepted baseline bytes and all experimental reports.
   Infrastructure tests live in `tests/internal/`; policy tests stay per experiment.
-- Extract only the duplicated credential-bearing workspace lifecycle. Fixed
-  generation entry points retain prompts/models, verification commands and
-  promotion policy. No manifests, callbacks, plugin registry or generic runner.
+- Share native generation prompt/model/auth defaults, preflight, independent
+  verification invocation, quarantine and promotion in `native_generator.py`.
+  Shared `native_cli.py` handles verification arguments/fingerprints/diagnostics.
+  Explicit Box selection is separate in `experiments/native_cli.py`; adding a
+  Box does not change core workflows or require copied scripts/tests. Baseline
+  orchestration remains separate. No manifests, plugin registry or runner classes.
 - Keep common image, repository-relative tooling path and hashing definitions in
   the internal container module. Both experiments import its qualified package
   name. Direct entry points explicitly locate the repository root; no Python
@@ -216,6 +222,10 @@ boundscript_internal/          # shared host-side mechanics; no experiment impor
   agent_workspace.py          # Pi lifecycle, credential scan, generation cleanup
   typescript_contract.py      # deterministic temporary TypeScript signature consumer
   box_definition.py           # explicit inputs/suites, ownership checks, fingerprint
+  native_generator.py         # shared generation/verification/quarantine/promotion
+  native_cli.py               # shared verification arguments and diagnostics
+  native_verifier.py          # independent offline verifier and exact suites
+experiments/native_cli.py     # explicit selection only; separate from core workflows
 tests/internal/               # shared lifecycle/security/resource regressions
 experiments/minimal-box/      # baseline authority, workflows and policy tests
 experiments/native-typescript-contracts/
@@ -227,18 +237,19 @@ docs/                         # assignments, current docs and historical proposa
 ```
 
 The dependency direction is experiments → internal mechanics, never the reverse.
-RenderWelcome's root/definition, local Typia build, fixed generator and verifier
-have no dependency on NormalizeContact's directory. Neither Box receives peer
+RenderWelcome's root/definition and local Typia build have no dependency on
+NormalizeContact's directory. Selecting Welcome through the shared CLI does not
+import NormalizeContact. Both operations use shared plain workflow functions. Neither Box receives peer
 source, tasks or tests during generation; neither standalone verifier invokes its
 peer. Application-owned composition can narrow the normalization result and pass
 its public success contact structurally to the consumer-owned welcome contract.
 The compile-only check in `tests/integration/` imports only public contracts and
 is not either Box's standalone oracle or generation input.
 
-Experiment paths remain independent except native verification's explicit
-`--baseline` historical candidate selection. Prompts/model/auth paths, acceptance
-rules, quarantine and promotion remain experiment-owned. Both generators may
-share mechanics without receiving each other's files inside their containers.
+Experiment paths remain independent except NormalizeContact verification's explicit
+`--baseline` historical candidate selection. Acceptance rules remain Box-owned;
+native prompt/model/auth defaults and quarantine/promotion mechanics are shared.
+Generation never receives another Box's files inside its container.
 Moving host Python modules does not alter any sandbox mount or runtime limit.
 
 ## Unchanged limits and deferred decisions
@@ -255,7 +266,7 @@ is no universal import/transitive dependency enforcement or production runtime
 validation wrapper.
 
 Credential brokerage, egress restrictions, robust hostile-program verification,
-artifact distribution/provenance, reusable orchestration, other languages and
+artifact distribution/provenance, broader orchestration, other languages and
 repair loops remain deferred. No accepted sources are manually repaired. Native RenderWelcome is a separate
 formatter Box, not a migration of the historical dependency-injected baseline.
 No broader architectural proposal is promoted to implemented capability by this

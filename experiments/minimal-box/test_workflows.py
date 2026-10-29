@@ -67,15 +67,16 @@ class WorkflowTests(unittest.TestCase):
         self.assertNotIn('PRIVATE', output.getvalue())
 
     def test_assertions_required_for_all_entry_points_on_any_branch(self):
-        native = HERE.parent / 'native-typescript-contracts'
-        welcome = HERE.parent / 'render-welcome-native'
-        for path in (HERE / 'generate.py', HERE / 'verify.py', HERE / 'verify_pair.py',
-                     native / 'generate.py', native / 'verify.py',
-                     welcome / 'generate.py', welcome / 'verify.py'):
-            with self.subTest(path=path), tempfile.TemporaryDirectory() as cwd:
+        commands = [[str(HERE / name)] for name in ('generate.py', 'verify.py', 'verify_pair.py')]
+        commands += [[str(HERE.parent / 'native_cli.py'), operation, box]
+                     for operation in ('generate', 'verify')
+                     for box in ('normalize-contact', 'render-welcome')]
+        for command in commands:
+            path = Path(command[0])
+            with self.subTest(command=command), tempfile.TemporaryDirectory() as cwd:
                 # Absolute entry points must resolve internal imports even outside
                 # the repository, including the independent verifier subprocess.
-                result = subprocess.run([sys.executable, '-B', '-O', str(path)], cwd=cwd,
+                result = subprocess.run([sys.executable, '-B', '-O', *command], cwd=cwd,
                                         capture_output=True, text=True, timeout=10)
                 self.assertNotEqual(result.returncode, 0)
                 self.assertIn('Assertions must be enabled', result.stdout + result.stderr)
@@ -96,9 +97,7 @@ class WorkflowTests(unittest.TestCase):
     def test_entry_points_resolve_one_internal_package_without_peer_imports(self):
         root = HERE.parents[1]
         paths = [HERE / name for name in ('generate.py', 'verify.py', 'verify_pair.py')]
-        paths += [HERE.parent / box / name
-                  for box in ('native-typescript-contracts', 'render-welcome-native')
-                  for name in ('generate.py', 'verify.py')]
+        paths += [HERE.parent / 'native_cli.py']
         source = '''
 import runpy, sys
 from pathlib import Path
@@ -106,10 +105,12 @@ paths = PATHS
 for path in paths:
     loaded = runpy.run_path(path, run_name='import_check')
     from boundscript_internal import container_runtime, agent_workspace
-    if 'verify_candidate' in loaded:
-        from boundscript_internal import native_verifier
-        assert loaded['verify_candidate'] is native_verifier.check
+    if path.endswith('native_cli.py'):
+        from boundscript_internal import native_cli, native_generator, native_verifier
+        assert native_cli.check is native_verifier.check
         assert native_verifier.runtime is container_runtime.runtime
+        assert native_generator.runtime is container_runtime.runtime
+        assert native_generator.agent_submission is agent_workspace.agent_submission
     else:
         assert loaded['runtime'] is container_runtime.runtime
     if path.endswith('generate.py'):
